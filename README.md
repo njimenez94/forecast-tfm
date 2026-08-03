@@ -8,13 +8,13 @@ El flujo es: descomprimir los datos → construir la base de datos → generar f
 
 ```
 doc/        Datos crudos comprimidos (m5-forecasting-accuracy.zip)
-data/       raw/ (CSV de M5) y processed/ (dataset.parquet) — solo se versiona la estructura
+data/       raw/ (CSV de M5) y processed/ (dataset.parquet por nivel, sin features derivadas) — solo se versiona la estructura
 config/     Parámetros del proyecto separados por responsabilidad (paths, features, model)
 queries/    SQL para crear la base DuckDB y el dataset base
 src/        Lógica reutilizable (datos, features, modelado, evaluación)
 scripts/    Puntos de entrada ejecutables (orquestan src/)
 notebooks/  Exploración (eda) y prototipado del modelo (model)
-artifacts/  Salidas generadas: modelo, params, forecast
+artifacts/  Salidas generadas: datasets/ (datasets listos para modelos), models/, forecast
 ```
 
 ## Scripts

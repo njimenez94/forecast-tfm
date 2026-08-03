@@ -106,30 +106,30 @@ FROM exog
 ORDER BY agg_id, date"""
 
 
-def build_cum_query(exog_sql: str, n: int) -> str:
-    """Reemplaza la columna 'sales' del resultado de exog_sql por la suma forward de n períodos.
+def build_cum_query(exog_sql: str, ns: list[int]) -> str:
+    """Añade columnas cumN = suma forward de N períodos, una por cada N en ns.
 
-    Usa una ventana ROWS BETWEEN 1 FOLLOWING AND n FOLLOWING sobre la serie (particionada por
-    agg_id, ordenada por date). Los últimos n registros por serie, donde la suma sería incompleta,
-    se eliminan con WHERE _cum IS NOT NULL.
+    cumN[t] = sales[t+1] + ... + sales[t+N], vía ROWS BETWEEN 1 FOLLOWING AND N FOLLOWING
+    (partición por agg_id, orden por date). DuckDB no devuelve NULL cuando el frame tiene
+    menos de N filas disponibles (suma parcial silenciosa) — el CASE/COUNT fuerza NULL en
+    las últimas N filas de cada serie (ventana incompleta), que se filtran en train time
+    según el target elegido, no aquí.
     """
+    def _cum_col(n: int) -> str:
+        frame = f"PARTITION BY agg_id ORDER BY date ROWS BETWEEN 1 FOLLOWING AND {n} FOLLOWING"
+        return (
+            f"CASE WHEN COUNT(sales) OVER ({frame}) = {n} "
+            f"THEN CAST(SUM(sales) OVER ({frame}) AS FLOAT) ELSE NULL END AS cum{n}"
+        )
+
+    cum_cols = ",\n        ".join(_cum_col(n) for n in ns)
     return f"""WITH _exog AS (
 {exog_sql}
-),
-_cum AS (
-    SELECT *,
-        SUM(sales) OVER (
-            PARTITION BY agg_id
-            ORDER BY date
-            ROWS BETWEEN 1 FOLLOWING AND {n} FOLLOWING
-        ) AS _cum_sales
-    FROM _exog
 )
 SELECT
-    * EXCLUDE (sales, _cum_sales),
-    CAST(_cum_sales AS FLOAT) AS sales
-FROM _cum
-WHERE _cum_sales IS NOT NULL
+    *,
+        {cum_cols}
+FROM _exog
 ORDER BY agg_id, date"""
 
 

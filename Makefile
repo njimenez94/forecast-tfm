@@ -1,20 +1,24 @@
-.PHONY: create_database create_datasets train-datasets pipeline clean clean-datasets
+.PHONY: create_database process-data build-datasets train-datasets pipeline clean clean-datasets
 
 PY := uv run python
 
 create_database:
 	$(PY) -m scripts.create_database
 
-create_datasets:
-	$(PY) -m scripts.create_datasets $(ARGS)
+process-data:
+	$(PY) -m scripts.process_data $(ARGS)
+
+build-datasets:
+	$(PY) -m scripts.build_datasets $(ARGS)
 
 train-datasets:
 	$(PY) -m scripts.train_datasets $(ARGS)
 
-pipeline: clean-datasets create_datasets train-datasets
+pipeline: clean-datasets process-data build-datasets train-datasets
 
 clean-datasets:
-	rm -f data/processed/dataset_level_*.parquet
+	rm -f data/processed/level_*.parquet
+	rm -f artifacts/datasets/dataset_level_*.parquet
 
 clean:
 	rm -rf artifacts/

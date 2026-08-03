@@ -8,18 +8,22 @@ RAW_ZIP = ROOT / "doc" / "m5-forecasting-accuracy.zip"
 DB_PATH = ROOT / "data" / "m5.db"
 CREATE_DATABASE_QUERY = ROOT / "queries" / "create_database.sql"
 
+# data/processed/: extracción SQL por nivel (sales, cumN, precio, calendario).
+# Generado por scripts/process_data.py (make process-data).
 PROCESSED_DIR = ROOT / "data" / "processed"
 
 OUTPUT_DIR = ROOT / "output"
 ARTIFACTS_DIR = ROOT / "artifacts"
 MODELS_DIR = ARTIFACTS_DIR / "models"
 
-
-def window_label(days: int | None) -> str:
-    if days is None:
-        return "wmax"
-    return f"w{days // 365}y"
+# artifacts/datasets/: data/processed/ + features derivadas (src/features/engineer.py),
+# listo para entrenar. Generado por scripts/build_datasets.py (make build-datasets).
+FEATURED_DIR = ARTIFACTS_DIR / "datasets"
 
 
-def dataset_level_path(level, grain: str, window_days: int | None, target: str = "sales") -> Path:
-    return PROCESSED_DIR / f"dataset_level_{level.id:02d}_{grain}_{window_label(window_days)}_{target}_{level.name}.parquet"
+def dataset_level_path(level, grain: str) -> Path:
+    return PROCESSED_DIR / f"level_{level.id:02d}_{grain}_{level.name}.parquet"
+
+
+def featured_level_path(level, grain: str) -> Path:
+    return FEATURED_DIR / f"dataset_level_{level.id:02d}_{grain}_{level.name}.parquet"

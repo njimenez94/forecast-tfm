@@ -1,8 +1,16 @@
-"""Entrena un MLForecast por nivel de agregación y evalúa en los últimos H períodos.
+"""Entrena un MLForecast por nivel de agregación y evalúa en valid y test.
 
-Para el target 'sales' evalúa en múltiples sub-horizontes (HORIZON config).
-Para targets 'cumN' predice h=1 (el acumulado de N períodos) y lo compara contra el
-primer paso del conjunto de validación, que ya contiene el acumulado real pre-computado.
+El final de cada serie se reserva en dos bloques consecutivos de igual longitud
+(~12 meses, max(HORIZON) del grain): valid (pensado para tuning, p.ej. Optuna, o
+early stopping) y test (prueba final, nunca usado para entrenar). El modelo se
+ajusta solo con train. El tamaño del bloque es el mismo para todos los targets,
+independiente de la ventana N de los targets acumulados, para que valid/test sean
+comparables entre targets.
+
+Para 'sales' evalúa en múltiples sub-horizontes (HORIZON config) dentro del bloque.
+Para 'cumN' evalúa un único horizonte igual al bloque completo: como "y" ya es la
+suma móvil de los N períodos siguientes a cada fecha, comparar período a período a
+lo largo de todo el bloque agrega esa suma móvil de forma consistente en el tiempo.
 
 Los modelos se guardan en artifacts/models/ y las métricas en artifacts/results.parquet.
 
@@ -15,6 +23,9 @@ import warnings
 from pathlib import Path
 
 warnings.filterwarnings("ignore", message="Found null values")
+# Momentum (RollingMean corta / larga) da 0/0 en series intermitentes con ventana
+# en cero; el NaN resultante es válido para LightGBM, no un error.
+warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 
 import pandas as pd
 from loguru import logger
@@ -25,68 +36,62 @@ from src.evaluation.metrics import bias, compute_wrmsse, wape
 from src.modeling.train import build_fcst, encode_static
 
 
+def _tfm_window(t) -> int:
+    """Ventana de historia que necesita un lag_transform (0 si no tiene una fija,
+    p.ej. ExpandingMean; recursivo para Combine, que envuelve otros dos transforms)."""
+    if hasattr(t, "window_size"):
+        return t.window_size
+    if hasattr(t, "tfm1"):
+        return max(_tfm_window(t.tfm1), _tfm_window(t.tfm2))
+    return 0
+
+
 def _eval_horizon(preds_df: pd.DataFrame, valid_pd: pd.DataFrame,
-                  train_for_wrmsse: pd.DataFrame, h: int) -> dict:
+                  train_for_wrmsse: pd.DataFrame | None, h: int) -> dict:
+    """Compara, período a período, las primeras h filas de preds_df contra valid_pd.
+
+    Para targets acumulados 'cumN', "y" ya es la suma de los N períodos siguientes a
+    cada fecha, así que esto evalúa esa suma móvil de forma consistente a lo largo de
+    todo el bloque (h = tamaño del bloque); WRMSSE no aplica y se omite (train_for_wrmsse=None).
+    """
     mask_p = preds_df.groupby("unique_id", sort=False).cumcount() < h
     mask_v = valid_pd.groupby("unique_id", sort=False).cumcount() < h
 
     preds   = preds_df[mask_p]["lgb"].clip(lower=0).round(0).astype(int).to_numpy()
     actuals = valid_pd[mask_v]["y"].to_numpy()
-    valid_h = (valid_pd[mask_v]
-               .rename(columns={"unique_id": "agg_id", "ds": "date", "y": "sales"}))
+
+    wrmsse = float("nan")
+    if train_for_wrmsse is not None:
+        valid_h = (valid_pd[mask_v]
+                   .rename(columns={"unique_id": "agg_id", "ds": "date", "y": "sales"}))
+        wrmsse = compute_wrmsse(train_for_wrmsse, valid_h, preds)
 
     return {
         "wape":   float(wape(actuals, preds)),
         "bias":   float(bias(actuals, preds)),
-        "wrmsse": compute_wrmsse(train_for_wrmsse, valid_h, preds),
+        "wrmsse": wrmsse,
     }
 
 
-def _eval_cum(preds_df: pd.DataFrame, valid_pd: pd.DataFrame) -> dict:
-    """Evalúa un modelo de target acumulado (h=1).
-
-    Compara la única predicción por serie contra el primer paso del conjunto de
-    validación, que contiene la suma acumulada real del período siguiente.
-    """
-    first_valid = (
-        valid_pd.sort_values("ds")
-        .groupby("unique_id", sort=False)
-        .first()
-        .reset_index()[["unique_id", "y"]]
-    )
-    merged  = preds_df[["unique_id", "lgb"]].merge(first_valid, on="unique_id", how="inner")
-    preds   = merged["lgb"].clip(lower=0).to_numpy()
-    actuals = merged["y"].to_numpy()
-    return {
-        "wape":   float(wape(actuals, preds)),
-        "bias":   float(bias(actuals, preds)),
-        "wrmsse": float("nan"),  # no aplica para targets acumulados
-    }
+def _split_preds(preds_df: pd.DataFrame, block: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Separa las predicciones en bloque valid (primeros `block` pasos) y test (siguientes)."""
+    cumcount = preds_df.groupby("unique_id", sort=False).cumcount()
+    preds_valid = preds_df[cumcount < block].reset_index(drop=True)
+    preds_test  = preds_df[cumcount >= block].reset_index(drop=True)
+    return preds_valid, preds_test
 
 
-def _train_level(file: Path) -> list[dict]:
+def _train_level(file: Path, level, grain: str, target: str) -> list[dict]:
     t0 = time.perf_counter()
-    parsed = parse_level_file(file)
-    if parsed is None:
-        logger.warning("  SKIP: formato no reconocido (¿archivo legacy sin target?): {}", file.name)
-        return []
-    level, grain, wlabel, target = parsed
     n = config.cum_n(target)
 
-    if n is None:
-        # Target 'sales': evaluar en múltiples horizontes
-        horizons     = config.HORIZON[grain]
-        h_max        = max(horizons)
-        split_horizon = h_max
-        h_predict    = h_max
-    else:
-        # Target acumulado 'cumN': reservar N períodos para validación, predecir h=1
-        horizons      = [n]
-        h_max         = n
-        split_horizon = n
-        h_predict     = 1
+    # Bloque fijo (~12 meses) para valid/test, igual para todos los targets: el tamaño
+    # de la ventana acumulada (7, 14, ...) no debe achicar el período de evaluación.
+    block     = max(config.HORIZON[grain])
+    h_predict = 2 * block
+    horizons  = config.HORIZON[grain] if n is None else [block]
 
-    data: LevelSplit = prepare_level(file, level, grain, split_horizon, target)
+    data: LevelSplit = prepare_level(file, level, grain, block, target)
     train_start  = data.train_pd["ds"].min().date()
     train_end    = data.train_pd["ds"].max().date()
     n_train_rows = len(data.train_pd)
@@ -95,20 +100,20 @@ def _train_level(file: Path) -> list[dict]:
     lags = config.valid_lags(grain, target)
     transforms = config.valid_lag_transforms(grain, target)
     transform_extra = max(
-        (k + max(t.window_size for t in ts) for k, ts in transforms.items()),
+        (k + max((_tfm_window(t) for t in ts), default=0) for k, ts in transforms.items()),
         default=0,
     )
     min_needed = max(max(lags), transform_extra)
 
     logger.info(
-        "L{} {}/{} | {} | {} series | h={} | train={:,} [{}  {} → {}] valid={:,}",
+        "L{} {}/{} | {} | {} series | bloque={} | train={:,} [{} → {}] valid={:,} test={:,}",
         level.id, level.name, grain, target, data.n_series,
-        h_max, n_train_rows, wlabel, train_start, train_end, len(data.valid_pd),
+        block, n_train_rows, train_start, train_end, len(data.valid_pd), len(data.test_pd),
     )
     if rows_per_series <= min_needed + 1:
         logger.warning(
-            "  SKIP: ventana {} insuficiente ({} períodos/serie, mínimo {})",
-            wlabel, rows_per_series, min_needed + 2,
+            "  SKIP: historia insuficiente ({} períodos/serie, mínimo {})",
+            rows_per_series, min_needed + 2,
         )
         return []
 
@@ -119,125 +124,98 @@ def _train_level(file: Path) -> list[dict]:
     fit_time_s = time.perf_counter() - t_fit
     del data.train_pd; gc.collect()
 
-    # Para h=1 (targets acumulados) truncar future_exog a 1 fila por serie
+    # future_exog cubre valid+test; se trunca a los h_predict pasos que hacen falta
     X_df = None
     if data.avail_exog and data.future_exog is not None:
-        if h_predict == 1:
-            X_df = (
-                data.future_exog
-                .sort_values("ds")
-                .groupby("unique_id", sort=False)
-                .head(1)
-                .reset_index(drop=True)
-            )
-        else:
-            X_df = data.future_exog
+        X_df = (
+            data.future_exog
+            .sort_values("ds")
+            .groupby("unique_id", sort=False)
+            .head(h_predict)
+            .reset_index(drop=True)
+        )
 
     preds_df = fcst.predict(h=h_predict, X_df=X_df)
 
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    model_path = config.MODELS_DIR / f"mlf_level_{level.id:02d}_{grain}_{wlabel}_{target}_{level.name}"
+    model_path = config.MODELS_DIR / f"mlf_level_{level.id:02d}_{grain}_{target}_{level.name}"
     fcst.save(str(model_path))
     del fcst; gc.collect()
 
-    results = []
-    for h in horizons:
-        if n is None:
-            m = _eval_horizon(preds_df, data.valid_pd, data.train_for_wrmsse, h)
-        else:
-            m = _eval_cum(preds_df, data.valid_pd)
+    preds_valid, preds_test = _split_preds(preds_df, block)
 
-        logger.debug(  # detalle por horizonte visible solo en nivel DEBUG
-            "  h={:>3} | WAPE: {:.1%}  BIAS: {:+.1%}  WRMSSE: {}",
-            h, m["wape"], m["bias"],
-            f"{m['wrmsse']:.3f}" if m["wrmsse"] == m["wrmsse"] else "n/a",
-        )
-        results.append({
-            "level_id": level.id, "level_name": level.name, "grain": grain,
-            "target": target,
-            "target_type": "sales" if n is None else "cumulative",
-            "window": wlabel, "horizon": h,
-            "n_series": data.n_series,
-            "n_rows": n_train_rows + len(data.valid_pd),
-            "fit_time_s": round(fit_time_s, 2),
-            **m,
-            "model_path": str(model_path),
-        })
+    results = []
+    for split_name, target_pd, preds_split in (
+        ("valid", data.valid_pd, preds_valid),
+        ("test", data.test_pd, preds_test),
+    ):
+        for h in horizons:
+            m = _eval_horizon(preds_split, target_pd, data.train_for_wrmsse, h)
+
+            logger.debug(  # detalle por horizonte visible solo en nivel DEBUG
+                "  {:>5} h={:>3} | WAPE: {:.1%}  BIAS: {:+.1%}  WRMSSE: {}",
+                split_name, h, m["wape"], m["bias"],
+                f"{m['wrmsse']:.3f}" if m["wrmsse"] == m["wrmsse"] else "n/a",
+            )
+            results.append({
+                "level_id": level.id, "level_name": level.name, "grain": grain,
+                "target": target,
+                "target_type": "sales" if n is None else "cumulative",
+                "split": split_name,
+                "horizon": h,
+                "n_series": data.n_series,
+                "n_rows": n_train_rows + len(data.valid_pd) + len(data.test_pd),
+                "fit_time_s": round(fit_time_s, 2),
+                **m,
+                "model_path": str(model_path),
+            })
 
     logger.debug("L{} {}/{}/{} listo en {:.1f}s", level.id, level.name, grain, target,
                  time.perf_counter() - t0)
     return results
 
 
-def _sort_key(f: Path):
-    """Ordena parquets por (level_id, grain, window, target_n) para log legible.
-
-    Sin esto glob devuelve orden alfabético: cum14 < cum21 < cum365 < cum42 < cum7.
-    Con esto: sales=0, cum7, cum14, cum21, ..., cum365.
-    """
-    parsed = parse_level_file(f)
-    if parsed is None:
-        return (999, "", "", 9999)
-    level, grain, wlabel, target = parsed
-    n = config.cum_n(target) or 0
-    grain_ord = 0 if grain == "daily" else 1
-    window_ord = {"w1y": 0, "w2y": 1, "w3y": 2, "w4y": 3, "wmax": 4}.get(wlabel, 99)
-    return (level.id, grain_ord, window_ord, n)
-
-
 def _print_group_summary(group_rows: list[dict]) -> None:
-    """Imprime tabla compacta con todos los resultados de un grupo (level/grain/window)."""
+    """Imprime tabla compacta con todos los resultados de un nivel/grain (todos los targets)."""
     if not group_rows:
         return
     r0 = group_rows[0]
-    header = (f"── L{r0['level_id']} {r0['level_name']} / {r0['grain']} / "
-              f"{r0['window']} ({r0['n_series']} series) ──")
+    header = f"── L{r0['level_id']} {r0['level_name']} / {r0['grain']} ({r0['n_series']} series) ──"
     logger.info("{}", "─" * max(len(header), 60))
     logger.info("{}", header)
-    logger.info("  {:>8}  {:>5}  {:>7}  {:>7}  {:>8}", "target", "h", "WAPE", "BIAS", "WRMSSE")
+    logger.info("  {:>8}  {:>5}  {:>5}  {:>7}  {:>7}  {:>8}", "target", "split", "h", "WAPE", "BIAS", "WRMSSE")
     for row in group_rows:
         wrmsse = f"{row['wrmsse']:.3f}" if row["wrmsse"] == row["wrmsse"] else "  n/a"
         logger.info(
-            "  {:>8}  {:>5}  {:>6.1%}  {:>+7.1%}  {:>8}",
-            row["target"], row["horizon"], row["wape"], row["bias"], wrmsse,
+            "  {:>8}  {:>5}  {:>5}  {:>6.1%}  {:>+7.1%}  {:>8}",
+            row["target"], row["split"], row["horizon"], row["wape"], row["bias"], wrmsse,
         )
 
 
 def main():
-    files = sorted(config.PROCESSED_DIR.glob("dataset_level_*.parquet"), key=_sort_key)
+    files = sorted(config.FEATURED_DIR.glob("dataset_level_*.parquet"))
     if not files:
-        logger.error("No hay parquets en {}. Ejecuta primero: make create_datasets",
-                     config.PROCESSED_DIR)
+        logger.error("No hay parquets en {}. Ejecuta primero: make process-data && make build-datasets",
+                     config.FEATURED_DIR)
         return
 
     results = []
-    group_rows: list[dict] = []
-    current_group: tuple = ()
 
     for i, file in enumerate(files, 1):
         parsed = parse_level_file(file)
         if parsed is None:
             logger.warning("  SKIP legacy: {}", file.name)
             continue
+        level, grain = parsed
 
-        level, grain, wlabel, _ = parsed
-        group_key = (level.id, grain, wlabel)
-
-        # Al cambiar de grupo, imprimir tabla del grupo anterior
-        if group_key != current_group and group_rows:
-            _print_group_summary(group_rows)
-            group_rows = []
-        current_group = group_key
-
-        try:
-            rows = _train_level(file)
-            results.extend(rows)
-            group_rows.extend(rows)
-        except Exception as e:
-            logger.exception("[{}/{}] error en {}: {}", i, len(files), file.name, e)
-
-    # Último grupo
-    if group_rows:
+        targets = ["sales"] + [f"cum{n}" for n in config.CUM_HORIZONS[grain]]
+        group_rows: list[dict] = []
+        for target in targets:
+            try:
+                group_rows.extend(_train_level(file, level, grain, target))
+            except Exception as e:
+                logger.exception("[{}/{}] error en {} target={}: {}", i, len(files), file.name, target, e)
+        results.extend(group_rows)
         _print_group_summary(group_rows)
 
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

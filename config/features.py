@@ -1,13 +1,24 @@
 """Configuración de features para mlforecast."""
-from mlforecast.lag_transforms import RollingMean, RollingMax
+import operator
+
+from mlforecast.lag_transforms import (
+    Combine, ExpandingMean, RollingMax, RollingMean, RollingMin, RollingStd, SeasonalRollingMean,
+)
 
 TARGET = "sales"
 
-# Ventana de entrenamiento en días hacia atrás desde el fin del dataset (None = máximo)
-TRAIN_WINDOW_DAYS = {
-    "daily":  [500, 730, 1095, None], # ~1.4y, 2y, 3y, max
-    "weekly": [1095, 1460, None],      # 3y, 4y, max
-}
+
+def _stats(*windows: int) -> list:
+    """Mean/std/min/max en cada window_size (volatilidad + nivel, no solo el promedio)."""
+    tfms = []
+    for w in windows:
+        tfms += [RollingMean(w), RollingStd(w), RollingMin(w), RollingMax(w)]
+    return tfms
+
+
+def _momentum(short: int, long: int) -> Combine:
+    """Media móvil corta / larga: >1 acelerando, <1 desacelerando (tendencia)."""
+    return Combine(RollingMean(short), RollingMean(long), operator.truediv)
 
 # Horizontes de validación por granularidad (días para daily, semanas para weekly)
 HORIZON = {
@@ -22,17 +33,31 @@ CUM_HORIZONS = {
     "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
 }
 
-# Lags que mlforecast genera automáticamente (en unidades de la frecuencia)
-# 365 incluido para que cum365 tenga al menos un lag seguro (k >= N=365)
+# Lags que mlforecast genera automáticamente (en unidades de la frecuencia).
+# 1-3/1-2 cortos para autocorrelación inmediata (solo target 'sales': para cumN los
+# filtra valid_lags por leakage). 364 (no 365) para alinear día-de-semana a un año.
 MLFORECAST_LAGS = {
-    "daily": [7, 14, 21, 28, 35, 42, 56, 91, 182, 364],
-    "weekly": [1, 2, 4, 8, 13, 17, 22, 26, 39, 52],
+    "daily": [1, 2, 3, 7, 14, 21, 28, 35, 42, 56, 91, 182, 364],
+    "weekly": [1, 2, 3, 4, 8, 13, 17, 22, 26, 39, 52],
 }
 
-# Transforms sobre el lag base (base_shift=28d → aplicados sobre lag 28; sin leakage)
+# Transforms por lag base (shift → sin leakage si shift >= N del target cumN, ver
+# valid_lag_transforms). Cada anchor: mean/std/min/max en varias ventanas + momentum
+# (corta/larga) donde aplica. 365/52 son el único anchor seguro para cum365/cum52.
 MLFORECAST_LAG_TRANSFORMS = {
-    "daily":  {28: [RollingMean(28), RollingMax(28), RollingMean(91), RollingMax(91)]},
-    "weekly": {1:  [RollingMean(4),  RollingMax(4),  RollingMean(13), RollingMax(13)]},
+    "daily": {
+        7:   _stats(7, 14),
+        28:  _stats(7, 28, 91) + [_momentum(7, 28)],
+        91:  _stats(28, 91) + [ExpandingMean()],
+        364: _stats(28, 91) + [SeasonalRollingMean(season_length=7, window_size=8)],
+        365: [RollingMean(28), RollingMean(91)],
+    },
+    "weekly": {
+        1:  _stats(4, 13),
+        4:  _stats(4, 13, 26) + [_momentum(4, 13)],
+        13: _stats(13, 26) + [ExpandingMean()],
+        52: _stats(4, 13),
+    },
 }
 
 # Features de calendario derivadas de ds por mlforecast
@@ -48,10 +73,15 @@ EXCLUDE_AS_STATIC = {"agg_id", "item_id"}
 PRICE_LAG_COL = {"daily": "price_lag_7", "weekly": "price_lag_1"}
 
 # Features exógenas time-varying (pasadas al modelo y a predict X_df)
+# Las últimas 9 (price_vs_max ... is_month_end) las añade src/features/engineer.py
+# sobre el dataset base; solo existen en artifacts/datasets/ (no en data/processed/).
 EXOG_COLS = [
     "avg_sell_price", "price_change", "price_vs_mean",
     "has_event", "has_event_2", "snap",
     "year", "month", "day", "dayofweek", "weekofyear", "is_weekend",
+    "price_vs_max", "days_since_release",
+    "event_type_1_enc", "event_type_2_enc", "days_since_event", "days_to_event",
+    "quarter", "is_month_start", "is_month_end",
 ]
 
 
