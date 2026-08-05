@@ -5,19 +5,21 @@ _SERIES_COL = "agg_id"
 _PRICE_COL = "avg_sell_price"
 
 
-def wape(y, p):
-    return np.abs(y - p).sum() / np.abs(y).sum()
+def wape(y_true, y_pred):
+    """WAPE: error absoluto total como fracción de las ventas totales."""
+    return np.abs(y_true - y_pred).sum() / np.abs(y_true).sum()
 
 
-def bias(y, p):
-    return (p - y).sum() / np.abs(y).sum()
+def bias(y_true, y_pred):
+    """Bias del forecast; positivo = sobreestima, normalizado por ventas."""
+    return (y_pred - y_true).sum() / np.abs(y_true).sum()
 
 
-def smape(y, p):
-    return np.mean(2 * np.abs(p - y) / (np.abs(y) + np.abs(p) + 1e-8))
+def smape(y_true, y_pred):
+    """SMAPE: error porcentual simétrico promedio (con epsilon)."""
+    denom = np.abs(y_true) + np.abs(y_pred) + 1e-8
+    return np.mean(2 * np.abs(y_pred - y_true) / denom)
 
-
-# ── M5 WRMSSE ────────────────────────────────────────────────────────────────
 
 def compute_scales(train_df, group_col=_SERIES_COL):
     """Denominador RMSSE por serie: MSE del naive one-step in-sample desde la
@@ -70,14 +72,18 @@ def calculate_wrmsse(valid_df, scales, weights=None, group_col=_SERIES_COL):
     return float(sum(rmsse[g] * w[g] / total for g in rmsse))
 
 
-def compute_wrmsse(train_df, valid_df, preds,
-                   group_col=_SERIES_COL, price_col=_PRICE_COL):
-    """Wrapper: adjunta forecast a valid_df y calcula WRMSSE."""
+def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
+                    price_col=_PRICE_COL):
+    """Adjunta las predicciones a valid_df y calcula el WRMSSE final."""
     if group_col not in valid_df.columns:
         return float("nan")
-    vdf = valid_df[[group_col, "date", "sales"]].copy()
-    vdf["forecast"] = preds
+
+    valid_with_preds = valid_df[[group_col, "date", "sales"]].copy()
+    valid_with_preds["forecast"] = preds
+
     scales = compute_scales(train_df, group_col)
-    weights = (compute_weights(train_df, price_col, group_col)
-               if price_col in train_df.columns else None)
-    return calculate_wrmsse(vdf, scales, weights, group_col)
+    weights = None
+    if price_col in train_df.columns:
+        weights = compute_weights(train_df, price_col, group_col)
+
+    return calculate_wrmsse(valid_with_preds, scales, weights, group_col)
