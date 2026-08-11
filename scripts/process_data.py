@@ -60,6 +60,10 @@ def _build_sql(lvl, grain: str) -> str:
 
 def generate_level(db_path, sql: str, out) -> None:
     with duckdb.connect(str(db_path)) as con:
+        # Límite conservador: el default (80% RAM) no cuenta el resto de procesos del
+        # host y provoca OOM-kill (Error 137) del proceso en niveles grandes (L12).
+        con.execute("PRAGMA memory_limit='3GB'")
+        con.execute("PRAGMA threads=4")
         con.execute(f"COPY ({sql}) TO '{out}' (FORMAT PARQUET, COMPRESSION ZSTD)")
 
 
