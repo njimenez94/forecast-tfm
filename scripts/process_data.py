@@ -21,6 +21,7 @@ import argparse
 import gc
 
 import duckdb
+import humanize
 from loguru import logger
 
 import config
@@ -42,13 +43,20 @@ def _periods(db_path) -> dict[str, int]:
 
 def show_counts(levels, db_path) -> None:
     periods = _periods(db_path)
-    logger.info(f"Periodos disponibles: {periods['daily']} días / {periods['weekly']} semanas")
-    logger.info(f"{'lvl':>3}  {'nombre':12} {'grain':7} {'series':>8} {'filas':>14}")
+    logger.info(
+        "Periodos disponibles: {} días / {} semanas",
+        humanize.intcomma(periods["daily"]), humanize.intcomma(periods["weekly"]),
+    )
     for lvl in levels:
         n = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
         for grain in lvl.grains:
             rows = n * periods[grain]
-            logger.info(f"{lvl.id:>3}  {lvl.name:12} {grain:7} {n:>8} {rows:>14,}")
+            logger.info(
+                "[L{} {}/{}] {} series × {} {} → {} filas",
+                lvl.id, lvl.name, grain,
+                humanize.intcomma(n), humanize.intcomma(periods[grain]), grain,
+                humanize.intcomma(rows),
+            )
 
 
 def _build_sql(lvl, grain: str) -> str:
@@ -69,18 +77,22 @@ def generate_level(db_path, sql: str, out) -> None:
 
 def generate(levels, db_path, processed_dir) -> None:
     processed_dir.mkdir(parents=True, exist_ok=True)
+    periods = _periods(db_path)
 
     for lvl in levels:
         n_series = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
         for grain in lvl.grains:
             out = config.dataset_level_path(lvl, grain)
+            n_periods = periods[grain]
+            n_rows = n_series * n_periods
+            logger.info("[L{} {}/{}] → {}", lvl.id, lvl.name, grain, out.name)
             logger.info(
-                "[L{} {}/{}] {} series → {}", lvl.id, lvl.name, grain, n_series, out.name,
+                "  {} series × {} {}", humanize.intcomma(n_series), humanize.intcomma(n_periods), grain,
             )
+            logger.info("  {} filas (aprox.)", humanize.intcomma(n_rows))
             sql = _build_sql(lvl, grain)
             generate_level(db_path, sql, out)
-            size_mb = out.stat().st_size / 1_048_576
-            logger.success("  listo  {:.1f} MB", size_mb)
+            logger.success("  listo  {}", humanize.naturalsize(out.stat().st_size, binary=True))
             gc.collect()
 
 
