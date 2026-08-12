@@ -1,4 +1,4 @@
-.PHONY: create-database process-data build-datasets train-datasets pipe
+.PHONY: create-database process-data build-datasets train-datasets
 
 PY := uv run python
 
@@ -13,6 +13,3 @@ build-datasets:
 
 train-datasets:
 	$(PY) -m scripts.train_datasets $(ARGS)
-
-data-pipe:
-	make create-database process-data build-datasets
