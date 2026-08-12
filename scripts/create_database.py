@@ -37,7 +37,8 @@ def load_files():
             con.execute(stmt)
 
         logger.info(f"Base de datos lista en '{db_path}'")
-        for (table,) in con.execute("SHOW TABLES").fetchall():
+        tables = sorted(t for (t,) in con.execute("SHOW TABLES").fetchall())
+        for table in tables:
             count = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             logger.info(f"  - {table}: {count:,} filas")
 
