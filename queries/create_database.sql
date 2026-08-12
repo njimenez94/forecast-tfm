@@ -36,7 +36,7 @@ CREATE TABLE dataset_raw AS
         s.cat_id,
         s.dept_id,
         s.item_id,
-        p.sell_price AS sell_price
+        p.sell_price AS sell_price,
         c.event_name_1,
         c.event_type_1,
         c.event_name_2,
@@ -46,7 +46,7 @@ CREATE TABLE dataset_raw AS
             WHEN 'TX' THEN c.snap_TX
             WHEN 'WI' THEN c.snap_WI
         END          AS snap,
-        s.sales      AS sales,
+        s.sales      AS sales
     FROM sales_train_evaluation s
     LEFT JOIN calendar c
         ON s.d = c.d
