@@ -47,7 +47,8 @@ CREATE TABLE dataset_raw AS
             WHEN 'TX' THEN c.snap_TX
             WHEN 'WI' THEN c.snap_WI
         END AS snap,
-        s.sales AS sales
+        s.sales AS units_sales,
+        IFNULL(s.sales, 0) * p.sell_price AS mnt_gross_sales
     FROM sales_train_evaluation s
     LEFT JOIN calendar c
         ON s.d = c.d
