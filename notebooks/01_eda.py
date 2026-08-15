@@ -221,22 +221,27 @@ def _(pd):
 
 @app.cell
 def _(pd):
-    def get_sample_ids(df_agg_id, conn, col_id='agg_id', n_samples=30, table='dataset_raw') -> pd.DataFrame:
-        """Devuelve una muestra de filas para `n_samples` ids top, medios y bottom (según orden de `df_agg_id`)."""
-        n = len(df_agg_id)
+    def get_sample_ids(df_ranked, conn, col_id='item_id', n_samples=30, table='dataset_raw') -> pd.DataFrame:
+        """Devuelve todas las filas de `table` para `n_samples` ids top, medios y bottom (según orden de `df_ranked`).
+
+        `col_id` suele ser `item_id`, para abarcar el producto completo (todas sus
+        combinaciones de tienda/estado, es decir, todas sus series `agg_id`), no una
+        muestra parcial de series sueltas.
+        """
+        n = len(df_ranked)
         mid_start = n // 2 - n_samples // 2
 
-        top = df_agg_id.iloc[:n_samples]
-        mid = df_agg_id.iloc[mid_start:mid_start + n_samples]
-        bottom = df_agg_id.iloc[-n_samples:]
+        top = df_ranked.iloc[:n_samples]
+        mid = df_ranked.iloc[mid_start:mid_start + n_samples]
+        bottom = df_ranked.iloc[-n_samples:]
 
-        series_id = (
+        selected_ids = (
             top[col_id].tolist() +
             mid[col_id].tolist() +
             bottom[col_id].tolist()
         )
 
-        ids_str = ", ".join(f"'{x}'" for x in series_id)
+        ids_str = ", ".join(f"'{x}'" for x in selected_ids)
 
         query = f"""
         SELECT * FROM {table}
@@ -245,7 +250,7 @@ def _(pd):
 
         df_sample = conn.sql(query).df()
 
-        return df_sample, series_id
+        return df_sample, selected_ids
 
     return (get_sample_ids,)
 
@@ -563,39 +568,35 @@ def _(mo):
 
 
 @app.cell
-def _(df_agg_id):
-    import humanize
+def _(df_item):
+    unique_products = df_item["item_id"].nunique()
 
-    unique_series = df_agg_id["agg_id"].nunique()
-
-
-    MB_PER_SERIES = 0.321
-    N_SAMPLES = 1020
+    MB_PER_SERIES = 3.2
+    N_SAMPLES = 100
     N_SELECTED = 3 * N_SAMPLES
 
-    n_selected = min(N_SELECTED, unique_series)
-    pct_dataset = n_selected / unique_series
-    size_bytes = n_selected * MB_PER_SERIES * 1024**2
+    n_products_selected = min(N_SELECTED, unique_products)
+    pct_dataset = n_products_selected / unique_products
+    mb_selected =  N_SELECTED * MB_PER_SERIES
 
     print(
-        f"Series únicas totales : {humanize.intcomma(unique_series)}\n"
-        f"Series seleccionadas  : {humanize.intcomma(n_selected)} ({pct_dataset:.2%} del total)\n"
-        f"Peso estimado         : {humanize.naturalsize(size_bytes, binary=True)} "
-        f"({MB_PER_SERIES:.3f} MB por serie)"
+        f"Productos únicos totales : {unique_products}\n"
+        f"Productos seleccionados  : {n_products_selected} ({pct_dataset:.2%} del total)\n "
+        f"MB seleccionado : {mb_selected} MB"
     )
-    return (n_selected,)
+    return (N_SAMPLES,)
 
 
 @app.cell
-def _(conn, df_agg_id, get_sample_ids, n_selected):
-    df_sample, series_id = get_sample_ids(df_agg_id, conn, col_id='agg_id', n_samples=n_selected, table='dataset_raw')
+def _(N_SAMPLES, conn, df_item, get_sample_ids):
+    df_sample, item_ids = get_sample_ids(df_item, conn, col_id='item_id', n_samples=N_SAMPLES, table='dataset_raw')
     df_sample.info()
-    return df_sample, series_id
+    return df_sample, item_ids
 
 
 @app.cell
-def _(df_agg_id, series_id):
-    df_agg_id[df_agg_id['agg_id'].isin(series_id)]
+def _(df_item, item_ids):
+    df_item[df_item['item_id'].isin(item_ids)]
     return
 
 
