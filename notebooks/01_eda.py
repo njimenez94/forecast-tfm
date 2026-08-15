@@ -77,7 +77,7 @@ def _(pd, plt, sns):
         plt.tight_layout()
         return fig
 
-    return
+    return (plot_share_pie,)
 
 
 @app.cell
@@ -87,39 +87,31 @@ def _(pd, plt, sns):
         label_col: str,
         value_col: str,
         top_n: int | None = None,
+        label_n: int | None = None,
         title: str | None = None,
         palette: str = "Set2",
-        figsize: tuple[float, float] = (9, None),
-        show_values: bool = True,
-        value_fmt: str = "{:,.0f}",
     ):
-        """Barras horizontales ordenadas de mayor a menor. `top_n=None` grafica todas las categorías."""
-        d = df[[label_col, value_col]].copy()
-        d[value_col] = pd.to_numeric(d[value_col])
-        d = d.groupby(label_col, as_index=False)[value_col].sum()
-
-        n_total = len(d)
-        is_truncated = top_n is not None and top_n < n_total
-        d = d.nlargest(n_total if top_n is None else min(top_n, n_total), value_col)
-
-        height = figsize[1] or max(3.0, 0.32 * len(d))
-        fig, ax = plt.subplots(figsize=(figsize[0], height))
-
-        sns.barplot(
-            data=d, y=label_col, x=value_col,
-            hue=label_col, palette=palette, legend=False, ax=ax,
+        """Horizontal bars sorted desc. top_n=None plots all; label_n=None labels all."""
+        s = (
+            df.groupby(label_col)[value_col]
+            .sum()
+            .sort_values(ascending=False)
+            .head(top_n)
         )
 
-        if show_values:
-            ax.bar_label(ax.containers[0], fmt=lambda v: value_fmt.format(v), padding=3, fontsize=9)
-            ax.margins(x=0.12)
+        n = len(s) if label_n is None else label_n
+        labels = [f"{v:,.0f}" if i < n else "" for i, v in enumerate(s.values)]
 
-        base = title or f"{value_col} por {label_col}"
-        ax.set_title(f"Top {top_n} — {base}" if is_truncated else base)
-        ax.set_xlabel("Venta bruta total")
-        ax.set_ylabel("")
-        fig.tight_layout()
-        return fig
+        plt.figure(figsize=(9, max(3.0, 0.32 * len(s))))
+        plt.barh(s.index.astype(str), s.values, color=sns.color_palette(palette, len(s)))
+        plt.gca().invert_yaxis()
+        plt.bar_label(plt.gca().containers[0], labels=labels, padding=3, fontsize=9)
+        plt.margins(x=0.12)
+        plt.title(title or f"{value_col} por {label_col}")
+        plt.xlabel(value_col)
+        plt.ylabel("")
+        plt.tight_layout()
+        return plt.gcf()
 
     return (plot_top_bars,)
 
@@ -260,9 +252,6 @@ def _(pd):
 
 @app.cell
 def _(mdates, pd, plt):
-
-
-
     def plot_series(
         df: pd.DataFrame,
         agg_id: str,
@@ -434,15 +423,15 @@ def _(conn, mo):
 def _(conn):
     df_stats = conn.sql("""
         SELECT COUNT(*)                      AS n_rows,
-               COUNT(DISTINCT item_id)       AS n_item_id,
-               COUNT(DISTINCT dept_id)       AS n_dept_id,
                COUNT(DISTINCT cat_id)        AS n_cat_id,
+               COUNT(DISTINCT dept_id)       AS n_dept_id,
+               COUNT(DISTINCT item_id)       AS n_item_id,
                COUNT(DISTINCT state_id)      AS n_state_id,
                COUNT(DISTINCT store_id)      AS n_store_id,
                COUNT(DISTINCT agg_id)        AS n_agg_id,
-               COUNT(DISTINCT date)          AS n_days,
                MIN(date)                     AS date_min,
-               MAX(date)                     AS date_max
+               MAX(date)                     AS date_max,
+               COUNT(DISTINCT date)          AS n_days
         FROM dataset_raw
     """).df()
 
@@ -454,6 +443,12 @@ def _(conn):
 def _(conn, get_agg_stats):
     df_cat = get_agg_stats(conn, ["cat_id"], count_cols=["store_id", "dept_id", "item_id"])
     df_cat
+    return (df_cat,)
+
+
+@app.cell
+def _(df_cat, plot_share_pie):
+    plot_share_pie(df_cat, value_col='mnt_gross_sales', label_col='cat_id', title="Distribución venta bruta categorías productos")
     return
 
 
@@ -461,6 +456,17 @@ def _(conn, get_agg_stats):
 def _(conn, get_agg_stats):
     df_dept = get_agg_stats(conn, ["cat_id", "dept_id"], count_cols=["store_id", "item_id"])
     df_dept
+    return (df_dept,)
+
+
+@app.cell
+def _(df_dept, plot_top_bars):
+    plot_top_bars(
+        df_dept,
+        value_col='mnt_gross_sales',
+        label_col='dept_id',
+        title="Venta bruta por departamento del producto"
+    )
     return
 
 
@@ -483,6 +489,12 @@ def _(df_item, plot_top_bars):
 def _(conn, get_agg_stats):
     df_state = get_agg_stats(conn, ["state_id"], count_cols=["store_id"])
     df_state
+    return (df_state,)
+
+
+@app.cell
+def _(df_state, plot_share_pie):
+    plot_share_pie(df_state, value_col='mnt_gross_sales', label_col='state_id', title="Distribución venta bruta por estado")
     return
 
 
@@ -508,6 +520,21 @@ def _(conn, get_agg_stats):
 
 
 @app.cell
+def _(df_agg_id, plot_top_bars):
+    plot_top_bars(df_agg_id, "agg_id", "mnt_gross_sales", top_n=20,
+                  title="Top 20 series por venta bruta")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Estudio demanda
+    """)
+    return
+
+
+@app.cell
 def _(add_sbc_class, conn, df_agg_id):
     df_agg_id_sbc = add_sbc_class(df_agg_id, conn)
     df_agg_id_sbc = df_agg_id.merge(df_agg_id_sbc)
@@ -523,13 +550,7 @@ def _(df_agg_id_sbc):
         cv2 = ('cv2','mean'),
         units_sales = ('units_sales', 'sum'),
         mnt_gross_sales = ('mnt_gross_sales', 'sum'),
-    ).round(2).to_clipboard(index=True)
-    return
-
-
-@app.cell
-def _(df_agg_id_sbc):
-    df_agg_id_sbc.to_clipboard(index=True)
+    ).round(2)#.to_clipboard(index=True)
     return
 
 
@@ -542,16 +563,34 @@ def _(mo):
 
 
 @app.cell
-def _(conn, df_agg_id, get_sample_ids):
-    df_sample, series_id = get_sample_ids(df_agg_id, conn, col_id='agg_id', n_samples=100, table='dataset_raw')
-    df_sample
-    return df_sample, series_id
+def _(df_agg_id):
+    import humanize
+
+    unique_series = df_agg_id["agg_id"].nunique()
+
+
+    MB_PER_SERIES = 0.321
+    N_SAMPLES = 1020
+    N_SELECTED = 3 * N_SAMPLES
+
+    n_selected = min(N_SELECTED, unique_series)
+    pct_dataset = n_selected / unique_series
+    size_bytes = n_selected * MB_PER_SERIES * 1024**2
+
+    print(
+        f"Series únicas totales : {humanize.intcomma(unique_series)}\n"
+        f"Series seleccionadas  : {humanize.intcomma(n_selected)} ({pct_dataset:.2%} del total)\n"
+        f"Peso estimado         : {humanize.naturalsize(size_bytes, binary=True)} "
+        f"({MB_PER_SERIES:.3f} MB por serie)"
+    )
+    return (n_selected,)
 
 
 @app.cell
-def _(df_agg_id_sbc, series_id):
-    df_agg_id_sbc[df_agg_id_sbc['agg_id'].isin(series_id)].to_clipboard(index=False)
-    return
+def _(conn, df_agg_id, get_sample_ids, n_selected):
+    df_sample, series_id = get_sample_ids(df_agg_id, conn, col_id='agg_id', n_samples=n_selected, table='dataset_raw')
+    df_sample.info()
+    return df_sample, series_id
 
 
 @app.cell
@@ -562,13 +601,19 @@ def _(df_agg_id, series_id):
 
 @app.cell
 def _(df_sample, plot_series):
-    plot_series(df_sample, "FOODS_3_090_WI_3", n=365*3)
+    plot_series(df_sample, "FOODS_3_090_WI_3", n=90)
     return
 
 
 @app.cell
 def _(df_sample, plot_series):
-    plot_series(df_sample, "FOODS_3_120_CA_3", n=365*3)
+    plot_series(df_sample, "FOODS_3_120_CA_3", n=90)
+    return
+
+
+@app.cell
+def _(df_sample, plot_series):
+    plot_series(df_sample, "FOODS_3_444_WI_2", n=90)
     return
 
 
