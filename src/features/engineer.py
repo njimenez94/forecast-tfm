@@ -4,12 +4,25 @@ calculó el SQL (precio, calendario básico, eventos crudos) y añade señales
 adicionales que solo se pueden calcular con historia completa de la serie
 (release, distancia a eventos, posición del precio, lags/rolling/momentum).
 """
+import re
+
 import pandas as pd
 import polars as pl
 
 from src.modeling.train import build_fcst
 
 _EVENT_TYPE_CODES = {"Sporting": 1, "Cultural": 2, "National": 3, "Religious": 4}
+
+# Eventos con cierre total de tienda (venta ~0 independientemente de la demanda
+# subyacente). Verificado empíricamente sobre data/processed: avg(sales | event)
+# de Christmas es 0.22 (vs. 492.58 global, n=350), 3 órdenes de magnitud por debajo
+# de cualquier otro evento (el segundo más bajo, Thanksgiving, promedia 301.86 --
+# reduce demanda pero no cierra). Se modela aparte de event_name_1/event_type_1
+# porque el efecto es un veto multiplicativo sobre la venta, no un desplazamiento
+# aditivo: un árbol de decisión necesita un split dedicado y con máxima señal
+# (no compartido con las ~30 categorías de event_name_1) para aislarlo del resto
+# de eventos, que sí son aditivos.
+_CLOSURE_EVENTS = {"Christmas"}
 
 
 def add_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -19,6 +32,12 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
     event_date = pl.when(is_event).then(pl.col("date"))
     release_date = pl.when(pl.col("avg_sell_price").is_not_null()).then(pl.col("date"))
     running_max_price = pl.col("avg_sell_price").cum_max().over("agg_id")
+    # is_in() sobre null devuelve null (lógica de Kleene), no false: sin fill_null
+    # los días sin evento (event_name_1/2 null) quedarían como null en vez de 0.
+    is_store_closed = (
+        pl.col("event_name_1").is_in(_CLOSURE_EVENTS).fill_null(False)
+        | pl.col("event_name_2").is_in(_CLOSURE_EVENTS).fill_null(False)
+    ).cast(pl.Int8)
 
     return df.with_columns(
         (pl.col("avg_sell_price") / running_max_price)
@@ -38,6 +57,7 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
         pl.col("date").dt.quarter().cast(pl.Int8).alias("quarter"),
         (pl.col("date").dt.day() == 1).cast(pl.Int8).alias("is_month_start"),
         (pl.col("date") == pl.col("date").dt.month_end()).cast(pl.Int8).alias("is_month_end"),
+        is_store_closed.alias("is_store_closed"),
     )
 
 
@@ -59,7 +79,36 @@ def add_lag_features(df: pd.DataFrame, grain: str, static_cols: list[str]) -> pd
     si el modelo elegido no los soporta.
     """
     fcst = build_fcst(grain, target="sales")
-    return fcst.preprocess(
+    out = fcst.preprocess(
         df, id_col="agg_id", time_col="date", target_col="sales", static_features=static_cols,
         dropna=False,
     )
+    return add_closure_interactions(out)
+
+
+# Columnas de "nivel" (lags y medias, en escala de ventas) generadas por mlforecast
+# -- se excluyen std/min/max (volatilidad, no nivel) y las ratio *_truediv_* (ya
+# normalizadas, gatearlas a 0 destruiría la señal en vez de corregirla).
+_LEVEL_COL_PATTERN = re.compile(
+    r"^(lag\d+|rolling_mean_lag\d+_window_size\d+"
+    r"|expanding_mean_lag\d+"
+    r"|seasonal_rolling_mean_lag\d+_season_length\d+_window_size\d+)$"
+)
+
+
+def add_closure_interactions(df: pd.DataFrame) -> pd.DataFrame:
+    """Interacción explícita cierre-de-tienda x nivel histórico: anula todas las
+    features de nivel (lags y medias moviles) cuando is_store_closed=1, en vez de
+    dejar que el árbol descubra ese cruce por su cuenta feature a feature. Con solo
+    ~350 filas de Christmas en todo el dataset, el split is_store_closed pierde
+    contra la señal masiva de cada lag/rolling individual sin esta ayuda explícita
+    -- neutralizar solo lag1 (la señal más fuerte) no basta: lag7, lag14, rolling
+    means, etc. siguen arrastrando la predicción hacia arriba.
+    """
+    if "is_store_closed" not in df.columns:
+        return df
+    is_open = 1 - df["is_store_closed"]
+    level_cols = [c for c in df.columns if _LEVEL_COL_PATTERN.match(c)]
+    for col in level_cols:
+        df[f"{col}_if_open"] = df[col] * is_open
+    return df
