@@ -52,6 +52,7 @@ def build_base_query(dims, grain: str) -> str:
         *events,
         snap_sel,
         "SUM(s.sales) AS sales",
+        "SUM(s.sales * p.sell_price) AS gross_sales",
         "SUM(s.sales * p.sell_price) / NULLIF(SUM(s.sales), 0) AS avg_sell_price",
     ]
     group = [f"s.{d}" for d in dims] + [time_group]
@@ -85,6 +86,7 @@ exog AS (
 SELECT
     agg_id, item_id, dept_id, cat_id, store_id, state_id, date,
     CAST(sales AS FLOAT) AS sales,
+    CAST(gross_sales AS FLOAT) AS gross_sales,
     CAST(avg_sell_price AS FLOAT) AS avg_sell_price,
     -- Price features (un solo LAG, sin power-set de lags de y)
     CAST(_plg AS FLOAT) AS price_lag_{price_lag},

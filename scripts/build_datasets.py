@@ -9,6 +9,7 @@ Uso:
 import argparse
 import warnings
 
+import pandas as pd
 from loguru import logger
 
 import config
@@ -48,6 +49,7 @@ def main():
         df = add_features(read_parquet_pl(file)).to_pandas()
         static_cols = [d for d in level.dims if d in df.columns and d not in config.EXCLUDE_AS_STATIC]
         final = add_lag_features(df, grain, static_cols)
+        final["date"] = pd.to_datetime(final["date"])
         final.to_parquet(out, compression="zstd", index=False)
         logger.success("  listo  {:.1f} MB  ({} cols, {} filas)",
                        out.stat().st_size / 1_048_576, final.shape[1], final.shape[0])
