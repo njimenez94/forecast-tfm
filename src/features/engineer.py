@@ -4,12 +4,26 @@ calculó el SQL (precio, calendario básico, eventos crudos) y añade señales
 adicionales que solo se pueden calcular con historia completa de la serie
 (release, distancia a eventos, posición del precio, lags/rolling/momentum).
 """
+import math
+
 import pandas as pd
 import polars as pl
 
 from src.modeling.train import build_fcst
 
 _EVENT_TYPE_CODES = {"Sporting": 1, "Cultural": 2, "National": 3, "Religious": 4}
+
+# Eventos sin cierre de tienda pero con caída de demanda clara y consistente,
+# verificada empíricamente sobre data/processed/level_09_daily_store_dept.parquet:
+# avg(sales | evento) de Thanksgiving es 301.86 (-39% vs 492.58 global, n=350) y de
+# NewYear 368.12 (-25%). El resto de los ~30 eventos del calendario cae dentro de
+# +-20% del promedio global, indistinguible de ruido a este nivel de agregación, así
+# que no se generaliza a los 30 (evita columnas dispersas sin señal real).
+_HIGH_IMPACT_EVENTS = ("Thanksgiving", "NewYear")
+
+# Ventana (días) de la aproximación de año calendario usada para las features
+# cíclicas de día del año (365.25 amortigua el corrimiento por años bisiestos).
+_DAYS_PER_YEAR = 365.25
 
 # Eventos con cierre total de tienda (venta ~0 independientemente de la demanda
 # subyacente). Verificado empíricamente sobre data/processed: avg(sales | event)
@@ -30,6 +44,21 @@ _CLOSURE_SALES_RATIO = 0.05
 # Ventana (días) alrededor de un cierre en la que days_to_closure lleva valor; fuera
 # de ella, NaN.
 _CLOSURE_WINDOW = 7
+
+
+def _event_distance_features(event_name: str) -> tuple[pl.Expr, pl.Expr]:
+    """days_since_<evento>/days_to_<evento>: mismo patrón forward_fill/backward_fill
+    que days_since_event/days_to_event, pero acotado a un único nombre de evento
+    (event_name_1 o event_name_2), para las señales de _HIGH_IMPACT_EVENTS."""
+    is_this_event = (
+        (pl.col("event_name_1") == event_name) | (pl.col("event_name_2") == event_name)
+    ).fill_null(False)
+    event_date = pl.when(is_this_event).then(pl.col("date"))
+    days_since = (pl.col("date") - event_date.forward_fill().over("agg_id")) \
+        .dt.total_days().cast(pl.Int32)
+    days_to = (event_date.backward_fill().over("agg_id") - pl.col("date")) \
+        .dt.total_days().cast(pl.Int32)
+    return days_since, days_to
 
 
 def add_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -77,7 +106,31 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
         .otherwise(None)
     )
 
-    return df.with_columns(
+    # Codificación cíclica del calendario (sin/cos): dow/month/day-of-year como
+    # enteros lineales rompen la continuidad dic->ene o dom->lun; el par sin/cos
+    # preserva la distancia real entre extremos del período.
+    dow = pl.col("date").dt.weekday().cast(pl.Float64)  # 1=lunes..7=domingo
+    month = pl.col("date").dt.month().cast(pl.Float64)
+    doy = pl.col("date").dt.ordinal_day().cast(pl.Float64)
+    dow_angle = 2 * math.pi * (dow - 1) / 7
+    month_angle = 2 * math.pi * (month - 1) / 12
+    doy_angle = 2 * math.pi * (doy - 1) / _DAYS_PER_YEAR
+
+    # Volatilidad de precio: desviación estándar móvil de 90 días (nivel ya lo da
+    # price_vs_max/price_vs_mean; esto captura si el precio ha estado fluctuando --
+    # promociones frecuentes -- vs. estable).
+    price_volatility = (
+        pl.col("avg_sell_price").rolling_std(window_size=90, min_samples=2).over("agg_id")
+    )
+
+    high_impact_exprs = {}
+    for event_name in _HIGH_IMPACT_EVENTS:
+        days_since, days_to = _event_distance_features(event_name)
+        key = event_name.lower()
+        high_impact_exprs[f"days_since_{key}"] = days_since.alias(f"days_since_{key}")
+        high_impact_exprs[f"days_to_{key}"] = days_to.alias(f"days_to_{key}")
+
+    df = df.with_columns(
         (pl.col("avg_sell_price") / running_max_price)
             .replace([float("inf"), float("-inf")], None)
             .cast(pl.Float32)
@@ -97,11 +150,94 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
         (pl.col("date").dt.day() == 1).cast(pl.Int8).alias("is_month_start"),
         (pl.col("date") == pl.col("date").dt.month_end()).cast(pl.Int8).alias("is_month_end"),
         is_store_closed.alias("is_store_closed"),
+        dow_angle.sin().cast(pl.Float32).alias("dow_sin"),
+        dow_angle.cos().cast(pl.Float32).alias("dow_cos"),
+        month_angle.sin().cast(pl.Float32).alias("month_sin"),
+        month_angle.cos().cast(pl.Float32).alias("month_cos"),
+        doy_angle.sin().cast(pl.Float32).alias("doy_sin"),
+        doy_angle.cos().cast(pl.Float32).alias("doy_cos"),
+        price_volatility.cast(pl.Float32).alias("price_volatility"),
+        *high_impact_exprs.values(),
     ).with_columns(
         pl.when(is_store_closed.cast(pl.Boolean)).then(0.0).otherwise(pl.col("sales"))
             .alias("sales"),
         pl.when(is_store_closed.cast(pl.Boolean)).then(0.0).otherwise(pl.col("gross_sales"))
             .alias("gross_sales"),
+    )
+
+    return add_intermittency_features(df)
+
+
+# Umbral (días) de racha de venta cero, con la serie ya en periodo activo (precio no
+# nulo) y sin evento de cierre, a partir del cual se marca como probable quiebre de
+# stock en vez de falta de demanda genuina.
+_STOCKOUT_STREAK_THRESHOLD = 7
+
+
+def add_intermittency_features(df: pl.DataFrame) -> pl.DataFrame:
+    """Señales de intermitencia de demanda (zero_streak, pct_zero, ADI, CV²) y un
+    proxy de quiebre de stock. df ya está ordenado por (agg_id, date) y trae 'sales'
+    final (post zero-out de is_store_closed) y 'days_since_release'.
+
+    Todo se calcula sobre pl.col("sales").shift(1).over("agg_id") -- el historial
+    hasta *ayer*, nunca incluyendo la venta del día actual -- para no leakear el
+    target: sin el shift, zero_streak==0 revelaría trivialmente que sales[t] > 0.
+    """
+    sales_prev = pl.col("sales").shift(1).over("agg_id")
+    is_zero_prev = (sales_prev == 0).cast(pl.Float32)
+
+    # Fecha de la última venta positiva estrictamente anterior a la fila actual:
+    # se calcula el forward_fill incluyendo el día de hoy y luego se desplaza el
+    # resultado un puesto, en vez de desplazar sales antes del forward_fill, porque
+    # así conviven en una sola expresión sin encadenar dos .over() anidados.
+    nonzero_date_incl_today = pl.when(pl.col("sales") > 0).then(pl.col("date"))
+    last_sale_date_prev = nonzero_date_incl_today.forward_fill().over("agg_id").shift(1).over("agg_id")
+    days_since_last_sale = (pl.col("date") - last_sale_date_prev).dt.total_days().cast(pl.Int32)
+    zero_streak = (days_since_last_sale - 1).clip(lower_bound=0)
+
+    pct_zero_28 = is_zero_prev.rolling_mean(window_size=28, min_samples=1).over("agg_id")
+    pct_zero_90 = is_zero_prev.rolling_mean(window_size=90, min_samples=1).over("agg_id")
+
+    # ADI expandiendo: días transcurridos desde el release (hasta ayer) / nº de días
+    # con venta positiva (hasta ayer). Cuanto mayor, más intermitente la serie.
+    days_elapsed_prev = (pl.col("days_since_release") - 1).clip(lower_bound=0)
+    nonzero_count_prev = (
+        (pl.col("sales") > 0).cast(pl.Int32).cum_sum().over("agg_id").shift(1).over("agg_id")
+    )
+    adi_expanding = (
+        (days_elapsed_prev / nonzero_count_prev)
+        .replace([float("inf"), float("-inf")], None)
+        .cast(pl.Float32)
+    )
+
+    # CV² (coef. de variación al cuadrado) de la venta en la ventana de 90 días
+    # previos. Aproximación sobre todos los días de la ventana (no solo los de venta
+    # positiva, que sería el CV² "puro" de tamaño de demanda de la literatura
+    # Syntetos-Boylan-Croston) -- mucho más simple de calcular vía rolling_std/mean
+    # nativos de polars y sigue distinguiendo series erráticas de suaves.
+    sales_prev_std = pl.col("sales").shift(1).over("agg_id") \
+        .rolling_std(window_size=90, min_samples=2).over("agg_id")
+    sales_prev_mean = pl.col("sales").shift(1).over("agg_id") \
+        .rolling_mean(window_size=90, min_samples=2).over("agg_id")
+    cv2_90 = (
+        ((sales_prev_std / sales_prev_mean) ** 2)
+        .replace([float("inf"), float("-inf")], None)
+        .cast(pl.Float32)
+    )
+
+    is_likely_stockout = (
+        pl.col("avg_sell_price").is_not_null()
+        & (zero_streak >= _STOCKOUT_STREAK_THRESHOLD)
+        & ~pl.col("is_store_closed").cast(pl.Boolean)
+    ).fill_null(False).cast(pl.Int8)
+
+    return df.with_columns(
+        zero_streak.alias("zero_streak"),
+        pct_zero_28.alias("pct_zero_28"),
+        pct_zero_90.alias("pct_zero_90"),
+        adi_expanding.alias("adi_expanding"),
+        cv2_90.alias("cv2_90"),
+        is_likely_stockout.alias("is_likely_stockout"),
     )
 
 

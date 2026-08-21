@@ -73,8 +73,18 @@ EXCLUDE_AS_STATIC = {"agg_id", "item_id"}
 PRICE_LAG_COL = {"daily": "price_lag_7", "weekly": "price_lag_1"}
 
 # Features exógenas time-varying (pasadas al modelo y a predict X_df)
-# Las últimas 9 (price_vs_max ... is_month_end) las añade src/features/engineer.py
-# sobre el dataset base; solo existen en artifacts/datasets/ (no en data/processed/).
+# Las que siguen a "price_vs_max" las añade src/features/engineer.py sobre el
+# dataset base; solo existen en artifacts/datasets/ (no en data/processed/).
+#
+# zero_streak/pct_zero_28/pct_zero_90/adi_expanding/cv2_90/is_likely_stockout son
+# cuasi-estáticas: dependen de sales histórica (hasta ayer, sin leakage), no de
+# calendario/precio futuro-conocido. Hoy el pipeline de train_datasets.py solo hace
+# backtest (predict sobre fechas históricas ya conocidas en valid/test, no forecast
+# real a futuro), así que valid/test ya traen estas columnas calculadas
+# correctamente desde el parquet -- no hace falta ningún tratamiento especial en
+# src/data/split.py. Si en el futuro se agrega un script de forecast genuino más
+# allá de la última fecha del dataset, ahí sí habría que congelar estas columnas al
+# último valor conocido en vez de dejarlas NaN.
 EXOG_COLS = [
     "avg_sell_price", "price_change", "price_vs_mean",
     "has_event", "has_event_2", "snap",
@@ -82,6 +92,12 @@ EXOG_COLS = [
     "price_vs_max", "days_since_release",
     "event_type_1_enc", "event_type_2_enc", "days_since_event", "days_to_event",
     "quarter", "is_month_start", "is_month_end",
+    "dow_sin", "dow_cos", "month_sin", "month_cos", "doy_sin", "doy_cos",
+    "price_volatility",
+    "days_since_thanksgiving", "days_to_thanksgiving",
+    "days_since_newyear", "days_to_newyear",
+    "zero_streak", "pct_zero_28", "pct_zero_90", "adi_expanding", "cv2_90",
+    "is_likely_stockout",
 ]
 
 

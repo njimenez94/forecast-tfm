@@ -3,7 +3,12 @@
 SEED = 42
 
 LGBM_PARAMS = {
-    "objective": "regression_l2",
+    "objective": "tweedie",
+    # Encontrado por Optuna sobre WRMSSE/WAPE en notebooks/02_model.ipynb (celda de
+    # búsqueda de hiperparámetros): tweedie maneja mejor la intermitencia
+    # (abundancia de ceros) que regression_l2, sobre todo en periodos post-evento
+    # (ver days_to_closure/days_to_thanksgiving/days_to_newyear).
+    "tweedie_variance_power": 1.3124217733388135,
     "metric": "mae",
     "learning_rate": 0.08,
     "n_estimators": 200,
