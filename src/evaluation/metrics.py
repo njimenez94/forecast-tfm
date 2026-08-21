@@ -97,3 +97,67 @@ def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
         weights = compute_weights(train_df, price_col, group_col)
 
     return calculate_wrmsse(valid_with_preds, scales, weights, group_col)
+
+
+def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sales",
+                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",)):
+    """Clipa cierres, calcula WAPE/WRMSSE globales y arma el detalle de error por fila.
+
+    Pensada para reusarse en cualquier etapa (modelo simple, post-Optuna, modelo
+    final): recibe el modelo ya evaluado (y_pred) en vez de reentrenar.
+    """
+    y_pred = clip_closed_stores(eval_df, y_pred)
+
+    metrics = {
+        "wape": wape(y_true, y_pred),
+        "wrmsse": compute_wrmsse(train_df, eval_df, y_pred),
+    }
+
+    df_pred = eval_df.copy()
+    df_pred["y_pred"] = np.round(y_pred, 0).astype(float)
+    df_pred["error"] = df_pred[target_col] - df_pred["y_pred"]
+    df_pred["abs_error"] = df_pred["error"].abs()
+    df_pred["wape"] = df_pred["abs_error"] / df_pred[target_col].abs()
+    df_pred["bias"] = -df_pred["error"] / df_pred[target_col].abs()
+
+    cols = list(id_cols) + [target_col] + list(extra_cols) + ["y_pred", "error", "abs_error", "wape", "bias"]
+    df_pred = df_pred[cols].sort_values("abs_error")
+
+    return metrics, df_pred
+
+
+def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIES_COL,
+                          weight_level=("date",)):
+    """WAPE/bias/WRMSSE por serie a partir del detalle de predicciones (salida de
+    `build_predictions_report`, debe traer las columnas `y_pred` y `gross_sales`).
+
+    `weight_level` define cómo se pondera el error dentro del WRMSSE de cada serie:
+    (group_col,) -> sin ponderación real (peso constante = total de la serie, igual a RMSSE)
+    ("date",) -> pondera cada fecha por su gross_sales (días de más venta pesan más)
+    (group_col, "date") -> pondera cada fila por su propio gross_sales
+    """
+    weight_level = list(weight_level)
+    scales = compute_scales(train_df, group_col)
+
+    def _wrmsse_for_group(g):
+        scale = scales.get(g.name)
+        if not scale:
+            return np.nan
+        weights = g.groupby(weight_level)["gross_sales"].transform("sum").to_numpy()
+        sq_err = (g[target_col].to_numpy() - g["y_pred"].to_numpy()) ** 2
+        rmse = np.sqrt(np.average(sq_err, weights=weights))
+        return float(rmse / np.sqrt(scale))
+
+    by_series = df_pred.groupby(group_col)
+    gross_sales_by_series = by_series["gross_sales"].sum()
+
+    df_metrics = pd.DataFrame({
+        "sales": by_series[target_col].sum(),
+        "gross_sales": gross_sales_by_series,
+        "gross_sales_pct": gross_sales_by_series / df_pred["gross_sales"].sum(),
+        "wape": by_series.apply(lambda g: wape(g[target_col], g["y_pred"])),
+        "bias": by_series.apply(lambda g: bias(g[target_col], g["y_pred"])),
+        "wrmsse": by_series.apply(_wrmsse_for_group),
+    })
+
+    return df_metrics.sort_values("gross_sales", ascending=False)

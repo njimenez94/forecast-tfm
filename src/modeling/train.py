@@ -21,7 +21,11 @@ def build_fcst(grain: str, target: str = "sales") -> MLForecast:
 
 
 def encode_static(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Deja las columnas estáticas (item_id/dept_id/...) como dtype 'category': el
+    wrapper sklearn de LightGBM detecta categorical_feature='auto' sobre columnas
+    category y hace splits nativos por categoría, en vez de tratarlas como enteros
+    ordinales si se convirtieran a .cat.codes."""
     for col in cols:
         if not pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].astype(str).astype("category").cat.codes
+            df[col] = df[col].astype(str).astype("category")
     return df
