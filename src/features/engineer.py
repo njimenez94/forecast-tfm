@@ -4,8 +4,6 @@ calculó el SQL (precio, calendario básico, eventos crudos) y añade señales
 adicionales que solo se pueden calcular con historia completa de la serie
 (release, distancia a eventos, posición del precio, lags/rolling/momentum).
 """
-import re
-
 import pandas as pd
 import polars as pl
 
@@ -19,10 +17,19 @@ _EVENT_TYPE_CODES = {"Sporting": 1, "Cultural": 2, "National": 3, "Religious": 4
 # de cualquier otro evento (el segundo más bajo, Thanksgiving, promedia 301.86 --
 # reduce demanda pero no cierra). Se modela aparte de event_name_1/event_type_1
 # porque el efecto es un veto multiplicativo sobre la venta, no un desplazamiento
-# aditivo: un árbol de decisión necesita un split dedicado y con máxima señal
-# (no compartido con las ~30 categorías de event_name_1) para aislarlo del resto
-# de eventos, que sí son aditivos.
+# aditivo.
 _CLOSURE_EVENTS = {"Christmas"}
+
+# is_store_closed exige, además del evento, que la venta observada ya sea marginal
+# frente al nivel típico de esa serie (< 5% de su media). El evento por sí solo no
+# basta como prueba de cierre en grains agregados (state/total), donde Christmas cae
+# pero la suma de decenas de tiendas sigue siendo sustancial -- solo se fuerza a 0
+# cuando el propio dato ya corrobora el cierre.
+_CLOSURE_SALES_RATIO = 0.05
+
+# Ventana (días) alrededor de un cierre en la que days_to_closure lleva valor; fuera
+# de ella, NaN.
+_CLOSURE_WINDOW = 7
 
 
 def add_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -34,10 +41,41 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
     running_max_price = pl.col("avg_sell_price").cum_max().over("agg_id")
     # is_in() sobre null devuelve null (lógica de Kleene), no false: sin fill_null
     # los días sin evento (event_name_1/2 null) quedarían como null en vez de 0.
-    is_store_closed = (
+    is_closure_event = (
         pl.col("event_name_1").is_in(_CLOSURE_EVENTS).fill_null(False)
         | pl.col("event_name_2").is_in(_CLOSURE_EVENTS).fill_null(False)
-    ).cast(pl.Int8)
+    )
+    mean_sales = pl.col("sales").mean().over("agg_id")
+    is_store_closed = (
+        is_closure_event & (pl.col("sales") < _CLOSURE_SALES_RATIO * mean_sales)
+    ).fill_null(False).cast(pl.Int8)
+
+    # Distancia firmada al cierre más cercano (positiva = faltan N días, negativa =
+    # pasaron N días, 0 el propio día de cierre), acotada a +-_CLOSURE_WINDOW y NaN
+    # fuera de esa ventana. A diferencia de days_since_event/days_to_event (genéricos,
+    # sin signo, uno por cada evento) esta es una única señal específica de cierres,
+    # pensada para que el árbol distinga "día después del cierre" (rebote de demanda)
+    # de un día normal sin depender de lag1, que en esos días vale 0 por el zero-out
+    # de is_store_closed. Sin acotar, el rango real (+-180 días entre un Christmas y
+    # el siguiente) diluye la señal entre cientos de valores similares en otras
+    # temporadas y el árbol no la usa; NaN fuera de la ventana la deja casi siempre
+    # nula salvo justo alrededor del cierre, mucho más fácil de explotar en un split.
+    closure_date = pl.when(is_closure_event).then(pl.col("date"))
+    days_since_closure = (pl.col("date") - closure_date.forward_fill().over("agg_id")) \
+        .dt.total_days().cast(pl.Int32)
+    days_to_closure = (closure_date.backward_fill().over("agg_id") - pl.col("date")) \
+        .dt.total_days().cast(pl.Int32)
+    signed_days_to_closure = (
+        pl.when(days_to_closure.is_null()).then(-days_since_closure)
+        .when(days_since_closure.is_null()).then(days_to_closure)
+        .when(days_to_closure <= days_since_closure).then(days_to_closure)
+        .otherwise(-days_since_closure)
+    )
+    signed_days_to_closure = (
+        pl.when(signed_days_to_closure.abs() <= _CLOSURE_WINDOW)
+        .then(signed_days_to_closure)
+        .otherwise(None)
+    )
 
     return df.with_columns(
         (pl.col("avg_sell_price") / running_max_price)
@@ -50,6 +88,7 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
             .dt.total_days().cast(pl.Int32).alias("days_since_event"),
         (event_date.backward_fill().over("agg_id") - pl.col("date"))
             .dt.total_days().cast(pl.Int32).alias("days_to_event"),
+        signed_days_to_closure.alias("days_to_closure"),
         pl.col("event_type_1").replace_strict(_EVENT_TYPE_CODES, default=0, return_dtype=pl.Int8)
             .alias("event_type_1_enc"),
         pl.col("event_type_2").replace_strict(_EVENT_TYPE_CODES, default=0, return_dtype=pl.Int8)
@@ -58,6 +97,11 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
         (pl.col("date").dt.day() == 1).cast(pl.Int8).alias("is_month_start"),
         (pl.col("date") == pl.col("date").dt.month_end()).cast(pl.Int8).alias("is_month_end"),
         is_store_closed.alias("is_store_closed"),
+    ).with_columns(
+        pl.when(is_store_closed.cast(pl.Boolean)).then(0.0).otherwise(pl.col("sales"))
+            .alias("sales"),
+        pl.when(is_store_closed.cast(pl.Boolean)).then(0.0).otherwise(pl.col("gross_sales"))
+            .alias("gross_sales"),
     )
 
 
@@ -79,36 +123,7 @@ def add_lag_features(df: pd.DataFrame, grain: str, static_cols: list[str]) -> pd
     si el modelo elegido no los soporta.
     """
     fcst = build_fcst(grain, target="sales")
-    out = fcst.preprocess(
+    return fcst.preprocess(
         df, id_col="agg_id", time_col="date", target_col="sales", static_features=static_cols,
         dropna=False,
     )
-    return add_closure_interactions(out)
-
-
-# Columnas de "nivel" (lags y medias, en escala de ventas) generadas por mlforecast
-# -- se excluyen std/min/max (volatilidad, no nivel) y las ratio *_truediv_* (ya
-# normalizadas, gatearlas a 0 destruiría la señal en vez de corregirla).
-_LEVEL_COL_PATTERN = re.compile(
-    r"^(lag\d+|rolling_mean_lag\d+_window_size\d+"
-    r"|expanding_mean_lag\d+"
-    r"|seasonal_rolling_mean_lag\d+_season_length\d+_window_size\d+)$"
-)
-
-
-def add_closure_interactions(df: pd.DataFrame) -> pd.DataFrame:
-    """Interacción explícita cierre-de-tienda x nivel histórico: anula todas las
-    features de nivel (lags y medias moviles) cuando is_store_closed=1, en vez de
-    dejar que el árbol descubra ese cruce por su cuenta feature a feature. Con solo
-    ~350 filas de Christmas en todo el dataset, el split is_store_closed pierde
-    contra la señal masiva de cada lag/rolling individual sin esta ayuda explícita
-    -- neutralizar solo lag1 (la señal más fuerte) no basta: lag7, lag14, rolling
-    means, etc. siguen arrastrando la predicción hacia arriba.
-    """
-    if "is_store_closed" not in df.columns:
-        return df
-    is_open = 1 - df["is_store_closed"]
-    level_cols = [c for c in df.columns if _LEVEL_COL_PATTERN.match(c)]
-    for col in level_cols:
-        df[f"{col}_if_open"] = df[col] * is_open
-    return df

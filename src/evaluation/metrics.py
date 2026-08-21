@@ -72,6 +72,16 @@ def calculate_wrmsse(valid_df, scales, weights=None, group_col=_SERIES_COL):
     return float(sum(rmsse[g] * w[g] / total for g in rmsse))
 
 
+def clip_closed_stores(valid_df, preds):
+    """Fuerza el forecast a 0 en filas con is_store_closed=1 (cierre conocido de
+    antemano vía calendario, no derivado de las ventas: no hay leakage). Cubre en
+    predicción lo que el procesamiento ya hace en el target de entrenamiento."""
+    preds = np.asarray(preds, dtype=float)
+    if "is_store_closed" in valid_df.columns:
+        preds = np.where(valid_df["is_store_closed"].to_numpy() == 1, 0.0, preds)
+    return preds
+
+
 def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
                     price_col=_PRICE_COL):
     """Adjunta las predicciones a valid_df y calcula el WRMSSE final."""
@@ -79,7 +89,7 @@ def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
         return float("nan")
 
     valid_with_preds = valid_df[[group_col, "date", "sales"]].copy()
-    valid_with_preds["forecast"] = preds
+    valid_with_preds["forecast"] = clip_closed_stores(valid_df, preds)
 
     scales = compute_scales(train_df, group_col)
     weights = None
