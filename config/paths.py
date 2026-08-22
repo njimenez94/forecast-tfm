@@ -18,7 +18,7 @@ MODELS_DIR = ARTIFACTS_DIR / "models"
 
 # artifacts/datasets/: data/processed/ + features derivadas (src/features/engineer.py),
 # listo para entrenar. Generado por scripts/build_datasets.py (make build-datasets).
-FEATURED_DIR = ARTIFACTS_DIR / "datasets"
+DATASETS = ROOT / "data" / "datasets"
 
 
 def dataset_level_path(level, grain: str) -> Path:
@@ -26,4 +26,4 @@ def dataset_level_path(level, grain: str) -> Path:
 
 
 def featured_level_path(level, grain: str) -> Path:
-    return FEATURED_DIR / f"dataset_level_{level.id:02d}_{grain}_{level.name}.parquet"
+    return DATASETS / f"dataset_level_{level.id:02d}_{grain}_{level.name}.parquet"

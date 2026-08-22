@@ -33,7 +33,7 @@ def main():
         logger.error("No hay parquets en {}. Ejecuta primero: make process-data", config.PROCESSED_DIR)
         return
 
-    config.FEATURED_DIR.mkdir(parents=True, exist_ok=True)
+    config.DATASETS.mkdir(parents=True, exist_ok=True)
 
     for file in files:
         parsed = parse_level_file(file)
