@@ -357,7 +357,12 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
 def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIES_COL,
                           weight_level=("date",)):
     """WAPE/bias/WRMSSE por serie a partir del detalle de predicciones (salida de
-    `build_predictions_report`, debe traer las columnas `y_pred` y `gross_sales`).
+    `build_predictions_report`, debe traer las columnas `y_pred`, `error`,
+    `abs_error` y `gross_sales`). Incluye también las sumas por serie de
+    `y_pred`/`error`/`abs_error` para poder inspeccionar la predicción cruda,
+    no solo las métricas normalizadas; y el conteo de días medidos (`n_days`)
+    y días con venta > 0 (`n_days_with_sales`) por serie, útil para distinguir
+    series intermitentes de series con demanda continua.
 
     `weight_level` define cómo se pondera el error dentro del WRMSSE de cada serie:
     (group_col,) -> sin ponderación real (peso constante = total de la serie, igual a RMSSE)
@@ -392,7 +397,12 @@ def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIE
     gross_sales_by_series = by_series["gross_sales"].sum()
 
     df_metrics = pd.DataFrame({
+        "n_days": by_series.size(),
+        "n_days_with_sales": by_series[target_col].apply(lambda s: int((s > 0).sum())),
         "sales": by_series[target_col].sum(),
+        "y_pred": by_series["y_pred"].sum(),
+        "error": by_series["error"].sum(),
+        "abs_error": by_series["abs_error"].sum(),
         "gross_sales": gross_sales_by_series,
         "gross_sales_pct": gross_sales_by_series / df_pred["gross_sales"].sum(),
         "wape": by_series.apply(lambda g: wape(g[target_col], g["y_pred"])),
@@ -405,3 +415,30 @@ def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIE
     })
 
     return df_metrics.sort_values("gross_sales", ascending=False)
+
+
+def build_all_series_metrics(train_df, valid_df, y_true, predictions, target_col="sales",
+                              group_col=_SERIES_COL, weight_level=("date",),
+                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",)):
+    """`build_series_metrics` (WAPE/bias/WRMSSE/MASE/SPEC por serie) para varios
+    modelos a la vez, concatenados en un único DataFrame con columna `model`.
+
+    Pensada para comparar todos los modelos de `model_results` (no solo el
+    modelo final) a nivel de serie, con las mismas métricas.
+
+    `predictions`: dict {nombre_modelo: y_pred_valid} (mismo `y_true`/`valid_df`
+    para todos, p.ej. el set de validación usado en `evaluate_predictions`).
+    """
+    frames = []
+    for name, y_pred in predictions.items():
+        _, df_pred = build_predictions_report(
+            train_df, valid_df, y_true, y_pred, target_col=target_col,
+            id_cols=id_cols, extra_cols=extra_cols,
+        )
+        df_metrics = build_series_metrics(
+            train_df, df_pred, target_col=target_col, group_col=group_col,
+            weight_level=weight_level,
+        )
+        frames.append(df_metrics.reset_index().assign(model=name))
+
+    return pd.concat(frames, ignore_index=True)
