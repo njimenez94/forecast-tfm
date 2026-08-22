@@ -99,6 +99,41 @@ def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
     return calculate_wrmsse(valid_with_preds, scales, weights, group_col)
 
 
+def wape_metric(y_true, y_pred):
+    """Eval metric de LightGBM (name, score, is_higher_better) para WAPE."""
+    return "wape", wape(y_true, y_pred), False
+
+
+def make_wrmsse_metric(train_df, valid_df):
+    """Fábrica de eval metric de LightGBM para WRMSSE: cierra sobre train/valid ya
+    que la callback de lgb sólo recibe (y_true, y_pred)."""
+    def _wrmsse_metric(y_true, y_pred):
+        return "wrmsse", compute_wrmsse(train_df, valid_df, y_pred), False
+    return _wrmsse_metric
+
+
+def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_time=None):
+    """WAPE/WRMSSE de un modelo sobre validación (clipando cierres conocidos).
+    Pensada para acumular en una lista y comparar modelos, p.ej.:
+    `model_results.append(evaluate_predictions(train, valid, y_valid, model.predict(X_valid), "LightGBM"))`
+
+    `fit_time` (segundos, opcional) permite comparar también el costo de
+    entrenamiento de cada modelo.
+    """
+    y_pred_valid = clip_closed_stores(valid_df, y_pred_valid)
+    result = {
+        "model": name,
+        "wape": float(wape(y_valid, y_pred_valid)),
+        "wrmsse": compute_wrmsse(train_df, valid_df, y_pred_valid),
+        "fit_time": fit_time,
+    }
+    msg = f"{name:>25s} | WAPE: {result['wape']:.2%} | WRMSSE: {result['wrmsse']:.4f}"
+    if fit_time is not None:
+        msg += f" | fit: {fit_time:.2f}s"
+    print(msg)
+    return result
+
+
 def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sales",
                               id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",)):
     """Clipa cierres, calcula WAPE/WRMSSE globales y arma el detalle de error por fila.
@@ -109,7 +144,7 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
     y_pred = clip_closed_stores(eval_df, y_pred)
 
     metrics = {
-        "wape": wape(y_true, y_pred),
+        "wape": float(wape(y_true, y_pred)),
         "wrmsse": compute_wrmsse(train_df, eval_df, y_pred),
     }
 

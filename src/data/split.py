@@ -6,9 +6,80 @@ from pathlib import Path
 
 import pandas as pd
 import polars as pl
+from loguru import logger
 
 import config
 from src.data.reader import read_parquet_pl
+
+
+@dataclass
+class DateSplit:
+    train: pd.DataFrame
+    valid: pd.DataFrame
+    test: pd.DataFrame
+    first_date: pd.Timestamp
+    last_date: pd.Timestamp
+    valid_start: pd.Timestamp
+    test_start: pd.Timestamp
+
+    @property
+    def train_days(self) -> int:
+        return (self.valid_start - self.first_date).days
+
+    @property
+    def valid_days(self) -> int:
+        return (self.test_start - self.valid_start).days
+
+    @property
+    def test_days(self) -> int:
+        return (self.last_date - self.test_start).days
+
+    def log_summary(self) -> None:
+        logger.info(f"Train : {self.first_date:%Y-%m-%d} to {self.valid_start:%Y-%m-%d} ({self.train_days:,} days, {len(self.train):,} rows)")
+        logger.info(f"Valid : {self.valid_start:%Y-%m-%d} to {self.test_start:%Y-%m-%d} ({self.valid_days:,} days, {len(self.valid):,} rows)")
+        logger.info(f"Test  : {self.test_start:%Y-%m-%d} to {self.last_date:%Y-%m-%d} ({self.test_days:,} days, {len(self.test):,} rows)")
+
+
+def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str = "date") -> DateSplit:
+    """Split temporal simple train/valid/test por fecha, sobre un dataframe ya con
+    features (a diferencia de `prepare_level`, que arma exógenas/agregados para
+    MLForecast). Los últimos `test_days` quedan como test, los `valid_days`
+    anteriores como validación, y todo lo previo como train."""
+    first_date = df[date_col].min()
+    last_date = df[date_col].max()
+    test_start = last_date - pd.DateOffset(days=test_days)
+    valid_start = test_start - pd.DateOffset(days=valid_days)
+
+    train = df[df[date_col] < valid_start]
+    valid = df[(df[date_col] >= valid_start) & (df[date_col] < test_start)]
+    test = df[df[date_col] >= test_start]
+
+    return DateSplit(
+        train=train, valid=valid, test=test,
+        first_date=first_date, last_date=last_date,
+        valid_start=valid_start, test_start=test_start,
+    )
+
+
+def build_feature_matrices(df: pd.DataFrame, split: DateSplit, features: list[str],
+                           categorical_features: list[str], target: str):
+    """Arma X/y para train/valid/test y unifica las categorías de las columnas
+    categóricas a partir del dataset completo: evita que cada split termine con un
+    set de categorías distinto (rompe modelos que las validan, p. ej. XGBoost)."""
+    X_train = split.train[features].copy()
+    X_valid = split.valid[features].copy()
+    X_test = split.test[features].copy()
+
+    for col in categorical_features:
+        categories = df[col].astype("category").cat.categories
+        for X in (X_train, X_valid, X_test):
+            X[col] = pd.Categorical(X[col], categories=categories)
+
+    y_train = split.train[target]
+    y_valid = split.valid[target]
+    y_test = split.test[target]
+
+    return X_train, y_train, X_valid, y_valid, X_test, y_test
 
 
 def parse_level_file(file: Path):
