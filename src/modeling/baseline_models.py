@@ -2,10 +2,16 @@
 tuning (ver notebook 02_model, sección "Comparación de modelos").
 
 `naive_last_value` y `seasonal_naive` no entrenan nada: son el piso mínimo que
-cualquier modelo debe superar. Los `fit_*` entrenan con hiperparámetros por
-defecto (sin tuning) sobre train, para comparar familias de modelo en
-validación vía `evaluate_predictions` (`src.evaluation.metrics`) antes de
-elegir una y recién ahí iterar (selección de features, Optuna, etc.).
+cualquier modelo debe superar. Los `fit_*` de ML (LightGBM, XGBoost, CatBoost,
+HistGradientBoosting, Ridge) entrenan con hiperparámetros por defecto (sin
+tuning) sobre la matriz de features (X_train/y_train). Los `fit_*` de
+forecasting estadístico clásico (SARIMA, ETS, Theta, TBATS, Prophet) en cambio
+ajustan serie por serie sobre train/valid (sin features, solo la propia serie
+temporal) vía `_forecast_by_series`.
+
+Todos se comparan en validación vía `evaluate_predictions`
+(`src.evaluation.metrics`) antes de elegir una familia y recién ahí iterar
+(selección de features, Optuna, etc.).
 """
 
 import numpy as np
@@ -91,6 +97,139 @@ def moving_average(train_df, valid_df, target_col, group_col="agg_id", window=7)
         .apply(lambda s: s.to_numpy(dtype=float)[-window:].mean())
     )
     return valid_df[group_col].map(ma).fillna(0.0).to_numpy()
+
+
+def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="agg_id"):
+    """Ajusta y pronostica serie por serie con `fit_predict(train_sub, future_dates) ->
+    array` (usado por los modelos estadísticos clásicos: ARIMA/SARIMA, ETS, Theta,
+    TBATS, Prophet), alineando el resultado con `valid_df` (mismo criterio de
+    sort/reindex que `drift`/`seasonal_naive`). Si `fit_predict` falla en una serie
+    (muy corta, degenerada, no converge, etc.) cae al último valor observado en
+    train para esa serie, en vez de abortar todo el ajuste."""
+    train_groups = dict(iter(train_df.sort_values("date").groupby(group_col, sort=False)))
+    valid_sorted = valid_df.sort_values([group_col, "date"])
+
+    n_failed = 0
+    parts, idx = [], []
+    for gid, sub in valid_sorted.groupby(group_col, sort=False):
+        h = len(sub)
+        train_sub = train_groups.get(gid)
+        if train_sub is None or train_sub.empty:
+            fc = np.zeros(h)
+        else:
+            try:
+                fc = np.asarray(fit_predict(train_sub, sub["date"].to_numpy()), dtype=float)
+                if fc.size != h:
+                    raise ValueError(f"esperaba {h} valores, se obtuvieron {fc.size}")
+            except Exception:
+                n_failed += 1
+                fc = np.full(h, float(train_sub[target_col].to_numpy(dtype=float)[-1]))
+        parts.append(fc)
+        idx.append(sub.index)
+
+    if n_failed:
+        logger.warning(f"{n_failed} serie(s) fallaron el ajuste; se usa el último valor de train como fallback.")
+
+    y_pred_sorted = pd.Series(np.concatenate(parts), index=np.concatenate(idx))
+    return y_pred_sorted.reindex(valid_df.index).to_numpy()
+
+def fit_sarima(train_df, valid_df, target_col, group_col="agg_id",
+                order=(1, 1, 1), seasonal_order=(1, 1, 1, 7)):
+    """ARIMA/SARIMA por serie vía `statsmodels.SARIMAX`, con orden fijo (sin
+    búsqueda automática tipo `auto_arima`: sobre ~1500-2000 observaciones por
+    serie, un stepwise search por AIC tarda minutos por serie y no es viable
+    para 70 series). `seasonal_order=(1,1,1,7)` da SARIMA (estacionalidad
+    semanal, típica en ventas diarias); pasar `seasonal_order=(0,0,0,0)` da
+    ARIMA simple. El método más citado en la literatura académica de
+    forecasting estadístico clásico."""
+    import warnings
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+    def _fit_predict(train_sub, future_dates):
+        y = train_sub[target_col].to_numpy(dtype=float)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            model = SARIMAX(
+                y, order=order, seasonal_order=seasonal_order,
+                enforce_stationarity=False, enforce_invertibility=False,
+            ).fit(disp=False, maxiter=200, method="lbfgs")
+        return model.forecast(len(future_dates))
+
+    return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
+
+
+def fit_ets(train_df, valid_df, target_col, group_col="agg_id", seasonal_periods=7):
+    """ETS / Holt-Winters (suavizado exponencial con tendencia y estacionalidad)
+    por serie, vía `statsmodels`. Rápido y robusto; base de muchos benchmarks
+    (M4/M5). Componentes aditivos (no multiplicativos) porque las ventas pueden
+    valer 0."""
+    from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+    def _fit_predict(train_sub, future_dates):
+        y = train_sub[target_col].to_numpy(dtype=float)
+        model = ExponentialSmoothing(
+            y, trend="add", seasonal="add", seasonal_periods=seasonal_periods,
+            initialization_method="estimated",
+        ).fit()
+        return model.forecast(len(future_dates))
+
+    return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
+
+
+def fit_theta(train_df, valid_df, target_col, group_col="agg_id", period=7):
+    """Theta method (Assimakopoulos & Nikolopoulos, 2000), ganador del M3: simple
+    (descompone la serie en dos "theta lines" y las combina) pero muy competitivo;
+    poco conocido fuera del ámbito de forecasting. Deseasonalización aditiva (no
+    multiplicativa) por los ceros en ventas."""
+    from statsmodels.tsa.forecasting.theta import ThetaModel
+
+    def _fit_predict(train_sub, future_dates):
+        y = train_sub[target_col].to_numpy(dtype=float)
+        model = ThetaModel(y, period=period, deseasonalize=True, method="additive").fit()
+        return model.forecast(len(future_dates)).to_numpy()
+
+    return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
+
+
+def fit_tbats(train_df, valid_df, target_col, group_col="agg_id", season_length=(7,)):
+    """TBATS (De Livera, Hyndman & Snyder, 2011): extensión de ETS con Box-Cox,
+    ARMA de residuos y estacionalidades múltiples (ej. semanal + anual), pensada
+    para series con más de una estacionalidad. Usa la implementación nativa de
+    `statsforecast` (no el paquete `tbats` de PyPI, que está sin mantenimiento y
+    es incompatible con scikit-learn>=1.8). `season_length=(7, 365.25)` habilita
+    la doble estacionalidad, a costa de más tiempo de ajuste por serie; por
+    defecto solo semanal."""
+    from statsforecast.models import TBATS
+
+    def _fit_predict(train_sub, future_dates):
+        y = train_sub[target_col].to_numpy(dtype=float)
+        model = TBATS(season_length=list(season_length)).fit(y)
+        return model.predict(len(future_dates))["mean"]
+
+    return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
+
+
+def fit_prophet(train_df, valid_df, target_col, group_col="agg_id",
+                 weekly_seasonality=True, yearly_seasonality=True):
+    """Prophet (Taylor & Letham, 2018, Meta): descompone tendencia + estacionalidad
+    + holidays con un modelo aditivo, robusto a datos faltantes/outliers y fácil
+    de tunear; popular en industria. Silencia los logs de `cmdstanpy` (el backend
+    de Prophet), muy verbosos por defecto."""
+    import logging
+
+    logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
+    logging.getLogger("prophet").setLevel(logging.WARNING)
+    from prophet import Prophet
+
+    def _fit_predict(train_sub, future_dates):
+        prophet_df = train_sub[["date", target_col]].rename(columns={"date": "ds", target_col: "y"})
+        model = Prophet(weekly_seasonality=weekly_seasonality, yearly_seasonality=yearly_seasonality)
+        model.fit(prophet_df)
+        future = pd.DataFrame({"ds": future_dates})
+        return model.predict(future)["yhat"].to_numpy()
+
+    return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
 
 def fit_lightgbm(X_train, y_train, categorical_features, random_state=42):
