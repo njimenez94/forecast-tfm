@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.16"
+__generated_with = "0.24.0"
 app = marimo.App()
 
 
@@ -441,6 +441,85 @@ def _(conn):
     """).df()
 
     df_stats.T.rename(columns={0: "value"})
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Magnitud por nivel de agregación
+
+    `dataset_raw` está al grano más fino (item-store diario, nivel 12). A partir de ahí se
+    puede derivar, con `COUNT(DISTINCT ...)`, cuántas series y cuántas filas tendría un
+    dataset a cualquiera de los 12 niveles de agregación M5 (ver `config/levels.py`), para
+    entender la magnitud de cada uno antes de generarlo. El panel es denso (una fila por
+    serie y período), así que `n_rows = n_series * n_periodos`. Se muestran ambos granos
+    (diario y semanal) para cada nivel, independientemente del grano con el que se genera
+    hoy en `artifacts/datasets`.
+    """)
+    return
+
+
+@app.cell
+def _(conn, pd):
+    LEVELS = [
+        (1,  "total",       []),
+        (2,  "state",       ["state_id"]),
+        (3,  "cat",         ["cat_id"]),
+        (4,  "dept",        ["cat_id", "dept_id"]),
+        (5,  "state_cat",   ["state_id", "cat_id"]),
+        (6,  "store",       ["state_id", "store_id"]),
+        (7,  "state_dept",  ["state_id", "cat_id", "dept_id"]),
+        (8,  "store_cat",   ["state_id", "store_id", "cat_id"]),
+        (9,  "store_dept",  ["state_id", "store_id", "cat_id", "dept_id"]),
+        (10, "item",        ["cat_id", "dept_id", "item_id"]),
+        (11, "item_state",  ["state_id", "cat_id", "dept_id", "item_id"]),
+        (12, "item_store",  ["state_id", "store_id", "cat_id", "dept_id", "item_id"]),
+    ]
+
+    n_days = conn.sql("SELECT COUNT(DISTINCT date) FROM dataset_raw").fetchone()[0]
+    n_weeks = -(-n_days // 7)  # ceil
+
+    rows = []
+    for level_id, name, cols in LEVELS:
+        key_expr = "concat_ws('||', " + ", ".join(cols) + ")" if cols else "'total'"
+        n_series = conn.sql(f"SELECT COUNT(DISTINCT {key_expr}) FROM dataset_raw").fetchone()[0]
+        rows.append({
+            "level_id": level_id,
+            "level": name,
+            "n_series": n_series,
+            "n_days": n_days,
+            "n_weeks": n_weeks,
+            "n_rows_daily": n_series * n_days,
+            "n_rows_weekly": n_series * n_weeks,
+        })
+
+    df_levels = pd.DataFrame(rows)
+    df_levels
+    return (df_levels,)
+
+
+@app.cell
+def _(df_levels, plt, sns):
+    _df_plot = df_levels.melt(
+        id_vars=["level_id", "level"],
+        value_vars=["n_rows_daily", "n_rows_weekly"],
+        var_name="grain",
+        value_name="n_rows",
+    )
+    _df_plot["grain"] = _df_plot["grain"].map({"n_rows_daily": "daily", "n_rows_weekly": "weekly"})
+    _df_plot = _df_plot.sort_values("level_id")
+
+    _fig, _ax = plt.subplots(figsize=(9, 7))
+    sns.barplot(_df_plot, x="n_rows", y="level", hue="grain", ax=_ax)
+    _ax.set_xscale("log")
+    for _container in _ax.containers:
+        _ax.bar_label(_container, labels=[f"{v:,.0f}" for v in _container.datavalues], padding=3, fontsize=7)
+    _ax.set_title("Filas por nivel de agregación, diario vs. semanal (escala log)", loc="left")
+    _ax.set_xlabel("n_rows")
+    _ax.set_ylabel("")
+    sns.despine()
+    plt.tight_layout()
     return
 
 
