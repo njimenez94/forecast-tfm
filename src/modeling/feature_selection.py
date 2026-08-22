@@ -29,9 +29,43 @@ def compute_permutation_importance(model, X_valid, y_valid, features,
 def backward_feature_selection(X_train, y_train, X_valid, train_df, valid_df,
                                 features, categorical_features, importance_perm,
                                 tolerance: float = 0.001, random_state: int = 42):
-    """Elimina features de forma iterativa mientras el WRMSSE de validación no
-    empeore más que `tolerance`. Parte del ranking de permutation importance (de
-    menor a mayor) e intenta descartar cada feature reentrenando sin ella."""
+    """Greedy backward feature selection guiado por permutation importance.
+
+    Parte del set completo de `features` e intenta eliminarlas una a una,
+    en orden ascendente de `importance_perm` (las menos importantes primero).
+    Cada eliminación se acepta si el WRMSSE de validación no empeora más que
+    `tolerance` respecto al mejor WRMSSE actual; si se acepta, la feature
+    queda fuera y el ranking se recalcula sobre el subconjunto restante
+    (importancias relativas cambian tras cada eliminación). El proceso
+    itera hasta que una pasada completa no logra eliminar ninguna feature.
+
+    Es "greedy" porque acepta la primera eliminación válida de cada
+    iteración en vez de evaluar todas las combinaciones posibles y elegir
+    la óptima (exhaustive search) — más rápido, no garantiza el mínimo
+    global de WRMSSE, pero es la aproximación estándar quue se usa en la práctica
+    práctica cuando el reentrenamiento es costoso.
+
+    Args:
+        X_train, y_train: features y target de entrenamiento.
+        X_valid: features de validación (target se deriva de valid_df).
+        train_df, valid_df: dataframes originales, requeridos por
+            `clip_closed_stores` y `compute_wrmsse` (métrica jerárquica).
+        features: lista inicial completa de features candidatas.
+        categorical_features: subset de `features` a tratar como categóricas
+            en LightGBM (se filtra dinámicamente en cada iteración).
+        importance_perm: ranking de permutation importance (Series o dict
+            indexado por nombre de feature) usado para decidir el orden de
+            intento de eliminación.
+        tolerance: máximo empeoramiento de WRMSSE aceptable para eliminar
+            una feature. A mayor tolerance, selección más agresiva.
+        random_state: semilla para reproducibilidad del LGBMRegressor.
+
+    Returns:
+        selected_features: lista final de features tras la selección.
+        best_wrmsse: WRMSSE de validación del modelo final.
+        selection_log: DataFrame con el historial de cada intento
+            (n_features, wrmsse, feature removida, si fue aceptada).
+    """
 
     def train_and_eval(feats):
         cat_feats = [c for c in categorical_features if c in feats]
