@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 _SERIES_COL = "agg_id"
 _PRICE_COL = "avg_sell_price"
@@ -295,7 +296,7 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
     )
     if fit_time is not None:
         msg += f" | fit: {fit_time:.2f}s"
-    print(msg)
+    logger.info(msg)
     return result
 
 
