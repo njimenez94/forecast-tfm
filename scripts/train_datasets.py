@@ -42,7 +42,7 @@ from src.modeling import (
     backward_feature_selection, catboost_features, compute_permutation_importance,
     drift, fit_catboost, fit_ets, fit_histgb, fit_lightgbm, fit_prophet, fit_ridge,
     fit_sarima, fit_tbats, fit_theta, fit_xgboost, histgb_features, historical_mean,
-    moving_average, naive_last_value, seasonal_naive,
+    moving_average, seasonal_naive,
 )
 
 
@@ -208,10 +208,6 @@ def make_evaluator(state: SimpleNamespace):
 def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     season_length = {"daily": 7, "weekly": 52}[state.grain]
     grain_letter = state.grain[0]
-
-    t0 = time.perf_counter()
-    evaluate_model("Naive (last value)", naive_last_value(state.train, state.valid, state.target),
-                    fit_time=time.perf_counter() - t0, category="Naive")
 
     t0 = time.perf_counter()
     y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=season_length)

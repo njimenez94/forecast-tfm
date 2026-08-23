@@ -1,7 +1,7 @@
 """Modelos de referencia para comparar antes de invertir en feature selection y
 tuning (ver notebook 02_model, sección "Comparación de modelos").
 
-`naive_last_value` y `seasonal_naive` no entrenan nada: son el piso mínimo que
+`seasonal_naive` no entrenan nada: son el piso mínimo que
 cualquier modelo debe superar. Los `fit_*` de ML (LightGBM, XGBoost, CatBoost,
 HistGradientBoosting, Ridge) entrenan con hiperparámetros por defecto (sin
 tuning) sobre la matriz de features (X_train/y_train). Los `fit_*` de
@@ -25,13 +25,6 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from xgboost import XGBRegressor
-
-
-def naive_last_value(train_df, valid_df, target_col, group_col="agg_id"):
-    """Repite la última venta observada por serie (día anterior al inicio de validación)."""
-    last_train_value = train_df.sort_values("date").groupby(group_col)[target_col].last()
-    return valid_df[group_col].map(last_train_value).fillna(0.0).to_numpy()
-
 
 def seasonal_naive(train_df, valid_df, target_col, group_col="agg_id", season_length=7):
     """Repite el valor observado el mismo día de la semana en la última semana de
