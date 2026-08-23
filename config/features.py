@@ -31,7 +31,13 @@ HORIZON = {
 # para daily, semanas para weekly); to_days() convierte a días de calendario, que
 # es en lo que trabaja date_split.
 SEASON_LENGTH = {"daily": 7, "weekly": 52}
-VALID_PERIODS = {"daily": 365, "weekly": 52}
+# Igual a TEST_PERIODS a propósito: valid tiene que ser un bloque del mismo
+# tamaño que el horizonte real de despliegue (no un tramo largo tipo 365 días),
+# para que feature selection y tuning de Optuna -- que corren sobre X_valid --
+# midan sobre el mismo problema que despues se evalua en test (ver
+# src.data.split.mask_horizon_leakage: un valid mas largo que el horizonte
+# fuerza a enmascarar casi toda la señal reciente en la mayoria de sus filas).
+VALID_PERIODS = {"daily": 28, "weekly": 4}
 TEST_PERIODS = {"daily": 28, "weekly": 4}
 
 
