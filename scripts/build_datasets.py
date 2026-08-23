@@ -50,6 +50,15 @@ def main():
         static_cols = [d for d in level.dims if d in df.columns and d not in config.EXCLUDE_AS_STATIC]
         final = add_lag_features(df, grain, static_cols)
         final["date"] = pd.to_datetime(final["date"])
+
+        # float64->float32 (los day-counts de engineer.py salen float64 al pasar por
+        # to_pandas() con nulls) y str->category (dims de baja cardinalidad repetidas
+        # en cada fila): recorta ~30% de RAM al leer el parquet, sin tocar cada caller.
+        float_cols = final.select_dtypes("float64").columns
+        str_cols = final.select_dtypes("str").columns
+        final[float_cols] = final[float_cols].astype("float32")
+        final[str_cols] = final[str_cols].astype("category")
+
         final.to_parquet(out, compression="zstd", index=False)
         logger.success("  listo  {:.1f} MB  ({} cols, {} filas)",
                        out.stat().st_size / 1_048_576, final.shape[1], final.shape[0])
