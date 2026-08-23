@@ -32,7 +32,9 @@ class DateSplit:
 
     @property
     def test_days(self) -> int:
-        return (self.last_date - self.test_start).days
+        # test = df >= test_start (sin cota superior), incluye last_date: intervalo
+        # cerrado en ambos extremos, a diferencia de train/valid que son semiabiertos.
+        return (self.last_date - self.test_start).days + 1
 
     def log_summary(self) -> None:
         logger.info(f"Train : {self.first_date:%Y-%m-%d} to {self.valid_start:%Y-%m-%d} ({self.train_days:,} days, {len(self.train):,} rows)")
@@ -47,7 +49,10 @@ def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str 
     anteriores como validación, y todo lo previo como train."""
     first_date = df[date_col].min()
     last_date = df[date_col].max()
-    test_start = last_date - pd.DateOffset(days=test_days)
+    # test = df >= test_start (sin cota superior) incluye last_date, así que el
+    # intervalo es cerrado en ambos extremos: para que abarque exactamente
+    # test_days días hay que restar (test_days - 1).
+    test_start = last_date - pd.DateOffset(days=test_days - 1)
     valid_start = test_start - pd.DateOffset(days=valid_days)
 
     train = df[df[date_col] < valid_start]
