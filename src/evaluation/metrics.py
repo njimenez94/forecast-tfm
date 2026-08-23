@@ -407,7 +407,10 @@ def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIE
             return np.nan
         weights = g.groupby(weight_level)["gross_sales"].transform("sum").to_numpy()
         sq_err = (g[target_col].to_numpy() - g["y_pred"].to_numpy()) ** 2
-        rmse = np.sqrt(np.average(sq_err, weights=weights))
+        if weights.sum() == 0:
+            rmse = np.sqrt(np.mean(sq_err))
+        else:
+            rmse = np.sqrt(np.average(sq_err, weights=weights))
         return float(rmse / np.sqrt(scale))
 
     def _mase_for_group(g):
