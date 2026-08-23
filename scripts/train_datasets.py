@@ -1,227 +1,549 @@
-"""Entrena un MLForecast por nivel de agregación y evalúa en valid y test.
+"""Entrena un modelo LightGBM para un nivel/target, replicando el flujo de
+notebooks/02_model.ipynb: split temporal, comparación de modelos base (naive,
+estadísticos clásicos, ML con hiperparámetros default), selección de features
+(permutation importance + backward elimination), explicación SHAP, tuning con
+Optuna y ajuste del modelo final.
 
-El final de cada serie se reserva en dos bloques consecutivos de igual longitud
-(~12 meses, max(HORIZON) del grain): valid (pensado para tuning, p.ej. Optuna, o
-early stopping) y test (prueba final, nunca usado para entrenar). El modelo se
-ajusta solo con train. El tamaño del bloque es el mismo para todos los targets,
-independiente de la ventana N de los targets acumulados, para que valid/test sean
-comparables entre targets.
+El pipeline está separado en fases activables/desactivables (`Config.run_*`),
+para poder saltear las que no hacen falta en una corrida dada (p.ej. iterar
+sobre selección de features sin repetir la comparación de modelos base, o
+reentrenar el modelo final con `config.LGBM_PARAMS` sin correr Optuna de nuevo).
 
-Para 'sales' evalúa en múltiples sub-horizontes (HORIZON config) dentro del bloque.
-Para 'cumN' evalúa un único horizonte igual al bloque completo: como "y" ya es la
-suma móvil de los N períodos siguientes a cada fecha, comparar período a período a
-lo largo de todo el bloque agrega esa suma móvil de forma consistente en el tiempo.
+Editar `CFG` (nivel, target, fases, hiperparámetros de tuning) y correr:
+    make train-datasets
+    # o
+    uv run python -m scripts.train_datasets
 
-Los modelos se guardan en artifacts/models/ y las métricas en artifacts/results.parquet.
-
-Uso:
-    python -m scripts.train_datasets
+Salidas:
+    artifacts/results/{level}_{target}_model_comparison.csv   comparación de modelos (si corrió alguna fase de baseline)
+    artifacts/results/{level}_{target}_series_metrics.csv     métricas por serie de esos modelos
+    artifacts/results/{level}_{target}_feature_selection.csv  historial de backward elimination
+    artifacts/plots/{level}_{target}_shap_*.png                explicación SHAP del modelo simple
+    artifacts/optuna_study.db                                  estudio Optuna (sqlite, uno por level/grain/target)
+    artifacts/models/{level}_{target}_artifact.pkl             artifact final (modelo + datos + métricas)
 """
-import gc
 import time
-import warnings
-from pathlib import Path
+from dataclasses import dataclass, field
+from types import SimpleNamespace
 
-warnings.filterwarnings("ignore", message="Found null values")
-# Momentum (RollingMean corta / larga) da 0/0 en series intermitentes con ventana
-# en cero; el NaN resultante es válido para LightGBM, no un error.
-warnings.filterwarnings("ignore", message="invalid value encountered in divide")
-
+import joblib
+import numpy as np
 import pandas as pd
 from loguru import logger
 
 import config
-from src.data.split import LevelSplit, parse_level_file, prepare_level
-from src.evaluation.metrics import bias, compute_wrmsse, wape
-from src.modeling.train import build_fcst, encode_static
+from src.data import build_feature_matrices, date_split
+from src.evaluation import (
+    build_all_series_metrics, build_predictions_report, evaluate_predictions,
+    make_wrmsse_metric,
+)
+from src.modeling import (
+    backward_feature_selection, catboost_features, compute_permutation_importance,
+    drift, fit_catboost, fit_ets, fit_histgb, fit_lightgbm, fit_prophet, fit_ridge,
+    fit_sarima, fit_tbats, fit_theta, fit_xgboost, histgb_features, historical_mean,
+    moving_average, naive_last_value, seasonal_naive,
+)
 
 
-def _tfm_window(t) -> int:
-    """Ventana de historia que necesita un lag_transform (0 si no tiene una fija,
-    p.ej. ExpandingMean; recursivo para Combine, que envuelve otros dos transforms)."""
-    if hasattr(t, "window_size"):
-        return t.window_size
-    if hasattr(t, "tfm1"):
-        return max(_tfm_window(t.tfm1), _tfm_window(t.tfm2))
-    return 0
+# ============================== CONFIG ==============================
+# Todo lo que controla la corrida vive acá, agrupado por fase. Editar y correr.
+
+@dataclass
+class Config:
+    # --- selección de dataset ---
+    level_id: int = 12
+    target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
+
+    # --- fases on/off ---
+    run_baseline_naive: bool = True
+    run_baseline_stats: bool = False    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
+    run_baseline_ml: bool = False       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
+    run_feature_selection: bool = False  # permutation importance + backward elimination
+    run_shap: bool = False
+    run_optuna: bool = False
+    save_artifact: bool = True
+
+    # --- split temporal ---
+    # daily: cantidad de días. weekly: cantidad de filas semanales (se convierte a
+    # días x7 antes de llamar a date_split, que siempre trabaja en días de calendario).
+    valid_periods_daily: int = 365
+    test_periods_daily: int = 28
+    valid_periods_weekly: int = 52
+    test_periods_weekly: int = 4
+
+    # --- comparación de modelos base ---
+    ma_windows: dict = field(default_factory=lambda: {
+        "daily": [7, 14, 21, 28, 35], "weekly": [2, 3, 4, 6, 8],
+    })
+    random_state: int = 42
+
+    # --- selección de features ---
+    permutation_sample_size: int = 15_000
+    permutation_n_repeats: int = 10
+    backward_tolerance: float = 0.001
+
+    # --- SHAP ---
+    shap_sample_size: int = 2_000
+
+    # --- Optuna ---
+    optuna_n_trials: int = 1_000
+    optuna_timeout_s: int = 15 * 60
+    optuna_objective: str = "rmse"
+
+    # --- modelo final ---
+    final_n_estimators: int = 1_500
 
 
-def _eval_horizon(preds_df: pd.DataFrame, valid_pd: pd.DataFrame,
-                  train_for_wrmsse: pd.DataFrame | None, h: int) -> dict:
-    """Compara, período a período, las primeras h filas de preds_df contra valid_pd.
+CFG = Config()
 
-    Para targets acumulados 'cumN', "y" ya es la suma de los N períodos siguientes a
-    cada fecha, así que esto evalúa esa suma móvil de forma consistente a lo largo de
-    todo el bloque (h = tamaño del bloque); WRMSSE no aplica y se omite (train_for_wrmsse=None).
-    """
-    mask_p = preds_df.groupby("unique_id", sort=False).cumcount() < h
-    mask_v = valid_pd.groupby("unique_id", sort=False).cumcount() < h
 
-    preds   = preds_df[mask_p]["lgb"].clip(lower=0).round(0).astype(int).to_numpy()
-    actuals = valid_pd[mask_v]["y"].to_numpy()
+# ============================== FASES ==============================
 
-    wrmsse = float("nan")
-    if train_for_wrmsse is not None:
-        valid_h = (valid_pd[mask_v]
-                   .rename(columns={"unique_id": "agg_id", "ds": "date", "y": "sales"}))
-        wrmsse = compute_wrmsse(train_for_wrmsse, valid_h, preds)
+def load_data(cfg: Config) -> SimpleNamespace:
+    level = config.LEVELS_BY_ID[cfg.level_id]
+    grain = level.grains[0]
+    level_str = f"level_{level.id:02d}_{grain}_{level.name}"
 
-    return {
-        "wape":   float(wape(actuals, preds)),
-        "bias":   float(bias(actuals, preds)),
-        "wrmsse": wrmsse,
+    df = pd.read_parquet(config.featured_level_path(level, grain)).sort_values("date").reset_index(drop=True)
+
+    target = cfg.target
+    id_cols = ["agg_id", "date"]
+    cum_cols = [c for c in df.columns if c.startswith("cum") and c[3:].isdigit()]
+    leaky_cols = [c for c in (["gross_sales"] + cum_cols) if c != target]
+
+    features = [c for c in df.columns if c not in id_cols + leaky_cols + [target]]
+    categorical_features = [
+        c for c in [
+            "item_id", "dept_id", "cat_id", "store_id", "state_id",
+            "event_name_1", "event_type_1", "event_name_2", "event_type_2",
+        ] if c in df.columns
+    ]
+    numerical_features = [c for c in features if c not in categorical_features]
+    features = categorical_features + numerical_features
+
+    logger.info("{} | target={} | {:,} filas | {} features ({} categóricas)",
+                level_str, target, len(df), len(features), len(categorical_features))
+
+    return SimpleNamespace(
+        level=level, grain=grain, level_str=level_str, df=df, target=target,
+        id_cols=id_cols, leaky_cols=leaky_cols,
+        features=features, categorical_features=categorical_features,
+        numerical_features=numerical_features,
+        model_results=[], predictions_valid={},
+    )
+
+
+def split_data(state: SimpleNamespace, cfg: Config) -> None:
+    if state.grain == "daily":
+        valid_days, test_days = cfg.valid_periods_daily, cfg.test_periods_daily
+    else:
+        # date_split trabaja en días de calendario: convertir semanas -> días. El
+        # -1 interno de date_split alinea el corte para que siga cayendo exactamente
+        # en un múltiplo de 7 filas semanales (no corta una semana a la mitad).
+        valid_days, test_days = cfg.valid_periods_weekly * 7, cfg.test_periods_weekly * 7
+
+    split = date_split(state.df, valid_days=valid_days, test_days=test_days)
+    split.log_summary()
+
+    X_train, y_train, X_valid, y_valid, X_test, y_test = build_feature_matrices(
+        state.df, split, state.features, state.categorical_features, state.target,
+    )
+
+    state.split = split
+    state.train, state.valid, state.test = split.train, split.valid, split.test
+    state.X_train, state.y_train = X_train, y_train
+    state.X_valid, state.y_valid = X_valid, y_valid
+    state.X_test, state.y_test = X_test, y_test
+    state.wrmsse_metric = make_wrmsse_metric(state.train, state.valid)
+
+    logger.info("Features: {} ({} categóricas)", len(state.features), len(state.categorical_features))
+
+
+def make_evaluator(state: SimpleNamespace):
+    """Cierra sobre `state` para acumular cada modelo evaluado en
+    `model_results`/`predictions_valid`, igual que `evaluate_model` en el notebook."""
+    def evaluate_model(name, y_pred_valid, fit_time=None, category=None):
+        result = evaluate_predictions(
+            state.train, state.valid, state.y_valid, y_pred_valid, name,
+            fit_time=fit_time, category=category,
+        )
+        state.model_results.append(result)
+        state.predictions_valid[name] = y_pred_valid
+        return result
+
+    return evaluate_model
+
+
+def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
+    season_length = {"daily": 7, "weekly": 52}[state.grain]
+    grain_letter = state.grain[0]
+
+    t0 = time.perf_counter()
+    evaluate_model("Naive (last value)", naive_last_value(state.train, state.valid, state.target),
+                    fit_time=time.perf_counter() - t0, category="Naive")
+
+    t0 = time.perf_counter()
+    y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=season_length)
+    evaluate_model(f"Seasonal naive ({season_length}{grain_letter})", y_pred,
+                    fit_time=time.perf_counter() - t0, category="Naive")
+
+    if state.grain == "daily":
+        t0 = time.perf_counter()
+        y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=365)
+        evaluate_model("Seasonal naive (365d)", y_pred, fit_time=time.perf_counter() - t0, category="Naive")
+
+    t0 = time.perf_counter()
+    evaluate_model("Drift", drift(state.train, state.valid, state.target),
+                    fit_time=time.perf_counter() - t0, category="Naive")
+
+    t0 = time.perf_counter()
+    evaluate_model("Historical mean", historical_mean(state.train, state.valid, state.target),
+                    fit_time=time.perf_counter() - t0, category="Naive")
+
+    for window in cfg.ma_windows[state.grain]:
+        t0 = time.perf_counter()
+        y_pred = moving_average(state.train, state.valid, state.target, window=window)
+        evaluate_model(f"Moving average ({window}{grain_letter})", y_pred,
+                        fit_time=time.perf_counter() - t0, category="Naive")
+
+
+def run_baseline_stats(state: SimpleNamespace, evaluate_model) -> None:
+    season_length = {"daily": 7, "weekly": 52}[state.grain]
+
+    for name, fn, kwargs in [
+        ("SARIMA", fit_sarima, dict(seasonal_order=(1, 1, 1, season_length))),
+        ("ETS (Holt-Winters)", fit_ets, dict(seasonal_periods=season_length)),
+        ("Theta", fit_theta, dict(period=season_length)),
+        ("TBATS", fit_tbats, dict(season_length=(season_length,))),
+        ("Prophet", fit_prophet, dict(weekly_seasonality=(state.grain == "daily"))),
+    ]:
+        t0 = time.perf_counter()
+        y_pred = fn(state.train, state.valid, state.target, **kwargs)
+        evaluate_model(name, y_pred, fit_time=time.perf_counter() - t0, category="Statistical")
+
+
+def run_baseline_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
+    t0 = time.perf_counter()
+    lgbm_model = fit_lightgbm(state.X_train, state.y_train, state.categorical_features,
+                               random_state=cfg.random_state)
+    evaluate_model("LightGBM", lgbm_model.predict(state.X_valid),
+                    fit_time=time.perf_counter() - t0, category="ML")
+    state.lgbm_model = lgbm_model
+
+    t0 = time.perf_counter()
+    xgb_model = fit_xgboost(state.X_train, state.y_train, random_state=cfg.random_state)
+    evaluate_model("XGBoost", xgb_model.predict(state.X_valid),
+                    fit_time=time.perf_counter() - t0, category="ML")
+
+    t0 = time.perf_counter()
+    catboost_model = fit_catboost(state.X_train, state.y_train, state.categorical_features,
+                                   random_state=cfg.random_state)
+    X_valid_cb = catboost_features(state.X_valid, state.categorical_features)
+    evaluate_model("CatBoost", catboost_model.predict(X_valid_cb),
+                    fit_time=time.perf_counter() - t0, category="ML")
+
+    t0 = time.perf_counter()
+    hgb_model = fit_histgb(state.X_train, state.y_train, random_state=cfg.random_state)
+    X_valid_hgb = histgb_features(state.X_valid, hgb_model.high_cardinality_features_)
+    evaluate_model("HistGradientBoosting", hgb_model.predict(X_valid_hgb),
+                    fit_time=time.perf_counter() - t0, category="ML")
+
+    t0 = time.perf_counter()
+    ridge_model = fit_ridge(state.X_train, state.y_train, state.numerical_features,
+                             random_state=cfg.random_state)
+    evaluate_model("Ridge", ridge_model.predict(state.X_valid[state.numerical_features]),
+                    fit_time=time.perf_counter() - t0, category="ML")
+
+
+def save_model_comparison(state: SimpleNamespace) -> None:
+    if not state.model_results:
+        return
+    out_dir = config.ARTIFACTS_DIR / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
+    results_df.to_csv(out_dir / f"{state.level_str}_{state.target}_model_comparison.csv", index=False)
+
+    if state.predictions_valid:
+        series_metrics_df = build_all_series_metrics(
+            state.train, state.valid, state.y_valid, state.predictions_valid, target_col=state.target,
+        )
+        series_metrics_df.to_csv(out_dir / f"{state.level_str}_{state.target}_series_metrics.csv", index=False)
+
+    logger.info("Comparación de modelos guardada en {}", out_dir)
+
+
+def select_features(state: SimpleNamespace, cfg: Config) -> None:
+    lgbm_model = getattr(state, "lgbm_model", None)
+    if lgbm_model is None:
+        lgbm_model = fit_lightgbm(state.X_train, state.y_train, state.categorical_features,
+                                   random_state=cfg.random_state)
+
+    importance_gain = pd.Series(
+        lgbm_model.booster_.feature_importance(importance_type="gain"), index=state.features,
+    ).sort_values(ascending=False)
+    logger.info("Top 10 gain importance:\n{}", importance_gain.head(10))
+
+    importance_perm = compute_permutation_importance(
+        lgbm_model, state.X_valid, state.y_valid, state.features,
+        sample_size=cfg.permutation_sample_size, n_repeats=cfg.permutation_n_repeats,
+        random_state=cfg.random_state,
+    )
+    logger.info("Top 10 permutation importance:\n{}", importance_perm.head(10))
+
+    selected_features, final_wrmsse, selection_log = backward_feature_selection(
+        state.X_train, state.y_train, state.X_valid, state.train, state.valid,
+        state.features, state.categorical_features, importance_perm,
+        tolerance=cfg.backward_tolerance, random_state=cfg.random_state,
+    )
+
+    dropped = sorted(set(state.features) - set(selected_features))
+    logger.info("Features descartadas ({}): {}", len(dropped), dropped)
+
+    state.features = selected_features
+    state.categorical_features = [c for c in state.categorical_features if c in state.features]
+    state.numerical_features = [c for c in state.numerical_features if c in state.features]
+    state.X_train = state.X_train[state.features]
+    state.X_valid = state.X_valid[state.features]
+    state.X_test = state.X_test[state.features]
+
+    out_dir = config.ARTIFACTS_DIR / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    selection_log.to_csv(out_dir / f"{state.level_str}_{state.target}_feature_selection.csv", index=False)
+
+    logger.info("Features finales: {} ({} categóricas) | WRMSSE={:.4f}",
+                len(state.features), len(state.categorical_features), final_wrmsse)
+
+
+def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
+    import lightgbm as lgb
+    import matplotlib.pyplot as plt
+    import shap
+    from lightgbm import LGBMRegressor
+
+    model = LGBMRegressor(objective="rmse")
+    t0 = time.perf_counter()
+    model.fit(
+        state.X_train, state.y_train,
+        eval_set=[(state.X_valid, state.y_valid)],
+        eval_metric=[state.wrmsse_metric],
+        callbacks=[lgb.early_stopping(100, first_metric_only=True), lgb.log_evaluation(10)],
+    )
+    fit_time = time.perf_counter() - t0
+    evaluate_model("LightGBM (selected features)", model.predict(state.X_valid),
+                    fit_time=fit_time, category="ML")
+
+    explainer = shap.TreeExplainer(model)
+    X_shap = state.X_test.sample(n=min(cfg.shap_sample_size, len(state.X_test)), random_state=cfg.random_state)
+    shap_values = explainer.shap_values(X_shap)
+
+    plot_dir = config.ARTIFACTS_DIR / "plots"
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    prefix = plot_dir / f"{state.level_str}_{state.target}_shap"
+
+    shap.summary_plot(shap_values, X_shap, plot_type="bar", show=False)
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_bar.png", dpi=120)
+    plt.close()
+
+    shap.summary_plot(shap_values, X_shap, show=False)
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_beeswarm.png", dpi=120)
+    plt.close()
+
+    top_feature = X_shap.columns[np.argsort(-np.abs(shap_values).mean(axis=0))[0]]
+    shap.dependence_plot(top_feature, shap_values, X_shap, interaction_index=None, show=False)
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_dependence_{top_feature}.png", dpi=120)
+    plt.close()
+
+    logger.info("SHAP: feature más importante = {} | plots guardados en {}", top_feature, plot_dir)
+
+
+def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
+    import lightgbm as lgb
+    import optuna
+    from optuna.integration import LightGBMPruningCallback
+
+    def objective(trial):
+        model = lgb.LGBMRegressor(
+            objective=cfg.optuna_objective,
+            learning_rate=trial.suggest_float("learning_rate", 0.03, 0.15, log=True),
+            n_estimators=cfg.final_n_estimators,
+            num_leaves=trial.suggest_int("num_leaves", 31, 255),
+            max_depth=trial.suggest_int("max_depth", 5, 10),
+            min_child_samples=trial.suggest_int("min_child_samples", 20, 200),
+            subsample=trial.suggest_float("subsample", 0.6, 1.0),
+            subsample_freq=1,
+            colsample_bytree=trial.suggest_float("colsample_bytree", 0.6, 1.0),
+            reg_alpha=trial.suggest_float("reg_alpha", 1e-3, 5, log=True),
+            reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 5, log=True),
+            random_state=cfg.random_state,
+            n_jobs=-1,
+            verbosity=-1,
+        )
+        model.fit(
+            state.X_train, state.y_train,
+            eval_set=[(state.X_valid, state.y_valid)],
+            eval_metric="rmse",
+            categorical_feature=state.categorical_features,
+            callbacks=[
+                lgb.early_stopping(30, first_metric_only=True, verbose=False),
+                LightGBMPruningCallback(trial, "rmse"),
+            ],
+        )
+        y_pred = model.predict(state.X_valid, num_iteration=model.best_iteration_)
+        _, final_wrmsse, _ = state.wrmsse_metric(state.y_valid, y_pred)
+        return final_wrmsse
+
+    config.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    study = optuna.create_study(
+        study_name=f"study_{state.level_str}_{state.target}",
+        direction="minimize",
+        storage=f"sqlite:///{config.ARTIFACTS_DIR / 'optuna_study.db'}",
+        load_if_exists=True,
+        sampler=optuna.samplers.TPESampler(seed=cfg.random_state),
+        pruner=optuna.pruners.MedianPruner(n_warmup_steps=10, n_startup_trials=5),
+    )
+    study.optimize(objective, n_trials=cfg.optuna_n_trials, timeout=cfg.optuna_timeout_s,
+                    show_progress_bar=True)
+
+    logger.info("Mejor WRMSSE (Optuna): {:.4f}", study.best_trial.value)
+    logger.info("Mejores hiperparámetros: {}", study.best_trial.params)
+    return study.best_trial.params
+
+
+def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_params: dict) -> None:
+    import lightgbm as lgb
+    from lightgbm import LGBMRegressor
+
+    if best_params:
+        model_params = dict(best_params)
+        final_model = LGBMRegressor(
+            objective=cfg.optuna_objective,
+            n_estimators=cfg.final_n_estimators,
+            random_state=cfg.random_state,
+            n_jobs=-1,
+            verbosity=-1,
+            subsample_freq=1,
+            **model_params,
+        )
+        label = "LightGBM (final, Optuna)"
+    else:
+        model_params = config.lgbm_params(state.level.id)
+        final_model = LGBMRegressor(**model_params)
+        label = "LightGBM (final, config.lgbm_params)"
+
+    t0 = time.perf_counter()
+    final_model.fit(
+        state.X_train, state.y_train,
+        eval_set=[(state.X_valid, state.y_valid)],
+        eval_metric=state.wrmsse_metric,
+        categorical_feature=state.categorical_features,
+        callbacks=[lgb.early_stopping(50, first_metric_only=True), lgb.log_evaluation(10)],
+    )
+    fit_time = time.perf_counter() - t0
+    evaluate_model(label, final_model.predict(state.X_valid), fit_time=fit_time, category="ML")
+
+    metrics_test, df_pred = build_predictions_report(
+        state.train, state.test, state.y_test, final_model.predict(state.X_test), target_col=state.target,
+    )
+    logger.info("Test WAPE: {:.2%} | Test WRMSSE: {:.4f}", metrics_test["wape"], metrics_test["wrmsse"])
+
+    state.final_model = final_model
+    state.model_params = model_params
+    state.metrics_test = metrics_test
+    state.df_pred = df_pred
+
+
+def export_artifact(state: SimpleNamespace) -> None:
+    results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
+
+    feature_importance = pd.Series(
+        state.final_model.booster_.feature_importance(importance_type="gain"), index=state.features,
+    ).sort_values(ascending=False)
+
+    artifact = {
+        "level": state.level_str,
+        "df": state.df,
+        "model": state.final_model,
+        "model_params": state.model_params,
+        "X_train": state.X_train, "y_train": state.y_train,
+        "X_valid": state.X_valid, "y_valid": state.y_valid,
+        "X_test": state.X_test, "y_test": state.y_test,
+        "train": state.train, "valid": state.valid, "test": state.test,
+        "features": state.features,
+        "categorical_features": state.categorical_features,
+        "numerical_features": state.numerical_features,
+        "id_cols": state.id_cols,
+        "leaky_cols": state.leaky_cols,
+        "target": state.target,
+        "feature_importance": feature_importance,
+        "model_results": state.model_results,
+        "results_df": results_df,
+        "wape_valid": state.model_results[-1]["wape"],
+        "wrmsse_valid": state.model_results[-1]["wrmsse"],
+        "wape_test": state.metrics_test["wape"],
+        "wrmsse_test": state.metrics_test["wrmsse"],
+        "train_start": str(state.split.first_date.date()),
+        "valid_start": str(state.split.valid_start.date()),
+        "test_start": str(state.split.test_start.date()),
     }
 
-
-def _split_preds(preds_df: pd.DataFrame, block: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Separa las predicciones en bloque valid (primeros `block` pasos) y test (siguientes)."""
-    cumcount = preds_df.groupby("unique_id", sort=False).cumcount()
-    preds_valid = preds_df[cumcount < block].reset_index(drop=True)
-    preds_test  = preds_df[cumcount >= block].reset_index(drop=True)
-    return preds_valid, preds_test
-
-
-def _train_level(file: Path, level, grain: str, target: str) -> list[dict]:
-    t0 = time.perf_counter()
-    n = config.cum_n(target)
-
-    # Bloque fijo (~12 meses) para valid/test, igual para todos los targets: el tamaño
-    # de la ventana acumulada (7, 14, ...) no debe achicar el período de evaluación.
-    block     = max(config.HORIZON[grain])
-    h_predict = 2 * block
-    horizons  = config.HORIZON[grain] if n is None else [block]
-
-    data: LevelSplit = prepare_level(file, level, grain, block, target)
-    train_start  = data.train_pd["ds"].min().date()
-    train_end    = data.train_pd["ds"].max().date()
-    n_train_rows = len(data.train_pd)
-    rows_per_series = n_train_rows // max(data.n_series, 1)
-
-    lags = config.valid_lags(grain, target)
-    transforms = config.valid_lag_transforms(grain, target)
-    transform_extra = max(
-        (k + max((_tfm_window(t) for t in ts), default=0) for k, ts in transforms.items()),
-        default=0,
-    )
-    min_needed = max(max(lags), transform_extra)
-
-    logger.info(
-        "L{} {}/{} | {} | {} series | bloque={} | train={:,} [{} → {}] valid={:,} test={:,}",
-        level.id, level.name, grain, target, data.n_series,
-        block, n_train_rows, train_start, train_end, len(data.valid_pd), len(data.test_pd),
-    )
-    if rows_per_series <= min_needed + 1:
-        logger.warning(
-            "  SKIP: historia insuficiente ({} períodos/serie, mínimo {})",
-            rows_per_series, min_needed + 2,
-        )
-        return []
-
-    encode_static(data.train_pd, data.static_cols)
-    fcst = build_fcst(grain, target)
-    t_fit = time.perf_counter()
-    fcst.fit(data.train_pd, static_features=data.static_cols)
-    fit_time_s = time.perf_counter() - t_fit
-    del data.train_pd; gc.collect()
-
-    # future_exog cubre valid+test; se trunca a los h_predict pasos que hacen falta
-    X_df = None
-    if data.avail_exog and data.future_exog is not None:
-        X_df = (
-            data.future_exog
-            .sort_values("ds")
-            .groupby("unique_id", sort=False)
-            .head(h_predict)
-            .reset_index(drop=True)
-        )
-
-    preds_df = fcst.predict(h=h_predict, X_df=X_df)
-
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    model_path = config.MODELS_DIR / f"mlf_level_{level.id:02d}_{grain}_{target}_{level.name}"
-    fcst.save(str(model_path))
-    del fcst; gc.collect()
-
-    preds_valid, preds_test = _split_preds(preds_df, block)
-
-    results = []
-    for split_name, target_pd, preds_split in (
-        ("valid", data.valid_pd, preds_valid),
-        ("test", data.test_pd, preds_test),
-    ):
-        for h in horizons:
-            m = _eval_horizon(preds_split, target_pd, data.train_for_wrmsse, h)
-
-            logger.debug(  # detalle por horizonte visible solo en nivel DEBUG
-                "  {:>5} h={:>3} | WAPE: {:.1%}  BIAS: {:+.1%}  WRMSSE: {}",
-                split_name, h, m["wape"], m["bias"],
-                f"{m['wrmsse']:.3f}" if m["wrmsse"] == m["wrmsse"] else "n/a",
-            )
-            results.append({
-                "level_id": level.id, "level_name": level.name, "grain": grain,
-                "target": target,
-                "target_type": "sales" if n is None else "cumulative",
-                "split": split_name,
-                "horizon": h,
-                "n_series": data.n_series,
-                "n_rows": n_train_rows + len(data.valid_pd) + len(data.test_pd),
-                "fit_time_s": round(fit_time_s, 2),
-                **m,
-                "model_path": str(model_path),
-            })
-
-    logger.debug("L{} {}/{}/{} listo en {:.1f}s", level.id, level.name, grain, target,
-                 time.perf_counter() - t0)
-    return results
-
-
-def _print_group_summary(group_rows: list[dict]) -> None:
-    """Imprime tabla compacta con todos los resultados de un nivel/grain (todos los targets)."""
-    if not group_rows:
-        return
-    r0 = group_rows[0]
-    header = f"── L{r0['level_id']} {r0['level_name']} / {r0['grain']} ({r0['n_series']} series) ──"
-    logger.info("{}", "─" * max(len(header), 60))
-    logger.info("{}", header)
-    logger.info("  {:>8}  {:>5}  {:>5}  {:>7}  {:>7}  {:>8}", "target", "split", "h", "WAPE", "BIAS", "WRMSSE")
-    for row in group_rows:
-        wrmsse = f"{row['wrmsse']:.3f}" if row["wrmsse"] == row["wrmsse"] else "  n/a"
-        logger.info(
-            "  {:>8}  {:>5}  {:>5}  {:>6.1%}  {:>+7.1%}  {:>8}",
-            row["target"], row["split"], row["horizon"], row["wape"], row["bias"], wrmsse,
-        )
+    artifact_path = config.MODELS_DIR / f"{state.level_str}_{state.target}_artifact.pkl"
+    joblib.dump(artifact, artifact_path)
+    logger.success("Artifact guardado en {}", artifact_path)
 
 
 def main():
-    files = sorted(config.FEATURED_DIR.glob("dataset_level_*.parquet"))
-    if not files:
-        logger.error("No hay parquets en {}. Ejecuta primero: make process-data && make build-datasets",
-                     config.FEATURED_DIR)
-        return
+    t_start = time.perf_counter()
+    cfg = CFG
 
-    results = []
+    state = load_data(cfg)
+    split_data(state, cfg)
+    evaluate_model = make_evaluator(state)
 
-    for i, file in enumerate(files, 1):
-        parsed = parse_level_file(file)
-        if parsed is None:
-            logger.warning("  SKIP legacy: {}", file.name)
-            continue
-        level, grain = parsed
+    if cfg.run_baseline_naive:
+        t0 = time.perf_counter()
+        run_baseline_naive(state, cfg, evaluate_model)
+        logger.info("Fase naive: {:.1f}s", time.perf_counter() - t0)
 
-        targets = ["sales"] + [f"cum{n}" for n in config.CUM_HORIZONS[grain]]
-        group_rows: list[dict] = []
-        for target in targets:
-            try:
-                group_rows.extend(_train_level(file, level, grain, target))
-            except Exception as e:
-                logger.exception("[{}/{}] error en {} target={}: {}", i, len(files), file.name, target, e)
-        results.extend(group_rows)
-        _print_group_summary(group_rows)
+    if cfg.run_baseline_stats:
+        t0 = time.perf_counter()
+        run_baseline_stats(state, evaluate_model)
+        logger.info("Fase estadísticos clásicos: {:.1f}s", time.perf_counter() - t0)
 
-    config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(results).to_parquet(config.OUTPUT_DIR / "experiment_results.parquet")
-    logger.info("─" * 60)
-    logger.info("Resultados guardados en {}", config.OUTPUT_DIR / "experiment_results.parquet")
+    if cfg.run_baseline_ml:
+        t0 = time.perf_counter()
+        run_baseline_ml(state, cfg, evaluate_model)
+        logger.info("Fase ML (hiperparámetros default): {:.1f}s", time.perf_counter() - t0)
+
+    save_model_comparison(state)
+
+    if cfg.run_feature_selection:
+        t0 = time.perf_counter()
+        select_features(state, cfg)
+        logger.info("Fase selección de features: {:.1f}s", time.perf_counter() - t0)
+
+    if cfg.run_shap:
+        t0 = time.perf_counter()
+        run_shap(state, cfg, evaluate_model)
+        logger.info("Fase SHAP: {:.1f}s", time.perf_counter() - t0)
+
+    best_params = {}
+    if cfg.run_optuna:
+        t0 = time.perf_counter()
+        best_params = tune_optuna(state, cfg)
+        logger.info("Fase Optuna: {:.1f}s", time.perf_counter() - t0)
+
+    fit_final_model(state, cfg, evaluate_model, best_params)
+
+    if cfg.save_artifact:
+        export_artifact(state)
+
+    logger.info("Pipeline completo ({}/{}) en {:.1f}s", state.level_str, state.target,
+                time.perf_counter() - t_start)
 
 
 if __name__ == "__main__":
