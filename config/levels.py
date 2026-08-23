@@ -20,19 +20,18 @@ class Level:
 
 
 LEVELS = [
-    Level(1,  "total",      (),                                                    ("daily",)),
-    Level(2,  "state",      ("state_id",),                                         ("daily",)),
-    Level(3,  "cat",        ("cat_id",),                                           ("daily",)),
-    Level(4,  "dept",       ("dept_id", "cat_id"),                                 ("daily",)),
-    Level(5,  "state_cat",  ("cat_id", "state_id"),                                ("daily",)),
-    Level(6,  "store",      ("store_id", "state_id"),                              ("daily",)),
-    Level(7,  "state_dept", ("dept_id", "cat_id", "state_id"),                     ("daily",)),
-    Level(8,  "store_cat",  ("cat_id", "store_id", "state_id"),                    ("daily",)),
-    Level(9,  "store_dept", ("dept_id", "cat_id", "store_id", "state_id"),         ("daily",)),
-    Level(10, "item",       ("dept_id", "cat_id", "item_id"),                      ("weekly", "daily")),
-    Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),          ("weekly", "daily")),
-    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"), ("weekly", "daily"),
-          ("store_id", "dept_id")),
+    Level(1,  "total",      (),                                                             ("daily",)),
+    Level(2,  "state",      ("state_id",),                                                  ("daily",)),
+    Level(3,  "cat",        ("cat_id",),                                                    ("daily",)),
+    Level(4,  "dept",       ("dept_id", "cat_id"),                                          ("daily",)),
+    Level(5,  "state_cat",  ("cat_id", "state_id"),                                         ("daily",)),
+    Level(6,  "store",      ("store_id", "state_id"),                                       ("daily",)),
+    Level(7,  "state_dept", ("dept_id", "cat_id", "state_id"),                              ("daily",)),
+    Level(8,  "store_cat",  ("cat_id", "store_id", "state_id"),                             ("daily",)),
+    Level(9,  "store_dept", ("dept_id", "cat_id", "store_id", "state_id"),                  ("daily",)),
+    Level(10, "item",       ("dept_id", "cat_id", "item_id"),                               ("weekly", "daily"),              ("dept_id")),
+    Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),                   ("weekly", "daily"),              ("state_id", "dept_id")),
+    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"),       ("weekly", "daily"),              ("store_id", "dept_id")),
 ]
 
 LEVELS_BY_ID = {lv.id: lv for lv in LEVELS}

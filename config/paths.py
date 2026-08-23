@@ -32,4 +32,4 @@ def featured_level_path(level, grain: str, split_values: dict | None = None) -> 
     suffix = ""
     if split_values:
         suffix = "__" + "_".join(str(split_values[c]) for c in level.split_by)
-    return DATASETS / f"dataset_level_{level.id:02d}_{grain}_{level.name}{suffix}.parquet"
+    return DATASETS / grain / f"dataset_level_{level.id:02d}_{grain}_{level.name}{suffix}.parquet"

@@ -91,7 +91,8 @@ def main():
         logger.error("No hay parquets en {}. Ejecuta primero: make process-data", config.PROCESSED_DIR)
         return
 
-    config.DATASETS.mkdir(parents=True, exist_ok=True)
+    for grain in ("daily", "weekly"):
+        (config.DATASETS / grain).mkdir(parents=True, exist_ok=True)
 
     for file in files:
         parsed = parse_level_file(file)
