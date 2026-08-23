@@ -7,9 +7,13 @@ Uso:
     python -m scripts.build_datasets --levels 1,9,12   # solo esos niveles
 """
 import argparse
+import gc
 import warnings
 
 import pandas as pd
+import polars as pl
+import pyarrow as pa
+import pyarrow.parquet as pq
 from loguru import logger
 
 import config
@@ -18,6 +22,40 @@ from src.data.split import parse_level_file
 from src.features.engineer import add_features, add_lag_features
 
 warnings.filterwarnings("ignore", message="invalid value encountered in divide")
+
+# Por encima de este nº de filas, procesar el nivel partición a partición (store_id
+# o, si solo hay un store, state_id) en vez de cargar el nivel entero: a partir de
+# item_state (~18M filas) el pico de RAM -- float64 intermedio antes del downcast +
+# la copia que hace mlforecast.preprocess -- satura la memoria disponible. Cada
+# partición procesada por separado pesa lo mismo que un nivel "item" (~6M filas),
+# que ya se sabe que corre sin problema.
+CHUNK_ROW_THRESHOLD = 10_000_000
+
+
+def _partition_col(file) -> str | None:
+    """store_id si tiene más de un valor (nivel item_store), si no state_id (nivel
+    item_state), si no None (no hace falta particionar)."""
+    lf = pl.scan_parquet(file)
+    cols = lf.collect_schema().names()
+    for col in ("store_id", "state_id"):
+        if col in cols and lf.select(pl.col(col).n_unique()).collect().item() > 1:
+            return col
+    return None
+
+
+def _process(df_pl: pl.DataFrame, grain: str, static_cols: list[str]) -> pd.DataFrame:
+    df = add_features(df_pl).to_pandas()
+    final = add_lag_features(df, grain, static_cols)
+    final["date"] = pd.to_datetime(final["date"])
+
+    # float64->float32 (los day-counts de engineer.py salen float64 al pasar por
+    # to_pandas() con nulls) y str->category (dims de baja cardinalidad repetidas
+    # en cada fila): recorta ~30% de RAM al leer el parquet, sin tocar cada caller.
+    float_cols = final.select_dtypes("float64").columns
+    str_cols = final.select_dtypes("str").columns
+    final[float_cols] = final[float_cols].astype("float32")
+    final[str_cols] = final[str_cols].astype("category")
+    return final
 
 
 def main():
@@ -46,22 +84,34 @@ def main():
 
         out = config.featured_level_path(level, grain)
         logger.info("[L{} {}/{}] {} → {}", level.id, level.name, grain, file.name, out.name)
-        df = add_features(read_parquet_pl(file)).to_pandas()
-        static_cols = [d for d in level.dims if d in df.columns and d not in config.EXCLUDE_AS_STATIC]
-        final = add_lag_features(df, grain, static_cols)
-        final["date"] = pd.to_datetime(final["date"])
+        static_cols = [d for d in level.dims if d not in config.EXCLUDE_AS_STATIC]
 
-        # float64->float32 (los day-counts de engineer.py salen float64 al pasar por
-        # to_pandas() con nulls) y str->category (dims de baja cardinalidad repetidas
-        # en cada fila): recorta ~30% de RAM al leer el parquet, sin tocar cada caller.
-        float_cols = final.select_dtypes("float64").columns
-        str_cols = final.select_dtypes("str").columns
-        final[float_cols] = final[float_cols].astype("float32")
-        final[str_cols] = final[str_cols].astype("category")
+        row_count = pl.scan_parquet(file).select(pl.len()).collect().item()
+        part_col = _partition_col(file) if row_count > CHUNK_ROW_THRESHOLD else None
 
-        final.to_parquet(out, compression="zstd", index=False)
+        if part_col is None:
+            final = _process(read_parquet_pl(file), grain, static_cols)
+            final.to_parquet(out, compression="zstd", index=False)
+            n_rows, n_cols = final.shape
+        else:
+            values = pl.scan_parquet(file).select(pl.col(part_col)).unique().collect()[part_col].to_list()
+            logger.info("  particionando por {} ({} partes, evita OOM)", part_col, len(values))
+            writer = None
+            n_rows = n_cols = 0
+            for value in values:
+                final = _process(read_parquet_pl(file, filter_expr=pl.col(part_col) == value), grain, static_cols)
+                table = pa.Table.from_pandas(final, preserve_index=False)
+                if writer is None:
+                    writer = pq.ParquetWriter(out, table.schema, compression="zstd")
+                writer.write_table(table)
+                n_rows += final.shape[0]
+                n_cols = final.shape[1]
+                del final, table
+                gc.collect()
+            writer.close()
+
         logger.success("  listo  {:.1f} MB  ({} cols, {} filas)",
-                       out.stat().st_size / 1_048_576, final.shape[1], final.shape[0])
+                       out.stat().st_size / 1_048_576, n_cols, n_rows)
 
 
 if __name__ == "__main__":
