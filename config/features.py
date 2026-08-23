@@ -46,6 +46,7 @@ MLFORECAST_LAGS = {
 # (corta/larga) donde aplica. 365/52 son el único anchor seguro para cum365/cum52.
 MLFORECAST_LAG_TRANSFORMS = {
     "daily": {
+        1:   _stats(7, 14, 21, 35) + [_momentum(7, 35)],
         7:   _stats(7, 14),
         28:  _stats(7, 28, 91) + [_momentum(7, 28)],
         91:  _stats(28, 91) + [ExpandingMean()],
