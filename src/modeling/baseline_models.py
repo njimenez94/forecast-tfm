@@ -16,6 +16,8 @@ Todos se comparan en validación vía `evaluate_predictions`
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
+from loguru import logger
 from catboost import CatBoostRegressor
 from lightgbm import LGBMRegressor
 from sklearn.ensemble import HistGradientBoostingRegressor
@@ -99,38 +101,50 @@ def moving_average(train_df, valid_df, target_col, group_col="agg_id", window=7)
     return valid_df[group_col].map(ma).fillna(0.0).to_numpy()
 
 
-def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="agg_id"):
+def _fit_predict_one(gid, sub, train_sub, target_col, fit_predict):
+    """Ajusta una única serie; usado por `_forecast_by_series` tanto en el
+    camino secuencial como en cada worker de `joblib` cuando `n_jobs != 1`."""
+    h = len(sub)
+    if train_sub is None or train_sub.empty:
+        return sub.index, np.zeros(h), False
+    try:
+        fc = np.asarray(fit_predict(train_sub, sub["date"].to_numpy()), dtype=float)
+        if fc.size != h:
+            raise ValueError(f"esperaba {h} valores, se obtuvieron {fc.size}")
+    except Exception:
+        fc = np.full(h, float(train_sub[target_col].to_numpy(dtype=float)[-1]))
+        return sub.index, fc, True
+    return sub.index, fc, False
+
+
+def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="agg_id", n_jobs=-1):
     """Ajusta y pronostica serie por serie con `fit_predict(train_sub, future_dates) ->
     array` (usado por los modelos estadísticos clásicos: ARIMA/SARIMA, ETS, Theta,
     TBATS, Prophet), alineando el resultado con `valid_df` (mismo criterio de
     sort/reindex que `drift`/`seasonal_naive`). Si `fit_predict` falla en una serie
     (muy corta, degenerada, no converge, etc.) cae al último valor observado en
-    train para esa serie, en vez de abortar todo el ajuste."""
+    train para esa serie, en vez de abortar todo el ajuste.
+
+    Cada serie se ajusta de forma independiente (no comparten estado), así que
+    se paralelizan con `joblib` (`n_jobs=-1` usa todos los cores); con miles de
+    series (ej. `level_10_weekly_item` tiene ~3000) el ajuste secuencial es el
+    cuello de botella real, no el costo de ajustar una sola serie."""
     train_groups = dict(iter(train_df.sort_values("date").groupby(group_col, sort=False)))
     valid_sorted = valid_df.sort_values([group_col, "date"])
+    groups = list(valid_sorted.groupby(group_col, sort=False))
 
-    n_failed = 0
-    parts, idx = [], []
-    for gid, sub in valid_sorted.groupby(group_col, sort=False):
-        h = len(sub)
-        train_sub = train_groups.get(gid)
-        if train_sub is None or train_sub.empty:
-            fc = np.zeros(h)
-        else:
-            try:
-                fc = np.asarray(fit_predict(train_sub, sub["date"].to_numpy()), dtype=float)
-                if fc.size != h:
-                    raise ValueError(f"esperaba {h} valores, se obtuvieron {fc.size}")
-            except Exception:
-                n_failed += 1
-                fc = np.full(h, float(train_sub[target_col].to_numpy(dtype=float)[-1]))
-        parts.append(fc)
-        idx.append(sub.index)
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(_fit_predict_one)(gid, sub, train_groups.get(gid), target_col, fit_predict)
+        for gid, sub in groups
+    )
 
+    n_failed = sum(failed for _, _, failed in results)
     if n_failed:
         logger.warning(f"{n_failed} serie(s) fallaron el ajuste; se usa el último valor de train como fallback.")
 
-    y_pred_sorted = pd.Series(np.concatenate(parts), index=np.concatenate(idx))
+    idx = np.concatenate([r[0] for r in results])
+    parts = np.concatenate([r[1] for r in results])
+    y_pred_sorted = pd.Series(parts, index=idx)
     return y_pred_sorted.reindex(valid_df.index).to_numpy()
 
 def fit_sarima(train_df, valid_df, target_col, group_col="agg_id",
