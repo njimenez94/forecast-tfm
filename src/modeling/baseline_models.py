@@ -291,10 +291,24 @@ def fit_catboost(X_train, y_train, categorical_features, random_state=42):
     return model
 
 
-def fit_histgb(X_train, y_train, random_state=42):
+def fit_histgb(X_train, y_train, random_state=42, max_bins=255):
+    """HistGradientBoostingRegressor no soporta categóricas con cardinalidad >
+    max_bins (255 por defecto): a diferencia de LightGBM/XGBoost/CatBoost, no
+    puede tratar `item_id` (niveles 10-12, ~3049 valores) como categórica
+    nativa. Se detectan las columnas dtype 'category' y solo se pasan como
+    categóricas las que caben dentro del límite; el resto (p. ej. item_id) se
+    deja fuera de `categorical_features` y HistGB la trata como numérica
+    (usa los códigos de la categoría), evitando el ValueError."""
+    categorical_features = [
+        col
+        for col in X_train.columns
+        if isinstance(X_train[col].dtype, pd.CategoricalDtype)
+        and len(X_train[col].cat.categories) <= max_bins
+    ]
     model = HistGradientBoostingRegressor(
         loss="absolute_error",
-        categorical_features="from_dtype",
+        categorical_features=categorical_features,
+        max_bins=max_bins,
         random_state=random_state,
     )
     model.fit(X_train, y_train)
