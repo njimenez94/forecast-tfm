@@ -247,13 +247,6 @@ def rmse(y_true, y_pred):
     return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
 
-def mape(y_true, y_pred, eps=1e-8):
-    """MAPE: error porcentual absoluto medio (con epsilon para evitar división por 0)."""
-    y_true = np.asarray(y_true, dtype=float)
-    y_pred = np.asarray(y_pred, dtype=float)
-    return float(np.mean(np.abs(y_true - y_pred) / (np.abs(y_true) + eps)))
-
-
 def rmsle(y_true, y_pred):
     """RMSLE: raíz del error cuadrático medio logarítmico. Penaliza más la
     subestimación que la sobreestimación y amortigua outliers en ventas altas
@@ -332,7 +325,6 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
         "wrmsse": compute_wrmsse(train_df, valid_df, y_pred_valid),
         "mae": mae(y_valid, y_pred_valid),
         "rmse": rmse(y_valid, y_pred_valid),
-        "mape": mape(y_valid, y_pred_valid),
         "smape": float(smape(y_valid, y_pred_valid)),
         "bias": float(bias(y_valid, y_pred_valid)),
         "rmsle": rmsle(y_valid, y_pred_valid),
@@ -345,7 +337,7 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
     msg = (
         f"{label:>25s} | WAPE: {result['wape']:.2%} | WRMSSE: {result['wrmsse']:.4f} "
         f"| MAE: {result['mae']:.3f} | RMSE: {result['rmse']:.3f} "
-        f"| MAPE: {result['mape']:.2%} | SMAPE: {result['smape']:.2%} | Bias: {result['bias']:.2%} "
+        f"| SMAPE: {result['smape']:.2%} | Bias: {result['bias']:.2%} "
         f"| RMSLE: {result['rmsle']:.4f} | TS: {result['tracking_signal']:.2f} "
         f"| SPEC: {result['spec']:.3f} | MASE: {result['mase']:.4f}"
     )
