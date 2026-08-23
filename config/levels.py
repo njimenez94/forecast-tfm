@@ -12,6 +12,11 @@ class Level:
     name: str
     dims: tuple[str, ...]
     grains: tuple[str, ...]  # ("daily",) | ("weekly",)
+    # Si no está vacío, build_datasets.py genera un parquet (y luego un modelo)
+    # independiente por cada combinación de valores de estas columnas, en vez de un
+    # único dataset para todo el nivel -- evita datasets/entrenamientos gigantes en
+    # los niveles de mayor cardinalidad (ver scripts/build_datasets.py).
+    split_by: tuple[str, ...] = ()
 
 
 LEVELS = [
@@ -26,7 +31,8 @@ LEVELS = [
     Level(9,  "store_dept", ("dept_id", "cat_id", "store_id", "state_id"),         ("daily",)),
     Level(10, "item",       ("dept_id", "cat_id", "item_id"),                      ("weekly", "daily")),
     Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),          ("weekly", "daily")),
-    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"), ("weekly","daily")),
+    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"), ("weekly", "daily"),
+          ("store_id", "dept_id")),
 ]
 
 LEVELS_BY_ID = {lv.id: lv for lv in LEVELS}

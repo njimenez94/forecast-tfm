@@ -25,5 +25,11 @@ def dataset_level_path(level, grain: str) -> Path:
     return PROCESSED_DIR / f"level_{level.id:02d}_{grain}_{level.name}.parquet"
 
 
-def featured_level_path(level, grain: str) -> Path:
-    return DATASETS / f"dataset_level_{level.id:02d}_{grain}_{level.name}.parquet"
+def featured_level_path(level, grain: str, split_values: dict | None = None) -> Path:
+    """split_values: valores de level.split_by (p.ej. {"store_id": "CA_3", "dept_id":
+    "FOODS_3"} en nivel 12) -- un parquet independiente por combinación, ver
+    scripts/build_datasets.py."""
+    suffix = ""
+    if split_values:
+        suffix = "__" + "_".join(str(split_values[c]) for c in level.split_by)
+    return DATASETS / f"dataset_level_{level.id:02d}_{grain}_{level.name}{suffix}.parquet"

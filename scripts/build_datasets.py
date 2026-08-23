@@ -58,6 +58,26 @@ def _process(df_pl: pl.DataFrame, grain: str, static_cols: list[str]) -> pd.Data
     return final
 
 
+def _process_split(file, level, grain: str, static_cols: list[str]) -> None:
+    """Como _process, pero un parquet independiente por cada combinación de
+    level.split_by (p.ej. store_id x dept_id en nivel 12): datasets y modelos
+    entrenables por separado en vez de un único dataset gigante para todo el nivel."""
+    cols = list(level.split_by)
+    combos = pl.scan_parquet(file).select(cols).unique().sort(cols).collect().rows()
+    logger.info("  separando por {} ({} datasets)", cols, len(combos))
+
+    for combo in combos:
+        split_values = dict(zip(cols, combo))
+        filter_expr = pl.all_horizontal([pl.col(c) == v for c, v in split_values.items()])
+        final = _process(read_parquet_pl(file, filter_expr=filter_expr), grain, static_cols)
+        out = config.featured_level_path(level, grain, split_values)
+        final.to_parquet(out, compression="zstd", index=False)
+        logger.success("  [{}] {:.1f} MB  ({} filas)", "/".join(map(str, combo)),
+                       out.stat().st_size / 1_048_576, final.shape[0])
+        del final
+        gc.collect()
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Genera el dataset final (features + lags/rolling) en artifacts/datasets/."
@@ -82,9 +102,15 @@ def main():
         if level_ids is not None and level.id not in level_ids:
             continue
 
+        static_cols = [d for d in level.dims if d not in config.EXCLUDE_AS_STATIC]
+
+        if level.split_by:
+            logger.info("[L{} {}/{}] {}", level.id, level.name, grain, file.name)
+            _process_split(file, level, grain, static_cols)
+            continue
+
         out = config.featured_level_path(level, grain)
         logger.info("[L{} {}/{}] {} → {}", level.id, level.name, grain, file.name, out.name)
-        static_cols = [d for d in level.dims if d not in config.EXCLUDE_AS_STATIC]
 
         row_count = pl.scan_parquet(file).select(pl.len()).collect().item()
         part_col = _partition_col(file) if row_count > CHUNK_ROW_THRESHOLD else None
