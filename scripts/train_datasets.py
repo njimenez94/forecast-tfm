@@ -79,7 +79,7 @@ class Config:
 
     # --- selección de features ---
     permutation_sample_size: int = 15_000
-    permutation_n_repeats: int = 10
+    permutation_n_repeats: int = 3
     backward_tolerance: float = 0.001
 
     # --- SHAP ---
