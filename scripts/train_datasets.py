@@ -7,7 +7,7 @@ Optuna y ajuste del modelo final.
 El pipeline está separado en fases activables/desactivables (`Config.run_*`),
 para poder saltear las que no hacen falta en una corrida dada (p.ej. iterar
 sobre selección de features sin repetir la comparación de modelos base, o
-reentrenar el modelo final con `config.LGBM_PARAMS` sin correr Optuna de nuevo).
+reentrenar el modelo final con `CFG.default_lgbm_params` sin correr Optuna de nuevo).
 
 Editar `CFG` (nivel, target, fases, hiperparámetros de tuning) y correr:
     make train-datasets
@@ -88,10 +88,25 @@ class Config:
     # --- Optuna ---
     optuna_n_trials: int = 1_000
     optuna_timeout_s: int = 15 * 60
-    optuna_objective: str = "rmse"
 
     # --- modelo final ---
     final_n_estimators: int = 1_500
+    # "tweedie" o "regression_l2"/"rmse" (aplica tanto si corre Optuna como si no).
+    objective: str = "tweedie"
+    tweedie_variance_power: float = 1.5
+    # Hiperparámetros del modelo final cuando NO corre Optuna (fallback, sin tunear).
+    default_lgbm_params: dict = field(default_factory=lambda: {
+        "metric": "mae",
+        "learning_rate": 0.05,
+        "n_estimators": 200,
+        "num_leaves": 31,
+        "min_data_in_leaf": 20,
+        "feature_fraction": 0.8,
+        "bagging_fraction": 0.8,
+        "bagging_freq": 1,
+        "verbose": -1,
+        "n_jobs": -1,
+    })
 
 
 CFG = Config()
@@ -360,14 +375,24 @@ def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     logger.info("SHAP: feature más importante = {} | plots guardados en {}", top_feature, plot_dir)
 
 
+def resolve_objective(cfg: Config) -> dict:
+    """Objective de `cfg.objective`, mismo criterio con o sin Optuna."""
+    kwargs = {"objective": cfg.objective}
+    if cfg.objective == "tweedie":
+        kwargs["tweedie_variance_power"] = cfg.tweedie_variance_power
+    return kwargs
+
+
 def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     import lightgbm as lgb
     import optuna
     from optuna.integration import LightGBMPruningCallback
 
+    objective_kwargs = resolve_objective(cfg)
+
     def objective(trial):
         model = lgb.LGBMRegressor(
-            objective=cfg.optuna_objective,
+            **objective_kwargs,
             learning_rate=trial.suggest_float("learning_rate", 0.03, 0.15, log=True),
             n_estimators=cfg.final_n_estimators,
             num_leaves=trial.suggest_int("num_leaves", 31, 255),
@@ -417,10 +442,12 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
     import lightgbm as lgb
     from lightgbm import LGBMRegressor
 
+    objective_kwargs = resolve_objective(cfg)
+
     if best_params:
         model_params = dict(best_params)
         final_model = LGBMRegressor(
-            objective=cfg.optuna_objective,
+            **objective_kwargs,
             n_estimators=cfg.final_n_estimators,
             random_state=cfg.random_state,
             n_jobs=-1,
@@ -430,9 +457,9 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
         )
         label = "LightGBM (final, Optuna)"
     else:
-        model_params = config.lgbm_params(state.level.id)
+        model_params = {**cfg.default_lgbm_params, "seed": cfg.random_state, **objective_kwargs}
         final_model = LGBMRegressor(**model_params)
-        label = "LightGBM (final, config.lgbm_params)"
+        label = "LightGBM (final, params default)"
 
     t0 = time.perf_counter()
     final_model.fit(
