@@ -22,6 +22,7 @@ Salidas:
     artifacts/optuna_study.db                                  estudio Optuna (sqlite, uno por level/grain/target)
     artifacts/models/{level}_{target}_artifact.pkl             artifact final (modelo + datos + métricas)
 """
+import gc
 import time
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -163,12 +164,27 @@ def split_data(state: SimpleNamespace, cfg: Config) -> None:
     X_train, y_train, X_valid, y_valid, X_test, y_test = build_feature_matrices(
         state.df, split, state.features, state.categorical_features, state.target,
     )
-
-    state.split = split
-    state.train, state.valid, state.test = split.train, split.valid, split.test
     state.X_train, state.y_train = X_train, y_train
     state.X_valid, state.y_valid = X_valid, y_valid
     state.X_test, state.y_test = X_test, y_test
+
+    # train/valid/test solo se usan después para bookkeeping de evaluación (scales
+    # WRMSSE/MASE, pesos por precio, clip de cierres, gross_sales de reportes) --
+    # no las ~100 columnas de features (esas ya están en X_train/X_valid/X_test).
+    # Cargar el nivel 12 completo (mayor cardinalidad) puede acercarse al límite de
+    # RAM disponible; recortar acá evita cargar ese peso tres veces más.
+    eval_cols = [c for c in dict.fromkeys(
+        ["agg_id", "date", "sales", "gross_sales", "avg_sell_price", "is_store_closed", state.target]
+    ) if c in state.df.columns]
+    state.train = split.train[eval_cols].copy()
+    state.valid = split.valid[eval_cols].copy()
+    state.test = split.test[eval_cols].copy()
+    state.first_date, state.valid_start, state.test_start = (
+        split.first_date, split.valid_start, split.test_start,
+    )
+    del split, state.df
+    gc.collect()
+
     state.wrmsse_metric = make_wrmsse_metric(state.train, state.valid)
 
     logger.info("Features: {} ({} categóricas)", len(state.features), len(state.categorical_features))
@@ -490,15 +506,16 @@ def export_artifact(state: SimpleNamespace) -> None:
         state.final_model.booster_.feature_importance(importance_type="gain"), index=state.features,
     ).sort_values(ascending=False)
 
+    # No se guardan df/X_train/y_train/X_valid/y_valid/valid: reconstruibles desde
+    # el parquet en data/datasets/ + este mismo pipeline, y notebooks/03_predictions.ipynb
+    # no los usa -- guardarlos solo triplicaba el tamaño del artifact (y el pico de
+    # RAM al armarlo) sin necesidad, justo lo que hace fallar por memoria al nivel 12.
     artifact = {
         "level": state.level_str,
-        "df": state.df,
         "model": state.final_model,
         "model_params": state.model_params,
-        "X_train": state.X_train, "y_train": state.y_train,
-        "X_valid": state.X_valid, "y_valid": state.y_valid,
         "X_test": state.X_test, "y_test": state.y_test,
-        "train": state.train, "valid": state.valid, "test": state.test,
+        "train": state.train, "test": state.test,
         "features": state.features,
         "categorical_features": state.categorical_features,
         "numerical_features": state.numerical_features,
@@ -512,9 +529,9 @@ def export_artifact(state: SimpleNamespace) -> None:
         "wrmsse_valid": state.model_results[-1]["wrmsse"],
         "wape_test": state.metrics_test["wape"],
         "wrmsse_test": state.metrics_test["wrmsse"],
-        "train_start": str(state.split.first_date.date()),
-        "valid_start": str(state.split.valid_start.date()),
-        "test_start": str(state.split.test_start.date()),
+        "train_start": str(state.first_date.date()),
+        "valid_start": str(state.valid_start.date()),
+        "test_start": str(state.test_start.date()),
     }
 
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)

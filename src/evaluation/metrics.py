@@ -280,10 +280,19 @@ def wape_metric(y_true, y_pred):
 
 def make_wrmsse_metric(train_df, valid_df):
     """Fábrica de eval metric de LightGBM para WRMSSE: cierra sobre train/valid ya
-    que la callback de lgb sólo recibe (y_true, y_pred)."""
+    que la callback de lgb sólo recibe (y_true, y_pred). Para el wrapper sklearn
+    (`LGBMRegressor.fit(eval_metric=...)`)."""
     def _wrmsse_metric(y_true, y_pred):
         return "wrmsse", compute_wrmsse(train_df, valid_df, y_pred), False
     return _wrmsse_metric
+
+
+def make_wrmsse_feval(train_df, valid_df):
+    """Igual que `make_wrmsse_metric` pero con la firma `(preds, eval_data)` que
+    espera `feval` en la API nativa (`lgb.train`) en vez de `(y_true, y_pred)`."""
+    def _feval(preds, eval_data):
+        return "wrmsse", compute_wrmsse(train_df, valid_df, preds), False
+    return _feval
 
 
 def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_time=None, category=None):
