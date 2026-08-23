@@ -26,6 +26,26 @@ HORIZON = {
     "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
 }
 
+# Split temporal estandar: mismo valid/test para todos los notebooks/scripts que
+# entrenen contra un nivel/grain dado. Unidad = periodos de la granularidad (días
+# para daily, semanas para weekly); to_days() convierte a días de calendario, que
+# es en lo que trabaja date_split.
+SEASON_LENGTH = {"daily": 7, "weekly": 52}
+VALID_PERIODS = {"daily": 365, "weekly": 52}
+TEST_PERIODS = {"daily": 28, "weekly": 4}
+
+
+def to_days(grain: str, periods: int) -> int:
+    return periods if grain == "daily" else periods * 7
+
+
+def valid_days(grain: str) -> int:
+    return to_days(grain, VALID_PERIODS[grain])
+
+
+def test_days(grain: str) -> int:
+    return to_days(grain, TEST_PERIODS[grain])
+
 # Horizontes acumulados a experimentar (días para daily, semanas para weekly)
 # Genera targets cum7, cum14, ... donde cumN predice la suma de los próximos N períodos
 CUM_HORIZONS = {
@@ -115,6 +135,11 @@ def valid_lags(grain: str, target: str) -> list[int]:
     Para cumN: necesita lag k >= N para evitar leakage
     (lag_k(cumN)[t] = cumN[t-k] involucra sales hasta t-k+N; safe si t-k+N <= t, i.e. k>=N).
     Si ningún lag existente cumple, devuelve [N] como mínimo.
+
+    Para 'sales' devuelve el set completo sin filtrar: el recorte por horizonte de
+    despliegue (un lag k solo es seguro para las filas con h <= k) se aplica fila a
+    fila en src.data.split.mask_horizon_leakage, después del split -- acá no se
+    conoce todavía dónde cae valid_start/test_start.
     """
     n = cum_n(target)
     all_lags = list(MLFORECAST_LAGS[grain])

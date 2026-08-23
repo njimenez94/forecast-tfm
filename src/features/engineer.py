@@ -249,7 +249,9 @@ def add_lag_features(df: pd.DataFrame, grain: str, static_cols: list[str]) -> pd
     el recorte por leakage que aplica valid_lags/valid_lag_transforms a targets
     cumN): quien entrene un modelo directo contra un target cumN debe restringirse a
     config.valid_lags/valid_lag_transforms(grain, f"cum{N}") para evitar leakage --
-    este dataset da el superset de columnas, no filtra por target.
+    este dataset da el superset de columnas, no filtra por target. El recorte por
+    horizonte de despliegue (lags menores al paso h de cada fila) se aplica después
+    del split, en src.data.split.mask_horizon_leakage.
 
     dropna=False: conserva todas las filas (las de historia insuficiente quedan con
     NaN en lag/rolling, no se descartan). Necesario porque scripts/train_datasets.py

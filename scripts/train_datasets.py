@@ -64,14 +64,6 @@ class Config:
     run_optuna: bool = False
     save_artifact: bool = True
 
-    # --- split temporal ---
-    # daily: cantidad de días. weekly: cantidad de filas semanales (se convierte a
-    # días x7 antes de llamar a date_split, que siempre trabaja en días de calendario).
-    valid_periods_daily: int = 365
-    test_periods_daily: int = 28
-    valid_periods_weekly: int = 52
-    test_periods_weekly: int = 4
-
     # --- comparación de modelos base ---
     ma_windows: dict = field(default_factory=lambda: {
         "daily": [7, 14, 21, 28, 35], "weekly": [2, 3, 4, 6, 8],
@@ -150,19 +142,15 @@ def load_data(cfg: Config) -> SimpleNamespace:
 
 
 def split_data(state: SimpleNamespace, cfg: Config) -> None:
-    if state.grain == "daily":
-        valid_days, test_days = cfg.valid_periods_daily, cfg.test_periods_daily
-    else:
-        # date_split trabaja en días de calendario: convertir semanas -> días. El
-        # -1 interno de date_split alinea el corte para que siga cayendo exactamente
-        # en un múltiplo de 7 filas semanales (no corta una semana a la mitad).
-        valid_days, test_days = cfg.valid_periods_weekly * 7, cfg.test_periods_weekly * 7
-
-    split = date_split(state.df, valid_days=valid_days, test_days=test_days)
+    split = date_split(
+        state.df,
+        valid_days=config.valid_days(state.grain),
+        test_days=config.test_days(state.grain),
+    )
     split.log_summary()
 
     X_train, y_train, X_valid, y_valid, X_test, y_test = build_feature_matrices(
-        state.df, split, state.features, state.categorical_features, state.target,
+        state.df, split, state.features, state.categorical_features, state.target, state.grain,
     )
     state.X_train, state.y_train = X_train, y_train
     state.X_valid, state.y_valid = X_valid, y_valid
@@ -206,7 +194,7 @@ def make_evaluator(state: SimpleNamespace):
 
 
 def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
-    season_length = {"daily": 7, "weekly": 52}[state.grain]
+    season_length = config.SEASON_LENGTH[state.grain]
     grain_letter = state.grain[0]
 
     t0 = time.perf_counter()
@@ -235,7 +223,7 @@ def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> N
 
 
 def run_baseline_stats(state: SimpleNamespace, evaluate_model) -> None:
-    season_length = {"daily": 7, "weekly": 52}[state.grain]
+    season_length = config.SEASON_LENGTH[state.grain]
 
     for name, fn, kwargs in [
         ("SARIMA", fit_sarima, dict(seasonal_order=(1, 1, 1, season_length))),

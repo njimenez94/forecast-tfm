@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import polars as pl
 from loguru import logger
@@ -66,14 +67,58 @@ def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str 
     )
 
 
+_LAG_PREFIXES = ("lag", "rolling_", "expanding_", "seasonal_")
+
+
+def _lag_anchor(col: str) -> int | None:
+    """Lag base de una columna generada por mlforecast (lag7, rolling_mean_lag28_
+    window_size7, ...), o None si no es una feature derivada del target."""
+    matches = re.findall(r"lag(\d+)", col)
+    return min(int(m) for m in matches) if matches else None
+
+
+def mask_horizon_leakage(X: pd.DataFrame, dates: pd.Series, origin: pd.Timestamp, grain: str) -> pd.DataFrame:
+    """NaN-ea, fila por fila, los lags/rolling/expanding/seasonal cuyo anchor sea
+    menor al paso h = (fecha - origin) en períodos de `grain`.
+
+    Un pronóstico real se hace de una sola tirada desde `origin` (el último día
+    conocido), sin actualizar con datos reales intermedios: para la fila que está
+    h períodos después de origin, ningún lag menor a h existe todavía -- lag_k
+    solo es seguro si k >= h. LightGBM/XGBoost manejan NaN nativamente, así que
+    enmascarar (no descartar columnas ni filas) conserva el máximo de señal legítima
+    disponible para cada fila.
+    """
+    period_days = 7 if grain == "weekly" else 1
+    h = ((dates - origin).dt.days // period_days).to_numpy()
+
+    X = X.copy()
+    for col in X.columns:
+        if not col.startswith(_LAG_PREFIXES):
+            continue
+        anchor = _lag_anchor(col)
+        if anchor is not None:
+            X.loc[h > anchor, col] = np.nan
+    return X
+
+
 def build_feature_matrices(df: pd.DataFrame, split: DateSplit, features: list[str],
-                           categorical_features: list[str], target: str):
+                           categorical_features: list[str], target: str, grain: str):
     """Arma X/y para train/valid/test y unifica las categorías de las columnas
     categóricas a partir del dataset completo: evita que cada split termine con un
-    set de categorías distinto (rompe modelos que las validan, p. ej. XGBoost)."""
+    set de categorías distinto (rompe modelos que las validan, p. ej. XGBoost).
+
+    X_valid/X_test pasan por mask_horizon_leakage: un pronóstico real se hace de
+    una sola tirada desde el último día conocido de cada split (fin de train para
+    valid, fin de valid para test) -- ver esa función."""
     X_train = split.train[features].copy()
     X_valid = split.valid[features].copy()
     X_test = split.test[features].copy()
+
+    period_days = 7 if grain == "weekly" else 1
+    origin_valid = split.valid_start - pd.DateOffset(days=period_days)
+    origin_test = split.test_start - pd.DateOffset(days=period_days)
+    X_valid = mask_horizon_leakage(X_valid, split.valid["date"], origin_valid, grain)
+    X_test = mask_horizon_leakage(X_test, split.test["date"], origin_test, grain)
 
     for col in categorical_features:
         categories = df[col].astype("category").cat.categories
