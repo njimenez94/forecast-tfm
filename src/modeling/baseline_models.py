@@ -135,26 +135,30 @@ def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="
 
 def fit_sarima(train_df, valid_df, target_col, group_col="agg_id",
                 order=(1, 1, 1), seasonal_order=(1, 1, 1, 7)):
-    """ARIMA/SARIMA por serie vía `statsmodels.SARIMAX`, con orden fijo (sin
-    búsqueda automática tipo `auto_arima`: sobre ~1500-2000 observaciones por
-    serie, un stepwise search por AIC tarda minutos por serie y no es viable
-    para 70 series). `seasonal_order=(1,1,1,7)` da SARIMA (estacionalidad
-    semanal, típica en ventas diarias); pasar `seasonal_order=(0,0,0,0)` da
-    ARIMA simple. El método más citado en la literatura académica de
-    forecasting estadístico clásico."""
-    import warnings
-    from statsmodels.tsa.statespace.sarimax import SARIMAX
-    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+    """ARIMA/SARIMA por serie vía `statsforecast.models.ARIMA` (nixtla), con
+    orden fijo (sin búsqueda automática tipo `auto_arima`: sobre ~1500-2000
+    observaciones por serie, un stepwise search por AIC tarda minutos por
+    serie y no es viable para 70 series). `seasonal_order=(1,1,1,7)` da SARIMA
+    (estacionalidad semanal, típica en ventas diarias); pasar
+    `seasonal_order=(0,0,0,0)` da ARIMA simple.
+
+    Se usa `statsforecast` en vez de `statsmodels.SARIMAX`: el statespace de
+    `SARIMAX` para estacionalidad larga (ej. `season_length=52` en series
+    semanales) tiene una dimensión de estado que crece con el período
+    estacional (~`max(p+s·P, q+s·Q+1)`), y el filtro de Kalman escala cúbico
+    con eso — cientos de veces más lento (y numéricamente inestable) que la
+    implementación de `statsforecast`, que no sufre ese blow-up."""
+    from statsforecast.models import ARIMA
+
+    p, d, q = order
+    P, D, Q, s = seasonal_order
 
     def _fit_predict(train_sub, future_dates):
         y = train_sub[target_col].to_numpy(dtype=float)
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=ConvergenceWarning)
-            model = SARIMAX(
-                y, order=order, seasonal_order=seasonal_order,
-                enforce_stationarity=False, enforce_invertibility=False,
-            ).fit(disp=False, maxiter=200, method="lbfgs")
-        return model.forecast(len(future_dates))
+        model = ARIMA(
+            order=(p, d, q), seasonal_order=(P, D, Q), season_length=s or 1,
+        ).fit(y)
+        return model.predict(len(future_dates))["mean"]
 
     return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
