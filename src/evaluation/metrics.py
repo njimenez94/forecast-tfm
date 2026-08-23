@@ -216,17 +216,22 @@ def clip_closed_stores(valid_df, preds):
 
 
 def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
-                    price_col=_PRICE_COL):
-    """Adjunta las predicciones a valid_df y calcula el WRMSSE final."""
+                    price_col=_PRICE_COL, scales=None, weights=None):
+    """Adjunta las predicciones a valid_df y calcula el WRMSSE final.
+
+    `scales`/`weights` opcionales: si ya se calcularon antes para el mismo
+    `train_df` (p.ej. en `make_wrmsse_metric`, invariantes entre llamadas
+    porque no dependen de las predicciones), se reusan en vez de recalcular
+    el groupby completo sobre train en cada invocación."""
     if group_col not in valid_df.columns:
         return float("nan")
 
     valid_with_preds = valid_df[[group_col, "date", "sales"]].copy()
     valid_with_preds["forecast"] = clip_closed_stores(valid_df, preds)
 
-    scales = compute_scales(train_df, group_col)
-    weights = None
-    if price_col in train_df.columns:
+    if scales is None:
+        scales = compute_scales(train_df, group_col)
+    if weights is None and price_col in train_df.columns:
         weights = compute_weights(train_df, price_col, group_col)
 
     return calculate_wrmsse(valid_with_preds, scales, weights, group_col)
@@ -278,20 +283,34 @@ def wape_metric(y_true, y_pred):
     return "wape", wape(y_true, y_pred), False
 
 
+def _wrmsse_scales_weights(train_df, group_col=_SERIES_COL, price_col=_PRICE_COL):
+    """Precalcula scales/weights una sola vez para un `train_df` fijo: ambas
+    son invariantes entre rondas de boosting (no dependen de las
+    predicciones), así que recalcularlas en cada llamada del eval metric
+    (una por ronda) es trabajo repetido sobre el mismo resultado."""
+    scales = compute_scales(train_df, group_col)
+    weights = compute_weights(train_df, price_col, group_col) if price_col in train_df.columns else None
+    return scales, weights
+
+
 def make_wrmsse_metric(train_df, valid_df):
     """Fábrica de eval metric de LightGBM para WRMSSE: cierra sobre train/valid ya
     que la callback de lgb sólo recibe (y_true, y_pred). Para el wrapper sklearn
     (`LGBMRegressor.fit(eval_metric=...)`)."""
+    scales, weights = _wrmsse_scales_weights(train_df)
+
     def _wrmsse_metric(y_true, y_pred):
-        return "wrmsse", compute_wrmsse(train_df, valid_df, y_pred), False
+        return "wrmsse", compute_wrmsse(train_df, valid_df, y_pred, scales=scales, weights=weights), False
     return _wrmsse_metric
 
 
 def make_wrmsse_feval(train_df, valid_df):
     """Igual que `make_wrmsse_metric` pero con la firma `(preds, eval_data)` que
     espera `feval` en la API nativa (`lgb.train`) en vez de `(y_true, y_pred)`."""
+    scales, weights = _wrmsse_scales_weights(train_df)
+
     def _feval(preds, eval_data):
-        return "wrmsse", compute_wrmsse(train_df, valid_df, preds), False
+        return "wrmsse", compute_wrmsse(train_df, valid_df, preds, scales=scales, weights=weights), False
     return _feval
 
 
