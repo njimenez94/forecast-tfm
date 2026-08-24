@@ -5,6 +5,7 @@ adicionales que solo se pueden calcular con historia completa de la serie
 (release, distancia a eventos, posición del precio, lags/rolling/momentum).
 """
 import math
+import warnings
 
 import pandas as pd
 import polars as pl
@@ -261,7 +262,12 @@ def add_lag_features(df: pd.DataFrame, grain: str, static_cols: list[str]) -> pd
     si el modelo elegido no los soporta.
     """
     fcst = build_fcst(grain, target="sales")
-    return fcst.preprocess(
-        df, id_col="agg_id", time_col="date", target_col="sales", static_features=static_cols,
-        dropna=False,
-    )
+    # utilsforecast inserta cada batch de columnas con df[names] = values -- con ~130
+    # columnas de lag/rolling eso fragmenta el DataFrame y pandas lo advierte por cada
+    # batch. Cosmético (no afecta el resultado), silenciado solo acá.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
+        return fcst.preprocess(
+            df, id_col="agg_id", time_col="date", target_col="sales", static_features=static_cols,
+            dropna=False,
+        )
