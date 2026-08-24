@@ -22,7 +22,7 @@ def _momentum(short: int, long: int) -> Combine:
 
 # Horizontes de validación por granularidad (días para daily, semanas para weekly)
 HORIZON = {
-    "daily":  [7, 14, 21, 28, 35, 42, 365],
+    "daily":  [7, 14, 21, 28, 35, 42, 364],
     "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
 }
 
@@ -66,7 +66,7 @@ def test_days(grain: str) -> int:
 # Horizontes acumulados a experimentar (días para daily, semanas para weekly)
 # Genera targets cum7, cum14, ... donde cumN predice la suma de los próximos N períodos
 CUM_HORIZONS = {
-    "daily":  [7, 14, 21, 28, 35, 42, 365],
+    "daily":  [7, 14, 21, 28, 35, 42, 364],
     "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
 }
 
@@ -74,7 +74,7 @@ CUM_HORIZONS = {
 # daily: denso 1-28 (cada día del bloque de horizonte VALID_PERIODS/TEST_PERIODS
 # tiene su propio lag puntual -- ver src.data.split.mask_horizon_leakage/block_origins,
 # que revalida cada fila por su propio h dentro del bloque de 28), después salta a
-# múltiplos gruesos (35, 42, 56, 91, 182, 364). 364 (no 365) para alinear
+# múltiplos gruesos (35, 42, 56, 91, 182, 364). 364 (no 364) para alinear
 # día-de-semana a un año. Filtro por leakage de targets cumN vía valid_lags.
 MLFORECAST_LAGS = {
     "daily": [*range(1, 29), 35, 42, 56, 91, 182, 364],
@@ -83,7 +83,7 @@ MLFORECAST_LAGS = {
 
 # Transforms por lag base (shift → sin leakage si shift >= N del target cumN, ver
 # valid_lag_transforms). Cada anchor: mean/std/min/max en varias ventanas + momentum
-# (corta/larga) donde aplica. 365/52 son el único anchor seguro para cum365/cum52.
+# (corta/larga) donde aplica. 364/52 son el único anchor seguro para cum364/cum52.
 # 2-6 rellenan el hueco entre el anchor=1 (denso) y el anchor=7 (rolling ya existía):
 # antes, una fila con h entre 2 y 6 se quedaba sin ningún rolling propio y usaba
 # directamente el de lag7 (ver src.data.split.mask_horizon_leakage).
@@ -99,7 +99,7 @@ MLFORECAST_LAG_TRANSFORMS = {
         28:  _stats(7, 28, 91) + [_momentum(7, 28)],
         91:  _stats(28, 91) + [ExpandingMean()],
         364: _stats(28, 91) + [SeasonalRollingMean(season_length=7, window_size=8)],
-        365: [RollingMean(28), RollingMean(91)],
+        364: [RollingMean(28), RollingMean(91)],
     },
     "weekly": {
         1:  _stats(4, 13),
