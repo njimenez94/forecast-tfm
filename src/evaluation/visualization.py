@@ -30,7 +30,7 @@ def plot_forecast(df_pred, target_col, agg_id, n=30, date=None):
 
 
 def explain_prediction(test_df, X_test, df_pred, explainer, target_col, agg_id, date, max_display=10):
-    """Waterfall de SHAP para la fila (agg_id, date), con el detalle real/pred/error
+    """Waterfall de SHAP para la fila (agg_id, date), con el detalle real/pred/bias
     en el título. Requiere un `explainer` de shap ya construido sobre el modelo."""
     import shap
 
@@ -46,8 +46,8 @@ def explain_prediction(test_df, X_test, df_pred, explainer, target_col, agg_id, 
     date_val = info["date"]
     sales_val = info[target_col]
     pred_val = info["y_pred"]
-    error_val = info["error"]
-    error_pct = (error_val / sales_val * 100) if sales_val != 0 else float("nan")
+    bias_val = -info["error"]  # pred - actual (positivo = sobreestima)
+    bias_pct = (bias_val / sales_val * 100) if sales_val != 0 else float("nan")
 
     shap.plots.waterfall(
         shap.Explanation(
@@ -63,7 +63,7 @@ def explain_prediction(test_df, X_test, df_pred, explainer, target_col, agg_id, 
     plt.title(
         f"{agg_id_val} | {date_val:%Y-%m-%d} | "
         f"sales={sales_val:.0f} | pred={pred_val:.0f} | "
-        f"error={error_val:.0f} ({error_pct:.1f}%)",
+        f"bias={bias_val:.0f} ({bias_pct:.1f}%)",
         pad=20,
         loc="left",
     )
