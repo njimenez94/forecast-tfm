@@ -31,14 +31,21 @@ HORIZON = {
 # para daily, semanas para weekly); to_days() convierte a días de calendario, que
 # es en lo que trabaja date_split.
 SEASON_LENGTH = {"daily": 7, "weekly": 52}
-# Igual a TEST_PERIODS a propósito: valid tiene que ser un bloque del mismo
-# tamaño que el horizonte real de despliegue (no un tramo largo tipo 365 días),
-# para que feature selection y tuning de Optuna -- que corren sobre X_valid --
-# midan sobre el mismo problema que despues se evalua en test (ver
-# src.data.split.mask_horizon_leakage: un valid mas largo que el horizonte
-# fuerza a enmascarar casi toda la señal reciente en la mayoria de sus filas).
+# Igual a TEST_PERIODS a propósito: es el horizonte real de despliegue, y también el
+# tamaño de bloque que src.data.split.build_feature_matrices usa para revalidar
+# horizonte en X_valid/X_test (ver block_origins). Con valid_days == valid_days(grain)
+# (el default, un único bloque) esto da feature selection/tuning de Optuna sobre el
+# mismo problema que después se evalúa en test. Un valid_days más largo (p.ej.
+# valid_year_days) sigue revalidando por bloques de este tamaño en vez de un único
+# origen para todo el split, así no enmascara de más la señal reciente.
 VALID_PERIODS = {"daily": 28, "weekly": 4}
 TEST_PERIODS = {"daily": 28, "weekly": 4}
+
+# Cantidad de bloques de VALID_PERIODS que arma un valid "último año completo" (pasar
+# a date_split(valid_days=...) -- build_feature_matrices ya revalida por bloques de
+# VALID_PERIODS sin ningún parámetro extra, ver arriba): 13*28 = 364 días,
+# 13*4 = 52 semanas, ambos ~1 año y múltiplo exacto del bloque.
+VALID_YEAR_BLOCKS = 13
 
 
 def to_days(grain: str, periods: int) -> int:
@@ -47,6 +54,10 @@ def to_days(grain: str, periods: int) -> int:
 
 def valid_days(grain: str) -> int:
     return to_days(grain, VALID_PERIODS[grain])
+
+
+def valid_year_days(grain: str) -> int:
+    return to_days(grain, VALID_PERIODS[grain] * VALID_YEAR_BLOCKS)
 
 
 def test_days(grain: str) -> int:

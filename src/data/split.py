@@ -38,8 +38,13 @@ class DateSplit:
         return (self.last_date - self.test_start).days + 1
 
     def log_summary(self) -> None:
-        logger.info(f"Train : {self.first_date:%Y-%m-%d} to {self.valid_start:%Y-%m-%d} ({self.train_days:,} days, {len(self.train):,} rows)")
-        logger.info(f"Valid : {self.valid_start:%Y-%m-%d} to {self.test_start:%Y-%m-%d} ({self.valid_days:,} days, {len(self.valid):,} rows)")
+        # último día real de train/valid (no valid_start/test_start): esos son el
+        # borde exclusivo del siguiente split, mostrarlos acá se lee como fechas
+        # duplicadas entre splits aunque las filas no se solapen.
+        train_last = self.train["date"].max()
+        valid_last = self.valid["date"].max()
+        logger.info(f"Train : {self.first_date:%Y-%m-%d} to {train_last:%Y-%m-%d} ({self.train_days:,} days, {len(self.train):,} rows)")
+        logger.info(f"Valid : {self.valid_start:%Y-%m-%d} to {valid_last:%Y-%m-%d} ({self.valid_days:,} days, {len(self.valid):,} rows)")
         logger.info(f"Test  : {self.test_start:%Y-%m-%d} to {self.last_date:%Y-%m-%d} ({self.test_days:,} days, {len(self.test):,} rows)")
 
 
@@ -77,7 +82,7 @@ def _lag_anchor(col: str) -> int | None:
     return min(int(m) for m in matches) if matches else None
 
 
-def mask_horizon_leakage(X: pd.DataFrame, dates: pd.Series, origin: pd.Timestamp, grain: str) -> pd.DataFrame:
+def mask_horizon_leakage(X: pd.DataFrame, dates: pd.Series, origin: pd.Timestamp | np.ndarray, grain: str) -> pd.DataFrame:
     """NaN-ea, fila por fila, los lags/rolling/expanding/seasonal cuyo anchor sea
     menor al paso h = (fecha - origin) en períodos de `grain`.
 
@@ -87,6 +92,10 @@ def mask_horizon_leakage(X: pd.DataFrame, dates: pd.Series, origin: pd.Timestamp
     solo es seguro si k >= h. LightGBM/XGBoost manejan NaN nativamente, así que
     enmascarar (no descartar columnas ni filas) conserva el máximo de señal legítima
     disponible para cada fila.
+
+    `origin` puede ser un único Timestamp (todo el split comparte origen) o un
+    array con un origen por fila (ver `block_origins`, para revalidar el horizonte
+    dentro de bloques consecutivos en vez de un único origen para todo el split).
     """
     period_days = 7 if grain == "weekly" else 1
     h = ((dates - origin).dt.days // period_days).to_numpy()
@@ -101,22 +110,61 @@ def mask_horizon_leakage(X: pd.DataFrame, dates: pd.Series, origin: pd.Timestamp
     return X
 
 
+def block_origins(dates: pd.Series, ref_start: pd.Timestamp, block_periods: int, grain: str) -> np.ndarray:
+    """Origen por fila para revalidar horizonte dentro de bloques consecutivos de
+    `block_periods` (unidades de `grain`) que arrancan en `ref_start` y se repiten
+    hasta cubrir `dates`.
+
+    Simula un pronóstico que se refresca cada `block_periods` con datos reales ya
+    observados hasta el día anterior a cada bloque -- en vez de un único origen fijo
+    para todo el split, que fuerza a enmascarar casi toda la señal reciente cuando el
+    split es mucho más largo que el horizonte real de despliegue (ver
+    mask_horizon_leakage y config.VALID_PERIODS)."""
+    period_days = 7 if grain == "weekly" else 1
+    block_days = block_periods * period_days
+    offset_days = ((dates - ref_start).dt.days // block_days) * block_days
+    block_start = ref_start + pd.to_timedelta(offset_days, unit="D")
+    return (block_start - pd.Timedelta(days=period_days)).to_numpy()
+
+
+def valid_blocks(valid_start: pd.Timestamp, test_start: pd.Timestamp, block_periods: int,
+                 grain: str) -> list[tuple[int, pd.Timestamp, pd.Timestamp]]:
+    """Bloques consecutivos de `block_periods` que cubren [valid_start, test_start),
+    para evaluar métricas bloque por bloque (en vez de agregadas sobre todo el
+    período). Toma los timestamps sueltos en vez de un DateSplit para poder
+    descartar train/valid/test (pesados) y quedarse solo con los bordes. Devuelve
+    (n, start, end) con end exclusivo; el último bloque puede ser más corto si el
+    total no es múltiplo exacto de block_periods."""
+    period_days = 7 if grain == "weekly" else 1
+    block_days = block_periods * period_days
+    blocks = []
+    start, n = valid_start, 0
+    while start < test_start:
+        end = min(start + pd.DateOffset(days=block_days), test_start)
+        blocks.append((n, start, end))
+        start, n = end, n + 1
+    return blocks
+
+
 def build_feature_matrices(df: pd.DataFrame, split: DateSplit, features: list[str],
                            categorical_features: list[str], target: str, grain: str):
     """Arma X/y para train/valid/test y unifica las categorías de las columnas
     categóricas a partir del dataset completo: evita que cada split termine con un
     set de categorías distinto (rompe modelos que las validan, p. ej. XGBoost).
 
-    X_valid/X_test pasan por mask_horizon_leakage: un pronóstico real se hace de
-    una sola tirada desde el último día conocido de cada split (fin de train para
-    valid, fin de valid para test) -- ver esa función."""
+    X_valid/X_test se enmascaran por bloques consecutivos de config.VALID_PERIODS[grain]
+    / config.TEST_PERIODS[grain] (ver block_origins): cada bloque revalida el horizonte
+    con su propio origen, como si el pronóstico se refrescara cada VALID_PERIODS con
+    datos reales ya observados. Si split.valid dura exactamente un bloque (el caso
+    estándar) esto da el mismo resultado que un único origen para todo el split; si
+    dura más (p.ej. config.valid_year_days(grain), el último año) evita enmascarar
+    de más la señal reciente en la mayoría de las filas."""
     X_train = split.train[features].copy()
     X_valid = split.valid[features].copy()
     X_test = split.test[features].copy()
 
-    period_days = 7 if grain == "weekly" else 1
-    origin_valid = split.valid_start - pd.DateOffset(days=period_days)
-    origin_test = split.test_start - pd.DateOffset(days=period_days)
+    origin_valid = block_origins(split.valid["date"], split.valid_start, config.VALID_PERIODS[grain], grain)
+    origin_test = block_origins(split.test["date"], split.test_start, config.TEST_PERIODS[grain], grain)
     X_valid = mask_horizon_leakage(X_valid, split.valid["date"], origin_valid, grain)
     X_test = mask_horizon_leakage(X_test, split.test["date"], origin_test, grain)
 
@@ -227,3 +275,24 @@ def prepare_level(file: Path, level, grain: str, horizon: int,
         avail_exog=avail_exog,
         n_series=n_series,
     )
+
+
+if __name__ == "__main__":
+    # ponytail: self-check para block_origins/valid_blocks (año de valid en bloques
+    # de 28 días) -- correr con `python -m src.data.split`.
+    dates = pd.Series(pd.date_range("2016-01-01", periods=364, freq="D"))
+    ref = dates.iloc[0]
+    origins = block_origins(dates, ref, block_periods=28, grain="daily")
+    # dentro del primer bloque el origen es siempre el día anterior a ref
+    assert (origins[:28] == np.datetime64(ref - pd.Timedelta(days=1))).all()
+    # el bloque 2 (día 28) resetea el origen 28 días más tarde
+    assert origins[28] == np.datetime64(ref + pd.Timedelta(days=27))
+
+    valid_start, test_start = dates.iloc[0], dates.iloc[-1] + pd.Timedelta(days=1)
+    blocks = valid_blocks(valid_start, test_start, block_periods=28, grain="daily")
+    assert len(blocks) == 13
+    assert blocks[0][1] == valid_start
+    assert blocks[-1][2] == test_start
+    assert all(b[2] == blocks[i + 1][1] for i, b in enumerate(blocks[:-1]))  # sin huecos/solapes
+
+    print("src.data.split self-check OK")
