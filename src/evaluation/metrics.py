@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from loguru import logger
+from sklearn.metrics import mean_tweedie_deviance
 
 _SERIES_COL = "agg_id"
 _PRICE_COL = "avg_sell_price"
@@ -269,6 +270,18 @@ def tracking_signal(y_true, y_pred):
     if mad == 0:
         return 0.0
     return float(np.sum(error) / mad)
+
+
+def objective_metric(y_true, y_pred, objective="rmse", tweedie_variance_power=1.5):
+    """Métrica coherente con el `objective` de LightGBM del nivel (ver
+    config.lgbm_params / TWEEDIE_LEVELS): rmse para el caso general, deviance
+    de Tweedie para los niveles intermitentes. Es la métrica que debe decidir
+    selección de features y ranking de Optuna -- WRMSSE se calcula aparte solo
+    para informar, no para decidir."""
+    if objective == "tweedie":
+        y_pred = np.clip(np.asarray(y_pred, dtype=float), 1e-6, None)
+        return float(mean_tweedie_deviance(y_true, y_pred, power=tweedie_variance_power))
+    return rmse(y_true, y_pred)
 
 
 def wape_metric(y_true, y_pred):

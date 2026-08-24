@@ -3,8 +3,8 @@ from src.evaluation.metrics import (
     build_series_metrics, calculate_mase, calculate_rmsse, calculate_spec,
     calculate_wmase, calculate_wrmsse, compute_mae_scales, compute_mase,
     compute_scales, compute_spec, compute_weights, compute_wrmsse,
-    evaluate_predictions, make_wrmsse_feval, make_wrmsse_metric, smape, spec,
-    wape, wape_metric,
+    evaluate_predictions, make_wrmsse_feval, make_wrmsse_metric,
+    objective_metric, smape, spec, wape, wape_metric,
 )
 from src.evaluation.visualization import (
     analizar_prediccion, explain_prediction, plot_forecast,
@@ -27,6 +27,7 @@ __all__ = [
     "compute_spec",
     "compute_mase",
     "wape_metric",
+    "objective_metric",
     "make_wrmsse_metric",
     "make_wrmsse_feval",
     "evaluate_predictions",

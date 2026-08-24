@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-
+import matplotlib.dates as mdates
 
 def plot_forecast(df_pred, target_col, agg_id, n=30, date=None):
     """Serie real vs. predicha para `agg_id`; si se pasa `date`, recorta +-n días
@@ -14,15 +14,18 @@ def plot_forecast(df_pred, target_col, agg_id, n=30, date=None):
         df_plot = df_plot[(df_plot["date"] >= since) & (df_plot["date"] <= until)]
 
     fig, ax = plt.subplots(figsize=(14, 5))
-    sns.lineplot(df_plot, x="date", y=target_col, label="Real", ax=ax)
-    sns.lineplot(df_plot, x="date", y="y_pred", label="Predicción", ax=ax)
+    sns.lineplot(df_plot, x="date", y=target_col, label="Real", marker="o", ax=ax)
+    sns.lineplot(df_plot, x="date", y="y_pred", label="Predicción", marker="o", ax=ax)
     if date:
         ax.axvline(date, color="red", linestyle="--", linewidth=1)
 
     ax.set_title(agg_id, loc="left")
     ax.set_xlabel("")
     ax.set_ylabel("")
+    ax.xaxis.set_major_locator(mdates.DayLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%y"))
     plt.xticks(rotation=45, ha="right")
+    ax.grid(axis="y", alpha=0.3)
     plt.ylim(0)
     sns.despine()
     plt.tight_layout()

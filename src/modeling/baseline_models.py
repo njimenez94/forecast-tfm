@@ -243,8 +243,12 @@ def fit_prophet(train_df, valid_df, target_col, group_col="agg_id",
     return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
 
-def fit_lightgbm(X_train, y_train, categorical_features, random_state=42):
-    model = LGBMRegressor(objective="rmse", random_state=random_state, verbosity=-1)
+def fit_lightgbm(X_train, y_train, categorical_features, objective="rmse",
+                  tweedie_variance_power=1.5, random_state=42):
+    params = {"objective": objective, "random_state": random_state, "verbosity": -1}
+    if objective == "tweedie":
+        params["tweedie_variance_power"] = tweedie_variance_power
+    model = LGBMRegressor(**params)
     model.fit(X_train, y_train, categorical_feature=categorical_features)
     return model
 

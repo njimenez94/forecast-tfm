@@ -36,7 +36,7 @@ import config
 from src.data import build_feature_matrices, date_split
 from src.evaluation import (
     build_all_series_metrics, build_predictions_report, evaluate_predictions,
-    make_wrmsse_metric,
+    make_wrmsse_metric, objective_metric,
 )
 from src.modeling import (
     backward_feature_selection, catboost_features, compute_permutation_importance,
@@ -240,7 +240,7 @@ def run_baseline_stats(state: SimpleNamespace, evaluate_model) -> None:
 def run_baseline_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     t0 = time.perf_counter()
     lgbm_model = fit_lightgbm(state.X_train, state.y_train, state.categorical_features,
-                               random_state=cfg.random_state)
+                               random_state=cfg.random_state, **resolve_objective(cfg))
     evaluate_model("LightGBM", lgbm_model.predict(state.X_valid),
                     fit_time=time.perf_counter() - t0, category="ML")
     state.lgbm_model = lgbm_model
@@ -289,10 +289,12 @@ def save_model_comparison(state: SimpleNamespace) -> None:
 
 
 def select_features(state: SimpleNamespace, cfg: Config) -> None:
+    objective_kwargs = resolve_objective(cfg)
+
     lgbm_model = getattr(state, "lgbm_model", None)
     if lgbm_model is None:
         lgbm_model = fit_lightgbm(state.X_train, state.y_train, state.categorical_features,
-                                   random_state=cfg.random_state)
+                                   random_state=cfg.random_state, **objective_kwargs)
 
     importance_gain = pd.Series(
         lgbm_model.booster_.feature_importance(importance_type="gain"), index=state.features,
@@ -302,14 +304,14 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
     importance_perm = compute_permutation_importance(
         lgbm_model, state.X_valid, state.y_valid, state.features,
         sample_size=cfg.permutation_sample_size, n_repeats=cfg.permutation_n_repeats,
-        random_state=cfg.random_state,
+        random_state=cfg.random_state, **objective_kwargs,
     )
     logger.info("Top 10 permutation importance:\n{}", importance_perm.head(10))
 
-    selected_features, final_wrmsse, selection_log = backward_feature_selection(
-        state.X_train, state.y_train, state.X_valid, state.train, state.valid,
+    selected_features, final_score, final_wrmsse, selection_log = backward_feature_selection(
+        state.X_train, state.y_train, state.X_valid, state.y_valid, state.train, state.valid,
         state.features, state.categorical_features, importance_perm,
-        tolerance=cfg.backward_tolerance, random_state=cfg.random_state,
+        tolerance=cfg.backward_tolerance, random_state=cfg.random_state, **objective_kwargs,
     )
 
     dropped = sorted(set(state.features) - set(selected_features))
@@ -326,8 +328,8 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     selection_log.to_csv(out_dir / f"{state.level_str}_{state.target}_feature_selection.csv", index=False)
 
-    logger.info("Features finales: {} ({} categóricas) | WRMSSE={:.4f}",
-                len(state.features), len(state.categorical_features), final_wrmsse)
+    logger.info("Features finales: {} ({} categóricas) | {}={:.4f} | WRMSSE={:.4f} (informativo)",
+                len(state.features), len(state.categorical_features), cfg.objective, final_score, final_wrmsse)
 
 
 def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
@@ -336,7 +338,7 @@ def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     import shap
     from lightgbm import LGBMRegressor
 
-    model = LGBMRegressor(objective="rmse")
+    model = LGBMRegressor(**resolve_objective(cfg))
     t0 = time.perf_counter()
     model.fit(
         state.X_train, state.y_train,
@@ -389,6 +391,7 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     from optuna.integration import LightGBMPruningCallback
 
     objective_kwargs = resolve_objective(cfg)
+    eval_metric = "tweedie" if cfg.objective == "tweedie" else "rmse"
 
     def objective(trial):
         model = lgb.LGBMRegressor(
@@ -410,16 +413,20 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
         model.fit(
             state.X_train, state.y_train,
             eval_set=[(state.X_valid, state.y_valid)],
-            eval_metric="rmse",
+            eval_metric=eval_metric,
             categorical_feature=state.categorical_features,
             callbacks=[
                 lgb.early_stopping(30, first_metric_only=True, verbose=False),
-                LightGBMPruningCallback(trial, "rmse"),
+                LightGBMPruningCallback(trial, eval_metric),
             ],
         )
         y_pred = model.predict(state.X_valid, num_iteration=model.best_iteration_)
+        # Optuna decide por `objective_metric` (coherente con cfg.objective); el
+        # WRMSSE se calcula y se guarda como user_attr solo para informar.
+        score = objective_metric(state.y_valid, y_pred, cfg.objective, cfg.tweedie_variance_power)
         _, final_wrmsse, _ = state.wrmsse_metric(state.y_valid, y_pred)
-        return final_wrmsse
+        trial.set_user_attr("wrmsse", final_wrmsse)
+        return score
 
     config.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     study = optuna.create_study(
@@ -433,7 +440,8 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     study.optimize(objective, n_trials=cfg.optuna_n_trials, timeout=cfg.optuna_timeout_s,
                     show_progress_bar=True)
 
-    logger.info("Mejor WRMSSE (Optuna): {:.4f}", study.best_trial.value)
+    logger.info("Mejor {} (Optuna): {:.4f} | WRMSSE: {:.4f} (informativo)",
+                cfg.objective, study.best_trial.value, study.best_trial.user_attrs["wrmsse"])
     logger.info("Mejores hiperparámetros: {}", study.best_trial.params)
     return study.best_trial.params
 
