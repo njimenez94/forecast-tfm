@@ -71,19 +71,30 @@ CUM_HORIZONS = {
 }
 
 # Lags que mlforecast genera automáticamente (en unidades de la frecuencia).
-# 1-3/1-2 cortos para autocorrelación inmediata (solo target 'sales': para cumN los
-# filtra valid_lags por leakage). 364 (no 365) para alinear día-de-semana a un año.
+# daily: denso 1-28 (cada día del bloque de horizonte VALID_PERIODS/TEST_PERIODS
+# tiene su propio lag puntual -- ver src.data.split.mask_horizon_leakage/block_origins,
+# que revalida cada fila por su propio h dentro del bloque de 28), después salta a
+# múltiplos gruesos (35, 42, 56, 91, 182, 364). 364 (no 365) para alinear
+# día-de-semana a un año. Filtro por leakage de targets cumN vía valid_lags.
 MLFORECAST_LAGS = {
-    "daily": [1, 2, 3, 7, 14, 21, 28, 35, 42, 56, 91, 182, 364],
+    "daily": [*range(1, 29), 35, 42, 56, 91, 182, 364],
     "weekly": [1, 2, 3, 4, 8, 13, 17, 22, 26, 39, 52],
 }
 
 # Transforms por lag base (shift → sin leakage si shift >= N del target cumN, ver
 # valid_lag_transforms). Cada anchor: mean/std/min/max en varias ventanas + momentum
 # (corta/larga) donde aplica. 365/52 son el único anchor seguro para cum365/cum52.
+# 2-6 rellenan el hueco entre el anchor=1 (denso) y el anchor=7 (rolling ya existía):
+# antes, una fila con h entre 2 y 6 se quedaba sin ningún rolling propio y usaba
+# directamente el de lag7 (ver src.data.split.mask_horizon_leakage).
 MLFORECAST_LAG_TRANSFORMS = {
     "daily": {
         1:   _stats(7, 14, 21, 35) + [_momentum(7, 35)],
+        2:   _stats(7, 14),
+        3:   _stats(7, 14),
+        4:   _stats(7, 14),
+        5:   _stats(7, 14),
+        6:   _stats(7, 14),
         7:   _stats(7, 14),
         28:  _stats(7, 28, 91) + [_momentum(7, 28)],
         91:  _stats(28, 91) + [ExpandingMean()],
