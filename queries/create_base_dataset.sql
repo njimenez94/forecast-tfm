@@ -6,7 +6,7 @@ WITH sales AS (
     SELECT * FROM sales_train_evaluation
 )
 SELECT
-    s.dept_id || '_' || s.cat_id || '_' || s.store_id || '_' || s.state_id AS agg_id,
+    s.dept_id || '_' || s.cat_id || '_' || s.store_id || '_' || s.state_id AS series_id,
     s.dept_id,
     s.cat_id,
     s.store_id,

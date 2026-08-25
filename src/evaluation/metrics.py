@@ -3,7 +3,7 @@ import pandas as pd
 from loguru import logger
 from sklearn.metrics import mean_tweedie_deviance
 
-_SERIES_COL = "agg_id"
+_SERIES_COL = "series_id"
 _PRICE_COL = "avg_sell_price"
 
 

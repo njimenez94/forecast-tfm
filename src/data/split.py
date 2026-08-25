@@ -224,7 +224,7 @@ def prepare_level(file: Path, level, grain: str, horizon: int,
     df = (
         read_parquet_pl(file)
         .filter(pl.col(target).is_not_null())
-        .rename({"agg_id": "unique_id", "date": "ds", target: "y"})
+        .rename({"series_id": "unique_id", "date": "ds", target: "y"})
     )
     n_series = df["unique_id"].n_unique()
 
@@ -248,7 +248,7 @@ def prepare_level(file: Path, level, grain: str, horizon: int,
         )
         train_for_wrmsse = (
             train_pl.select(wrmsse_cols)
-            .rename({"unique_id": "agg_id", "ds": "date", "y": "sales"})
+            .rename({"unique_id": "series_id", "ds": "date", "y": "sales"})
             .to_pandas()
         )
     else:

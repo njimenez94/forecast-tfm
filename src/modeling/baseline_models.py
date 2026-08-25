@@ -26,7 +26,7 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from xgboost import XGBRegressor
 
-def seasonal_naive(train_df, valid_df, target_col, group_col="agg_id", season_length=7):
+def seasonal_naive(train_df, valid_df, target_col, group_col="series_id", season_length=7):
     """Repite el valor observado el mismo día de la semana en la última semana de
     train (estacionalidad semanal, típica en ventas diarias de retail)."""
     last_season = (
@@ -50,7 +50,7 @@ def seasonal_naive(train_df, valid_df, target_col, group_col="agg_id", season_le
     )
 
 
-def drift(train_df, valid_df, target_col, group_col="agg_id"):
+def drift(train_df, valid_df, target_col, group_col="series_id"):
     """Método de deriva (drift / random walk with drift): proyecta la recta que une
     el primer y último valor de train por serie, extrapolada linealmente hacia
     adelante (paso h=1,2,... dentro de validación)."""
@@ -76,14 +76,14 @@ def drift(train_df, valid_df, target_col, group_col="agg_id"):
     )
 
 
-def historical_mean(train_df, valid_df, target_col, group_col="agg_id"):
+def historical_mean(train_df, valid_df, target_col, group_col="series_id"):
     """Promedio histórico completo de train por serie (constante en todo el
     horizonte de validación); solo tiene sentido si la serie es ~estacionaria."""
     hist_mean = train_df.groupby(group_col)[target_col].mean()
     return valid_df[group_col].map(hist_mean).fillna(0.0).to_numpy()
 
 
-def moving_average(train_df, valid_df, target_col, group_col="agg_id", window=7):
+def moving_average(train_df, valid_df, target_col, group_col="series_id", window=7):
     """Promedio de los últimos `window` valores observados en train por serie
     (suaviza ruido reciente), repetido de forma constante en validación."""
     ma = (
@@ -110,7 +110,7 @@ def _fit_predict_one(gid, sub, train_sub, target_col, fit_predict):
     return sub.index, fc, False
 
 
-def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="agg_id", n_jobs=-1):
+def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="series_id", n_jobs=-1):
     """Ajusta y pronostica serie por serie con `fit_predict(train_sub, future_dates) ->
     array` (usado por los modelos estadísticos clásicos: ARIMA/SARIMA, ETS, Theta,
     TBATS, Prophet), alineando el resultado con `valid_df` (mismo criterio de
@@ -140,7 +140,7 @@ def _forecast_by_series(train_df, valid_df, target_col, fit_predict, group_col="
     y_pred_sorted = pd.Series(parts, index=idx)
     return y_pred_sorted.reindex(valid_df.index).to_numpy()
 
-def fit_sarima(train_df, valid_df, target_col, group_col="agg_id",
+def fit_sarima(train_df, valid_df, target_col, group_col="series_id",
                 order=(1, 1, 1), seasonal_order=(1, 1, 1, 7)):
     """ARIMA/SARIMA por serie vía `statsforecast.models.ARIMA` (nixtla), con
     orden fijo (sin búsqueda automática tipo `auto_arima`: sobre ~1500-2000
@@ -170,7 +170,7 @@ def fit_sarima(train_df, valid_df, target_col, group_col="agg_id",
     return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
 
-def fit_ets(train_df, valid_df, target_col, group_col="agg_id", seasonal_periods=7):
+def fit_ets(train_df, valid_df, target_col, group_col="series_id", seasonal_periods=7):
     """ETS / Holt-Winters (suavizado exponencial con tendencia y estacionalidad)
     por serie, vía `statsmodels`. Rápido y robusto; base de muchos benchmarks
     (M4/M5). Componentes aditivos (no multiplicativos) porque las ventas pueden
@@ -188,7 +188,7 @@ def fit_ets(train_df, valid_df, target_col, group_col="agg_id", seasonal_periods
     return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
 
-def fit_theta(train_df, valid_df, target_col, group_col="agg_id", period=7):
+def fit_theta(train_df, valid_df, target_col, group_col="series_id", period=7):
     """Theta method (Assimakopoulos & Nikolopoulos, 2000), ganador del M3: simple
     (descompone la serie en dos "theta lines" y las combina) pero muy competitivo;
     poco conocido fuera del ámbito de forecasting. Deseasonalización aditiva (no
@@ -203,7 +203,7 @@ def fit_theta(train_df, valid_df, target_col, group_col="agg_id", period=7):
     return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
 
-def fit_tbats(train_df, valid_df, target_col, group_col="agg_id", season_length=(7,)):
+def fit_tbats(train_df, valid_df, target_col, group_col="series_id", season_length=(7,)):
     """TBATS (De Livera, Hyndman & Snyder, 2011): extensión de ETS con Box-Cox,
     ARMA de residuos y estacionalidades múltiples (ej. semanal + anual), pensada
     para series con más de una estacionalidad. Usa la implementación nativa de
@@ -221,7 +221,7 @@ def fit_tbats(train_df, valid_df, target_col, group_col="agg_id", season_length=
     return _forecast_by_series(train_df, valid_df, target_col, _fit_predict, group_col)
 
 
-def fit_prophet(train_df, valid_df, target_col, group_col="agg_id",
+def fit_prophet(train_df, valid_df, target_col, group_col="series_id",
                  weekly_seasonality=True, yearly_seasonality=True):
     """Prophet (Taylor & Letham, 2018, Meta): descompone tendencia + estacionalidad
     + holidays con un modelo aditivo, robusto a datos faltantes/outliers y fácil

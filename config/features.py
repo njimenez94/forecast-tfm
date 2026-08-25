@@ -116,7 +116,7 @@ MLFORECAST_DATE_FEATURES = ["dayofweek", "month", "week"]
 MLFORECAST_FREQ = {"daily": "D", "weekly": "W-SAT"}
 
 # Columnas categóricas estáticas excluidas de static_features (son el índice de serie)
-EXCLUDE_AS_STATIC = {"agg_id"}
+EXCLUDE_AS_STATIC = {"series_id"}
 
 # Columna de precio lag por granularidad (coincide con build_exog_query)
 PRICE_LAG_COL = {"daily": "price_lag_7", "weekly": "price_lag_1"}

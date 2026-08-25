@@ -115,7 +115,7 @@ def load_data(cfg: Config) -> SimpleNamespace:
     df = pd.read_parquet(config.featured_level_path(level, grain)).sort_values("date").reset_index(drop=True)
 
     target = cfg.target
-    id_cols = ["agg_id", "date"]
+    id_cols = ["series_id", "date"]
     cum_cols = [c for c in df.columns if c.startswith("cum") and c[3:].isdigit()]
     leaky_cols = [c for c in (["gross_sales"] + cum_cols) if c != target]
 
@@ -162,7 +162,7 @@ def split_data(state: SimpleNamespace, cfg: Config) -> None:
     # Cargar el nivel 12 completo (mayor cardinalidad) puede acercarse al límite de
     # RAM disponible; recortar acá evita cargar ese peso tres veces más.
     eval_cols = [c for c in dict.fromkeys(
-        ["agg_id", "date", "sales", "gross_sales", "avg_sell_price", "is_store_closed", state.target]
+        ["series_id", "date", "sales", "gross_sales", "avg_sell_price", "is_store_closed", state.target]
     ) if c in state.df.columns]
     state.train = split.train[eval_cols].copy()
     state.valid = split.valid[eval_cols].copy()

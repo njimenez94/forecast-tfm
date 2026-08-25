@@ -123,7 +123,7 @@ def _(pd):
         group_cols: list[str],
         count_cols: list[str] | None = None,
         table: str = "dataset_raw",
-        where: str = "units_sales != 0",
+        where: str = "sales != 0",
     ) -> pd.DataFrame:
         """Estadísticas de ventas agregadas al nivel de granularidad indicado por `group_cols`.
 
@@ -133,12 +133,12 @@ def _(pd):
         `n_days_with_sales` los periodos que pasan el filtro `where` (por defecto, venta != 0);
         `n_days_zero_sales = n_days - n_days_with_sales`. Esta descomposición solo es
         directamente interpretable como "días sin venta de la serie" cuando `group_cols`
-        está al grano de la serie (p.ej. `agg_id`); en niveles más agregados, `n_days`
+        está al grano de la serie (p.ej. `series_id`); en niveles más agregados, `n_days`
         cuenta fechas distintas entre todas las filas base del grupo, no días con venta
         total del grupo = 0.
 
-        Ambas CTEs se calculan solo sobre el rango "activo" de cada `agg_id`, es decir,
-        desde su `release_date` (primera fecha con `price` no nulo, proxy de que el item
+        Ambas CTEs se calculan solo sobre el rango "activo" de cada `series_id`, es decir,
+        desde su `release_date` (primera fecha con `sell_price` no nulo, proxy de que el item
         ya estaba a la venta en esa tienda) en adelante. Sin este recorte, los días previos
         al lanzamiento cuentan como "sin venta" y desinflan artificialmente ratios como
         `n_days_with_sales / n_days` (o infllan el ADI) para items lanzados tarde, aunque
@@ -155,28 +155,28 @@ def _(pd):
             for c, name in zip(count_cols or [], count_names)
         )
 
-        _dim_order = ["cat_id", "dept_id", "item_id", "state_id", "store_id", "agg_id"]
+        _dim_order = ["cat_id", "dept_id", "item_id", "state_id", "store_id", "series_id"]
         ordered_group_cols = [c for c in _dim_order if c in group_cols]
         ordered_group_cols += [c for c in group_cols if c not in _dim_order]
         select_order = (
             ordered_group_cols + count_names + [
                 "date_min", "date_max", "n_days", "n_days_with_sales", "n_days_zero_sales",
-                "adi", "mean_gross_sales_day", "units_sales", "mnt_gross_sales", "mean_price",
+                "adi", "mean_gross_sales_day", "sales", "mnt_gross_sales", "mean_price",
             ]
         )
         select_cols = ",\n            ".join(select_order)
 
         query = f"""
         WITH released AS (
-            SELECT agg_id, MIN(date) AS release_date
+            SELECT series_id, MIN(date) AS release_date
             FROM {table}
-            WHERE price IS NOT NULL
-            GROUP BY agg_id
+            WHERE sell_price IS NOT NULL
+            GROUP BY series_id
         ),
         active AS (
             SELECT t.*
             FROM {table} t
-            JOIN released r USING (agg_id)
+            JOIN released r USING (series_id)
             WHERE t.date >= r.release_date
         ),
         totals AS (
@@ -192,9 +192,9 @@ def _(pd):
                 MIN(date)                                   AS date_min,
                 MAX(date)                                   AS date_max,
                 COUNT(DISTINCT date)                        AS n_days_with_sales,
-                SUM(units_sales)                            AS units_sales,
+                SUM(sales)                                   AS sales,
                 SUM(mnt_gross_sales)                        AS mnt_gross_sales,
-                SUM(mnt_gross_sales) / SUM(units_sales)     AS mean_price,
+                SUM(mnt_gross_sales) / SUM(sales)           AS mean_price,
                 SUM(mnt_gross_sales) / COUNT(DISTINCT date) AS mean_gross_sales_day
             FROM active
             WHERE {where}
@@ -225,7 +225,7 @@ def _(pd):
         """Devuelve todas las filas de `table` para `n_samples` ids top, medios y bottom (según orden de `df_ranked`).
 
         `col_id` suele ser `item_id`, para abarcar el producto completo (todas sus
-        combinaciones de tienda/estado, es decir, todas sus series `agg_id`), no una
+        combinaciones de tienda/estado, es decir, todas sus series `series_id`), no una
         muestra parcial de series sueltas.
         """
         n = len(df_ranked)
@@ -259,23 +259,23 @@ def _(pd):
 def _(mdates, pd, plt):
     def plot_series(
         df: pd.DataFrame,
-        agg_id: str,
+        series_id: str,
         n: int = 28,
-        value_col: str = "units_sales",
-        id_col: str = "agg_id",
+        value_col: str = "sales",
+        id_col: str = "series_id",
         date_col: str = "date",
         figsize: tuple[float, float] = (11, 4),
     ):
-        """Serie temporal de los últimos `n` días para un `agg_id`."""
+        """Serie temporal de los últimos `n` días para un `series_id`."""
         s = (
-            df.query(f"{id_col} == @agg_id")
+            df.query(f"{id_col} == @series_id")
             .sort_values(date_col)
             .set_index(date_col)[value_col]
             .tail(n)
         )
 
         if s.empty:
-            raise ValueError(f"Sin datos para {id_col} == {agg_id!r}")
+            raise ValueError(f"Sin datos para {id_col} == {series_id!r}")
 
         plt.figure(figsize=figsize)
         plt.plot(s.index, s.values, marker="o", ms=4, lw=1.5)
@@ -289,7 +289,7 @@ def _(mdates, pd, plt):
             plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
             plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%b-%y"))
 
-        plt.title(f"{agg_id} — últimos {len(s)} días")
+        plt.title(f"{series_id} — últimos {len(s)} días")
         plt.xlabel("")
         plt.ylabel(value_col)
         plt.grid(alpha=0.3)
@@ -307,8 +307,8 @@ def _(np):
     def add_sbc_class(
         df,
         conn,
-        id_cols: str | list[str] = "agg_id",
-        value_col: str = "units_sales",
+        id_cols: str | list[str] = "series_id",
+        value_col: str = "sales",
         table: str = "dataset_raw",
         adi_cut: float = 1.32,
         cv2_cut: float = 0.49,
@@ -433,7 +433,7 @@ def _(conn):
                COUNT(DISTINCT item_id)       AS n_item_id,
                COUNT(DISTINCT state_id)      AS n_state_id,
                COUNT(DISTINCT store_id)      AS n_store_id,
-               COUNT(DISTINCT agg_id)        AS n_agg_id,
+               COUNT(DISTINCT series_id)        AS n_series_id,
                MIN(date)                     AS date_min,
                MAX(date)                     AS date_max,
                COUNT(DISTINCT date)          AS n_days
@@ -598,14 +598,14 @@ def _(df_store, plot_top_bars):
 
 @app.cell
 def _(conn, get_agg_stats):
-    df_agg_id =  get_agg_stats(conn, ["cat_id", "dept_id", "item_id",'state_id','store_id','agg_id'])
-    df_agg_id
-    return (df_agg_id,)
+    df_series_id =  get_agg_stats(conn, ["cat_id", "dept_id", "item_id",'state_id','store_id','series_id'])
+    df_series_id
+    return (df_series_id,)
 
 
 @app.cell
-def _(df_agg_id, plot_top_bars):
-    plot_top_bars(df_agg_id, "agg_id", "mnt_gross_sales", top_n=20,
+def _(df_series_id, plot_top_bars):
+    plot_top_bars(df_series_id, "series_id", "mnt_gross_sales", top_n=20,
                   title="Top 20 series por venta bruta")
     return
 
@@ -619,20 +619,20 @@ def _(mo):
 
 
 @app.cell
-def _(add_sbc_class, conn, df_agg_id):
-    df_agg_id_sbc = add_sbc_class(df_agg_id, conn)
-    df_agg_id_sbc = df_agg_id.merge(df_agg_id_sbc)
-    df_agg_id_sbc
-    return (df_agg_id_sbc,)
+def _(add_sbc_class, conn, df_series_id):
+    df_series_id_sbc = add_sbc_class(df_series_id, conn)
+    df_series_id_sbc = df_series_id.merge(df_series_id_sbc)
+    df_series_id_sbc
+    return (df_series_id_sbc,)
 
 
 @app.cell
-def _(df_agg_id_sbc):
-    df_agg_id_sbc.groupby(["sbc_class"]).agg(
-        count = ('agg_id', 'count'),
+def _(df_series_id_sbc):
+    df_series_id_sbc.groupby(["sbc_class"]).agg(
+        count = ('series_id', 'count'),
         adi = ('adi','mean'),
         cv2 = ('cv2','mean'),
-        units_sales = ('units_sales', 'sum'),
+        sales = ('sales', 'sum'),
         mnt_gross_sales = ('mnt_gross_sales', 'sum'),
     ).round(2)#.to_clipboard(index=True)
     return

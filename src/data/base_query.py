@@ -2,7 +2,7 @@
 
 `build_base_query(dims, grain)` produce el esquema base:
 
-    agg_id, item_id, dept_id, cat_id, store_id, state_id, date,
+    series_id, item_id, dept_id, cat_id, store_id, state_id, date,
     event_name_1, event_type_1, event_name_2, event_type_2, snap, sales, avg_sell_price
 
 `build_exog_query(base_sql, grain)` añade features exógenas ligeras (precio, eventos,
@@ -30,9 +30,9 @@ def build_base_query(dims, grain: str) -> str:
     event_agg = "MAX" if weekly else "any_value"
 
     if dims:
-        agg_id = "concat_ws('_', " + ", ".join(f"s.{d}" for d in dims) + ") AS agg_id"
+        series_id = "concat_ws('_', " + ", ".join(f"s.{d}" for d in dims) + ") AS series_id"
     else:
-        agg_id = "'TOTAL' AS agg_id"
+        series_id = "'TOTAL' AS series_id"
 
     dim_cols = [f"s.{d}" if d in dims else f"'TOTAL' AS {d}" for d in ALL_DIMS]
     events = [f"{event_agg}(c.{c}) AS {c}" for c in _EVENTS]
@@ -46,7 +46,7 @@ def build_base_query(dims, grain: str) -> str:
     time_group = "c.wm_yr_wk" if weekly else "c.date"
 
     select = [
-        agg_id,
+        series_id,
         *dim_cols,
         date_sel,
         *events,
@@ -64,7 +64,7 @@ def build_base_query(dims, grain: str) -> str:
         "LEFT JOIN sell_prices p\n"
         "    ON s.store_id = p.store_id AND s.item_id = p.item_id AND c.wm_yr_wk = p.wm_yr_wk\n"
         "GROUP BY " + ", ".join(group) + "\n"
-        "ORDER BY agg_id, date"
+        "ORDER BY series_id, date"
     )
 
 
@@ -79,12 +79,12 @@ def build_exog_query(base_sql: str, grain: str) -> str:
 ),
 exog AS (
     SELECT *,
-        LAG(avg_sell_price, {price_lag}) OVER (PARTITION BY agg_id ORDER BY date) AS _plg,
-        AVG(avg_sell_price) OVER (PARTITION BY agg_id) AS _pmean
+        LAG(avg_sell_price, {price_lag}) OVER (PARTITION BY series_id ORDER BY date) AS _plg,
+        AVG(avg_sell_price) OVER (PARTITION BY series_id) AS _pmean
     FROM base
 )
 SELECT
-    agg_id, item_id, dept_id, cat_id, store_id, state_id, date,
+    series_id, item_id, dept_id, cat_id, store_id, state_id, date,
     CAST(sales AS FLOAT) AS sales,
     CAST(gross_sales AS FLOAT) AS gross_sales,
     CAST(avg_sell_price AS FLOAT) AS avg_sell_price,
@@ -105,20 +105,20 @@ SELECT
     CAST(EXTRACT(WEEK   FROM date) AS TINYINT)  AS weekofyear,
     CAST(EXTRACT(ISODOW FROM date) >= 6 AS TINYINT) AS is_weekend
 FROM exog
-ORDER BY agg_id, date"""
+ORDER BY series_id, date"""
 
 
 def build_cum_query(exog_sql: str, ns: list[int]) -> str:
     """Añade columnas cumN = suma forward de N períodos, una por cada N en ns.
 
     cumN[t] = sales[t+1] + ... + sales[t+N], vía ROWS BETWEEN 1 FOLLOWING AND N FOLLOWING
-    (partición por agg_id, orden por date). DuckDB no devuelve NULL cuando el frame tiene
+    (partición por series_id, orden por date). DuckDB no devuelve NULL cuando el frame tiene
     menos de N filas disponibles (suma parcial silenciosa) — el CASE/COUNT fuerza NULL en
     las últimas N filas de cada serie (ventana incompleta), que se filtran en train time
     según el target elegido, no aquí.
     """
     def _cum_col(n: int) -> str:
-        frame = f"PARTITION BY agg_id ORDER BY date ROWS BETWEEN 1 FOLLOWING AND {n} FOLLOWING"
+        frame = f"PARTITION BY series_id ORDER BY date ROWS BETWEEN 1 FOLLOWING AND {n} FOLLOWING"
         return (
             f"CASE WHEN COUNT(sales) OVER ({frame}) = {n} "
             f"THEN CAST(SUM(sales) OVER ({frame}) AS FLOAT) ELSE NULL END AS cum{n}"
@@ -132,7 +132,7 @@ SELECT
     *,
         {cum_cols}
 FROM _exog
-ORDER BY agg_id, date"""
+ORDER BY series_id, date"""
 
 
 def count_series_query(dims) -> str:

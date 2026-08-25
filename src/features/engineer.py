@@ -55,27 +55,27 @@ def _event_distance_features(event_name: str) -> tuple[pl.Expr, pl.Expr]:
         (pl.col("event_name_1") == event_name) | (pl.col("event_name_2") == event_name)
     ).fill_null(False)
     event_date = pl.when(is_this_event).then(pl.col("date"))
-    days_since = (pl.col("date") - event_date.forward_fill().over("agg_id")) \
+    days_since = (pl.col("date") - event_date.forward_fill().over("series_id")) \
         .dt.total_days().cast(pl.Int32)
-    days_to = (event_date.backward_fill().over("agg_id") - pl.col("date")) \
+    days_to = (event_date.backward_fill().over("series_id") - pl.col("date")) \
         .dt.total_days().cast(pl.Int32)
     return days_since, days_to
 
 
 def add_features(df: pl.DataFrame) -> pl.DataFrame:
-    df = df.sort(["agg_id", "date"])
+    df = df.sort(["series_id", "date"])
 
     is_event = pl.col("has_event").cast(pl.Boolean) | pl.col("has_event_2").cast(pl.Boolean)
     event_date = pl.when(is_event).then(pl.col("date"))
     release_date = pl.when(pl.col("avg_sell_price").is_not_null()).then(pl.col("date"))
-    running_max_price = pl.col("avg_sell_price").cum_max().over("agg_id")
+    running_max_price = pl.col("avg_sell_price").cum_max().over("series_id")
     # is_in() sobre null devuelve null (lógica de Kleene), no false: sin fill_null
     # los días sin evento (event_name_1/2 null) quedarían como null en vez de 0.
     is_closure_event = (
         pl.col("event_name_1").is_in(_CLOSURE_EVENTS).fill_null(False)
         | pl.col("event_name_2").is_in(_CLOSURE_EVENTS).fill_null(False)
     )
-    mean_sales = pl.col("sales").mean().over("agg_id")
+    mean_sales = pl.col("sales").mean().over("series_id")
     is_store_closed = (
         is_closure_event & (pl.col("sales") < _CLOSURE_SALES_RATIO * mean_sales)
     ).fill_null(False).cast(pl.Int8)
@@ -91,9 +91,9 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
     # temporadas y el árbol no la usa; NaN fuera de la ventana la deja casi siempre
     # nula salvo justo alrededor del cierre, mucho más fácil de explotar en un split.
     closure_date = pl.when(is_closure_event).then(pl.col("date"))
-    days_since_closure = (pl.col("date") - closure_date.forward_fill().over("agg_id")) \
+    days_since_closure = (pl.col("date") - closure_date.forward_fill().over("series_id")) \
         .dt.total_days().cast(pl.Int32)
-    days_to_closure = (closure_date.backward_fill().over("agg_id") - pl.col("date")) \
+    days_to_closure = (closure_date.backward_fill().over("series_id") - pl.col("date")) \
         .dt.total_days().cast(pl.Int32)
     signed_days_to_closure = (
         pl.when(days_to_closure.is_null()).then(-days_since_closure)
@@ -121,7 +121,7 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
     # price_vs_max/price_vs_mean; esto captura si el precio ha estado fluctuando --
     # promociones frecuentes -- vs. estable).
     price_volatility = (
-        pl.col("avg_sell_price").rolling_std(window_size=90, min_samples=2).over("agg_id")
+        pl.col("avg_sell_price").rolling_std(window_size=90, min_samples=2).over("series_id")
     )
 
     high_impact_exprs = {}
@@ -136,11 +136,11 @@ def add_features(df: pl.DataFrame) -> pl.DataFrame:
             .replace([float("inf"), float("-inf")], None)
             .cast(pl.Float32)
             .alias("price_vs_max"),
-        (pl.col("date") - release_date.min().over("agg_id"))
+        (pl.col("date") - release_date.min().over("series_id"))
             .dt.total_days().cast(pl.Int32).alias("days_since_release"),
-        (pl.col("date") - event_date.forward_fill().over("agg_id"))
+        (pl.col("date") - event_date.forward_fill().over("series_id"))
             .dt.total_days().cast(pl.Int32).alias("days_since_event"),
-        (event_date.backward_fill().over("agg_id") - pl.col("date"))
+        (event_date.backward_fill().over("series_id") - pl.col("date"))
             .dt.total_days().cast(pl.Int32).alias("days_to_event"),
         signed_days_to_closure.alias("days_to_closure"),
         pl.col("event_type_1").replace_strict(_EVENT_TYPE_CODES, default=0, return_dtype=pl.Int8)
@@ -177,14 +177,14 @@ _STOCKOUT_STREAK_THRESHOLD = 7
 
 def add_intermittency_features(df: pl.DataFrame) -> pl.DataFrame:
     """Señales de intermitencia de demanda (zero_streak, pct_zero, ADI, CV²) y un
-    proxy de quiebre de stock. df ya está ordenado por (agg_id, date) y trae 'sales'
+    proxy de quiebre de stock. df ya está ordenado por (series_id, date) y trae 'sales'
     final (post zero-out de is_store_closed) y 'days_since_release'.
 
-    Todo se calcula sobre pl.col("sales").shift(1).over("agg_id") -- el historial
+    Todo se calcula sobre pl.col("sales").shift(1).over("series_id") -- el historial
     hasta *ayer*, nunca incluyendo la venta del día actual -- para no leakear el
     target: sin el shift, zero_streak==0 revelaría trivialmente que sales[t] > 0.
     """
-    sales_prev = pl.col("sales").shift(1).over("agg_id")
+    sales_prev = pl.col("sales").shift(1).over("series_id")
     is_zero_prev = (sales_prev == 0).cast(pl.Float32)
 
     # Fecha de la última venta positiva estrictamente anterior a la fila actual:
@@ -192,18 +192,18 @@ def add_intermittency_features(df: pl.DataFrame) -> pl.DataFrame:
     # resultado un puesto, en vez de desplazar sales antes del forward_fill, porque
     # así conviven en una sola expresión sin encadenar dos .over() anidados.
     nonzero_date_incl_today = pl.when(pl.col("sales") > 0).then(pl.col("date"))
-    last_sale_date_prev = nonzero_date_incl_today.forward_fill().over("agg_id").shift(1).over("agg_id")
+    last_sale_date_prev = nonzero_date_incl_today.forward_fill().over("series_id").shift(1).over("series_id")
     days_since_last_sale = (pl.col("date") - last_sale_date_prev).dt.total_days().cast(pl.Int32)
     zero_streak = (days_since_last_sale - 1).clip(lower_bound=0)
 
-    pct_zero_28 = is_zero_prev.rolling_mean(window_size=28, min_samples=1).over("agg_id")
-    pct_zero_90 = is_zero_prev.rolling_mean(window_size=90, min_samples=1).over("agg_id")
+    pct_zero_28 = is_zero_prev.rolling_mean(window_size=28, min_samples=1).over("series_id")
+    pct_zero_90 = is_zero_prev.rolling_mean(window_size=90, min_samples=1).over("series_id")
 
     # ADI expandiendo: días transcurridos desde el release (hasta ayer) / nº de días
     # con venta positiva (hasta ayer). Cuanto mayor, más intermitente la serie.
     days_elapsed_prev = (pl.col("days_since_release") - 1).clip(lower_bound=0)
     nonzero_count_prev = (
-        (pl.col("sales") > 0).cast(pl.Int32).cum_sum().over("agg_id").shift(1).over("agg_id")
+        (pl.col("sales") > 0).cast(pl.Int32).cum_sum().over("series_id").shift(1).over("series_id")
     )
     adi_expanding = (
         (days_elapsed_prev / nonzero_count_prev)
@@ -216,10 +216,10 @@ def add_intermittency_features(df: pl.DataFrame) -> pl.DataFrame:
     # positiva, que sería el CV² "puro" de tamaño de demanda de la literatura
     # Syntetos-Boylan-Croston) -- mucho más simple de calcular vía rolling_std/mean
     # nativos de polars y sigue distinguiendo series erráticas de suaves.
-    sales_prev_std = pl.col("sales").shift(1).over("agg_id") \
-        .rolling_std(window_size=90, min_samples=2).over("agg_id")
-    sales_prev_mean = pl.col("sales").shift(1).over("agg_id") \
-        .rolling_mean(window_size=90, min_samples=2).over("agg_id")
+    sales_prev_std = pl.col("sales").shift(1).over("series_id") \
+        .rolling_std(window_size=90, min_samples=2).over("series_id")
+    sales_prev_mean = pl.col("sales").shift(1).over("series_id") \
+        .rolling_mean(window_size=90, min_samples=2).over("series_id")
     cv2_90 = (
         ((sales_prev_std / sales_prev_mean) ** 2)
         .replace([float("inf"), float("-inf")], None)
@@ -268,6 +268,6 @@ def add_lag_features(df: pd.DataFrame, grain: str, static_cols: list[str]) -> pd
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
         return fcst.preprocess(
-            df, id_col="agg_id", time_col="date", target_col="sales", static_features=static_cols,
+            df, id_col="series_id", time_col="date", target_col="sales", static_features=static_cols,
             dropna=False,
         )
