@@ -22,7 +22,7 @@ import pandas as pd
 from loguru import logger
 
 import config
-from scripts.train_datasets import reconstruct_test_data
+from scripts.train_dataset import reconstruct_test_data
 from src.evaluation.metrics import clip_closed_stores, evaluate_predictions
 
 DESCRIPTIVE_COLS = ["item_id", "dept_id", "cat_id", "store_id", "state_id"]

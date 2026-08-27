@@ -11,7 +11,7 @@ process-data:
 build-datasets:
 	$(PY) -m scripts.build_datasets $(ARGS)
 
-train-datasets:
+train-dataset:
 	$(PY) -m scripts.train_dataset $(ARGS)
 
 train-all:
