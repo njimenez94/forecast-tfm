@@ -48,17 +48,23 @@ class DateSplit:
         logger.info(f"Test  : {self.test_start:%Y-%m-%d} to {self.last_date:%Y-%m-%d} ({self.test_days:,} days, {len(self.test):,} rows)")
 
 
-def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str = "date") -> DateSplit:
+def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str = "date",
+                test_start: pd.Timestamp | None = None) -> DateSplit:
     """Split temporal simple train/valid/test por fecha, sobre un dataframe ya con
     features (a diferencia de `prepare_level`, que arma exógenas/agregados para
     MLForecast). Los últimos `test_days` quedan como test, los `valid_days`
-    anteriores como validación, y todo lo previo como train."""
+    anteriores como validación, y todo lo previo como train.
+
+    `test_start` fija el borde del split en vez de derivarlo de `last_date`: lo usa
+    scripts.train_datasets.reconstruct_test_data() para reproducir exactamente el
+    split de un artifact ya entrenado, aunque el parquet se haya regenerado después."""
     first_date = df[date_col].min()
     last_date = df[date_col].max()
-    # test = df >= test_start (sin cota superior) incluye last_date, así que el
-    # intervalo es cerrado en ambos extremos: para que abarque exactamente
-    # test_days días hay que restar (test_days - 1).
-    test_start = last_date - pd.DateOffset(days=test_days - 1)
+    if test_start is None:
+        # test = df >= test_start (sin cota superior) incluye last_date, así que el
+        # intervalo es cerrado en ambos extremos: para que abarque exactamente
+        # test_days días hay que restar (test_days - 1).
+        test_start = last_date - pd.DateOffset(days=test_days - 1)
     valid_start = test_start - pd.DateOffset(days=valid_days)
 
     train = df[df[date_col] < valid_start]

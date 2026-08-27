@@ -20,7 +20,8 @@ Salidas:
     artifacts/results/{level}_{target}_feature_selection.csv  historial de backward elimination
     artifacts/plots/{level}_{target}_shap_*.png                explicación SHAP del modelo simple
     artifacts/optuna_study.db                                  estudio Optuna (sqlite, uno por level/grain/target)
-    artifacts/models/{level}_{target}_artifact.pkl             artifact final (modelo + datos + métricas)
+    artifacts/models/{level}_{target}_artifact.pkl             artifact liviano (modelo + features + métricas,
+                                                                 sin datos -- ver reconstruct_test_data())
 """
 import gc
 import time
@@ -141,11 +142,12 @@ def load_data(cfg: Config) -> SimpleNamespace:
     )
 
 
-def split_data(state: SimpleNamespace, cfg: Config) -> None:
+def split_data(state: SimpleNamespace, cfg: Config, test_start: pd.Timestamp | None = None) -> None:
     split = date_split(
         state.df,
         valid_days=config.valid_days(state.grain),
         test_days=config.test_days(state.grain),
+        test_start=test_start,
     )
     split.log_summary()
 
@@ -491,6 +493,23 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
     state.df_pred = df_pred
 
 
+def reconstruct_test_data(artifact: dict) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.DataFrame]:
+    """Reconstruye X_test/y_test/train/test de un artifact liviano (export_artifact ya
+    no las guarda), repitiendo load_data()+split_data() sobre el parquet de
+    data/datasets/ (make build-datasets). Usado por notebooks/03_predictions.ipynb.
+
+    Fija el split al `test_start` guardado en el artifact (en vez de derivarlo del
+    último día del parquet, el default de date_split): reproduce el split exacto
+    usado en el entrenamiento aunque el parquet se haya regenerado después."""
+    cfg = SimpleNamespace(level_id=artifact["level_id"], target=artifact["target"])
+    state = load_data(cfg)
+    state.features = artifact["features"]
+    state.categorical_features = artifact["categorical_features"]
+    state.numerical_features = artifact["numerical_features"]
+    split_data(state, cfg, test_start=pd.Timestamp(artifact["test_start"]))
+    return state.X_test, state.y_test, state.train, state.test
+
+
 def export_artifact(state: SimpleNamespace) -> None:
     results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
 
@@ -498,16 +517,15 @@ def export_artifact(state: SimpleNamespace) -> None:
         state.final_model.booster_.feature_importance(importance_type="gain"), index=state.features,
     ).sort_values(ascending=False)
 
-    # No se guardan df/X_train/y_train/X_valid/y_valid/valid: reconstruibles desde
-    # el parquet en data/datasets/ + este mismo pipeline, y notebooks/03_predictions.ipynb
-    # no los usa -- guardarlos solo triplicaba el tamaño del artifact (y el pico de
-    # RAM al armarlo) sin necesidad, justo lo que hace fallar por memoria al nivel 12.
+    # Solo modelo + metadata (features, métricas): liviano para respaldar/mover entre
+    # máquinas sin arrastrar datos. df/X_*/y_*/train/valid/test NO se guardan --
+    # reconstruct_test_data() las recrea desde el parquet en data/datasets/ repitiendo
+    # load_data()+split_data() de este módulo (ver notebooks/03_predictions.ipynb).
     artifact = {
         "level": state.level_str,
+        "level_id": state.level.id,
         "model": state.final_model,
         "model_params": state.model_params,
-        "X_test": state.X_test, "y_test": state.y_test,
-        "train": state.train, "test": state.test,
         "features": state.features,
         "categorical_features": state.categorical_features,
         "numerical_features": state.numerical_features,

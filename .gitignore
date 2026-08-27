@@ -20,7 +20,9 @@ data/processed/*
 fil-result/
 /fil-result
 
-# Artefactos generados (datasets procesados, modelos entrenados): reproducibles
-# desde doc/m5-forecasting-accuracy.zip con make create_database/process-data/
-# build-datasets/train-datasets. No se versionan.
-artifacts/
+# Artefactos generados: resultados, gráficos y estudio de Optuna no se versionan
+# (reproducibles con make create-database/process-data/build-datasets/train-datasets).
+# artifacts/models/*.pkl sí: son livianos (modelo + features + métricas, sin datos --
+# ver scripts/train_datasets.py:reconstruct_test_data()).
+artifacts/*
+!artifacts/models/
