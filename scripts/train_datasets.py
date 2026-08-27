@@ -64,11 +64,11 @@ class Config:
 
     # --- fases on/off ---
     run_baseline_naive: bool = True
-    run_baseline_stats: bool = False    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
-    run_baseline_ml: bool = False       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
-    run_feature_selection: bool = False  # permutation importance + backward elimination
-    run_shap: bool = False
-    run_optuna: bool = False
+    run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
+    run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
+    run_feature_selection: bool = True  # permutation importance + backward elimination
+    run_shap: bool = True
+    run_optuna: bool = True
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
@@ -83,14 +83,14 @@ class Config:
 
     # --- selección de features ---
     permutation_sample_size: int = 15_000
-    permutation_n_repeats: int = 3
-    backward_tolerance: float = 0.001
+    permutation_n_repeats: int = 5
+    backward_tolerance: float = 0.0
 
     # --- SHAP ---
-    shap_sample_size: int = 2_000
+    shap_sample_size: int = 300_000
 
     # --- Optuna ---
-    optuna_n_trials: int = 1_000
+    optuna_n_trials: int = 100_000
     optuna_timeout_s: int = 15 * 60
     # n_estimators durante la búsqueda (con early stopping, no hace falta tunear
     # tantos árboles); el refit final usa final_n_estimators, más alto.
@@ -632,7 +632,10 @@ def main():
 
     for level_id in level_ids:
         level = config.LEVELS_BY_ID[level_id]
-        cfg = replace(CFG, level_id=level_id)
+        # TWEEDIE_LEVELS (10-12, ver config/model.py): series intermitentes,
+        # siempre tweedie sin importar qué objective tenga CFG para el resto.
+        objective = "tweedie" if level_id in config.TWEEDIE_LEVELS else CFG.objective
+        cfg = replace(CFG, level_id=level_id, objective=objective)
 
         if not level.split_by:
             try:

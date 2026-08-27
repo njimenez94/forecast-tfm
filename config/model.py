@@ -5,7 +5,7 @@ SEED = 42
 # Niveles con series muy intermitentes (item-level, alta cardinalidad, muchos
 # ceros): "tweedie" maneja mejor esa abundancia de ceros que regression_l2 (el
 # objective usado en el resto de los niveles, más agregados).
-TWEEDIE_LEVELS = {10, 11, 12}
+TWEEDIE_LEVELS = {11, 12}
 TWEEDIE_VARIANCE_POWER = 1.5
 
 # Fallback genérico (no tuneado para ningún nivel en particular) para cuando se
