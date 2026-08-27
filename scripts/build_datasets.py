@@ -86,7 +86,7 @@ def main():
     args = ap.parse_args()
     level_ids = {int(x) for x in args.levels.split(",")} if args.levels else None
 
-    files = sorted(config.PROCESSED_DIR.glob("level_*.parquet"))
+    files = sorted(config.PROCESSED_DIR.glob("*/level_*.parquet"))
     if not files:
         logger.error("No hay parquets en {}. Ejecuta primero: make process-data", config.PROCESSED_DIR)
         return

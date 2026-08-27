@@ -76,7 +76,8 @@ def generate_level(db_path, sql: str, out) -> None:
 
 
 def generate(levels, db_path, processed_dir) -> None:
-    processed_dir.mkdir(parents=True, exist_ok=True)
+    for grain in ("daily", "weekly"):
+        (processed_dir / grain).mkdir(parents=True, exist_ok=True)
     periods = _periods(db_path)
 
     for lvl in levels:

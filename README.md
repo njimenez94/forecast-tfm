@@ -45,7 +45,7 @@ También existe `make data-pipe`, que encadena los tres primeros pasos (`create-
 | Archivo | Generado por | Contenido |
 |---------|--------------|-----------|
 | `data/m5.db` | `create-database` | Base de datos DuckDB con las tablas crudas de M5 |
-| `data/processed/level_*.parquet` | `process-data` | Dataset base por nivel de agregación, sin features derivadas |
+| `data/processed/{daily,weekly}/level_*.parquet` | `process-data` | Dataset base por nivel de agregación, sin features derivadas |
 | `artifacts/datasets/dataset_level_*.parquet` | `build-datasets` | Dataset final por nivel, con features/lags/rolling ya materializados |
 | `artifacts/models/` | `train-datasets` | Modelos MLForecast entrenados, uno por nivel/grain/target |
 | `output/experiment_results.parquet` | `train-datasets` | Métricas (WAPE, Bias, WRMSSE) por nivel/grain/target/split/horizonte |
