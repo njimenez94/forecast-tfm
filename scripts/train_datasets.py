@@ -15,7 +15,8 @@ Editar `CFG` (target, fases, hiperparámetros de tuning) y correr:
     uv run python -m scripts.train_datasets --levels 1,9,12
 
 Niveles con `split_by` (10-12: un dataset por combinación dept/store, ver
-config/levels.py) no están soportados todavía por este pipeline y se saltean.
+config/levels.py) entrenan un modelo por combinación, iterando sobre los
+parquets ya generados por build-datasets (ver main()).
 
 Salidas:
     artifacts/results/{level}_{target}_model_comparison.csv   comparación de modelos (si corrió alguna fase de baseline)
