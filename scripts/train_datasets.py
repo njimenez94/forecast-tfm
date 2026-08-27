@@ -71,6 +71,10 @@ class Config:
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
+    # Seasonal naive: varias ventanas para comparar (ver notebooks/02_model.ipynb).
+    sn_windows: dict = field(default_factory=lambda: {
+        "daily": [1, 7, 28, 364], "weekly": [1, 4, 52],
+    })
     ma_windows: dict = field(default_factory=lambda: {
         "daily": [7, 14, 21, 28, 35], "weekly": [2, 3, 4, 6, 8],
     })
@@ -87,11 +91,16 @@ class Config:
     # --- Optuna ---
     optuna_n_trials: int = 1_000
     optuna_timeout_s: int = 15 * 60
+    # n_estimators durante la búsqueda (con early stopping, no hace falta tunear
+    # tantos árboles); el refit final usa final_n_estimators, más alto.
+    optuna_n_estimators: int = 1_500
 
     # --- modelo final ---
-    final_n_estimators: int = 1_500
+    final_n_estimators: int = 5_000
     # "tweedie" o "regression_l2"/"rmse" (aplica tanto si corre Optuna como si no).
     objective: str = "tweedie"
+    # Fijo si run_optuna=False; si run_optuna=True y objective=="tweedie", Optuna
+    # tunea este valor (1.1-1.9) en vez de usar el fijo.
     tweedie_variance_power: float = 1.5
     # Hiperparámetros del modelo final cuando NO corre Optuna (fallback, sin tunear).
     default_lgbm_params: dict = field(default_factory=lambda: {
@@ -204,18 +213,13 @@ def make_evaluator(state: SimpleNamespace):
 
 
 def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
-    season_length = config.SEASON_LENGTH[state.grain]
     grain_letter = state.grain[0]
 
-    t0 = time.perf_counter()
-    y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=season_length)
-    evaluate_model(f"Seasonal naive ({season_length}{grain_letter})", y_pred,
-                    fit_time=time.perf_counter() - t0, category="Naive")
-
-    if state.grain == "daily":
+    for window in cfg.sn_windows[state.grain]:
         t0 = time.perf_counter()
-        y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=365)
-        evaluate_model("Seasonal naive (365d)", y_pred, fit_time=time.perf_counter() - t0, category="Naive")
+        y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=window)
+        evaluate_model(f"Seasonal naive ({window}{grain_letter})", y_pred,
+                        fit_time=time.perf_counter() - t0, category="Naive")
 
     t0 = time.perf_counter()
     evaluate_model("Drift", drift(state.train, state.valid, state.target),
@@ -404,10 +408,10 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     eval_metric = "tweedie" if cfg.objective == "tweedie" else "rmse"
 
     def objective(trial):
-        model = lgb.LGBMRegressor(
+        params = dict(
             **objective_kwargs,
             learning_rate=trial.suggest_float("learning_rate", 0.03, 0.15, log=True),
-            n_estimators=cfg.final_n_estimators,
+            n_estimators=cfg.optuna_n_estimators,
             num_leaves=trial.suggest_int("num_leaves", 31, 255),
             max_depth=trial.suggest_int("max_depth", 5, 10),
             min_child_samples=trial.suggest_int("min_child_samples", 20, 200),
@@ -420,6 +424,10 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
             n_jobs=-1,
             verbosity=-1,
         )
+        if cfg.objective == "tweedie":
+            params["tweedie_variance_power"] = trial.suggest_float("tweedie_variance_power", 1.1, 1.9)
+
+        model = lgb.LGBMRegressor(**params)
         model.fit(
             state.X_train, state.y_train,
             eval_set=[(state.X_valid, state.y_valid)],
@@ -433,7 +441,8 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
         y_pred = model.predict(state.X_valid, num_iteration=model.best_iteration_)
         # Optuna decide por `objective_metric` (coherente con cfg.objective); el
         # WRMSSE se calcula y se guarda como user_attr solo para informar.
-        score = objective_metric(state.y_valid, y_pred, cfg.objective, cfg.tweedie_variance_power)
+        tweedie_power = params.get("tweedie_variance_power", cfg.tweedie_variance_power)
+        score = objective_metric(state.y_valid, y_pred, cfg.objective, tweedie_power)
         _, final_wrmsse, _ = state.wrmsse_metric(state.y_valid, y_pred)
         trial.set_user_attr("wrmsse", final_wrmsse)
         return score
@@ -463,16 +472,14 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
     objective_kwargs = resolve_objective(cfg)
 
     if best_params:
-        model_params = dict(best_params)
-        final_model = LGBMRegressor(
-            **objective_kwargs,
-            n_estimators=cfg.final_n_estimators,
-            random_state=cfg.random_state,
-            n_jobs=-1,
-            verbosity=-1,
-            subsample_freq=1,
-            **model_params,
-        )
+        # best_params puede traer tweedie_variance_power tuneado (ver tune_optuna) --
+        # va después de objective_kwargs para que gane sobre el valor fijo de cfg.
+        model_params = {
+            **objective_kwargs, **best_params,
+            "n_estimators": cfg.final_n_estimators, "random_state": cfg.random_state,
+            "n_jobs": -1, "verbosity": -1, "subsample_freq": 1,
+        }
+        final_model = LGBMRegressor(**model_params)
         label = "LightGBM (final, Optuna)"
     else:
         model_params = {**cfg.default_lgbm_params, "seed": cfg.random_state, **objective_kwargs}

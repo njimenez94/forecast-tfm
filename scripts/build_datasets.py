@@ -10,6 +10,7 @@ import argparse
 import gc
 import warnings
 
+import humanize
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -66,14 +67,14 @@ def _process_split(file, level, grain: str, static_cols: list[str]) -> None:
     combos = pl.scan_parquet(file).select(cols).unique().sort(cols).collect().rows()
     logger.info("  separando por {} ({} datasets)", cols, len(combos))
 
-    for combo in combos:
+    for i, combo in enumerate(combos, 1):
         split_values = dict(zip(cols, combo))
         filter_expr = pl.all_horizontal([pl.col(c) == v for c, v in split_values.items()])
         final = _process(read_parquet_pl(file, filter_expr=filter_expr), grain, static_cols)
         out = config.featured_level_path(level, grain, split_values)
         final.to_parquet(out, compression="zstd", index=False)
-        logger.success("  [{}] {:.1f} MB  ({} filas)", "/".join(map(str, combo)),
-                       out.stat().st_size / 1_048_576, final.shape[0])
+        logger.success("  [{}/{}] [{}] {:.1f} MB  ({} filas)", i, len(combos), "/".join(map(str, combo)),
+                       out.stat().st_size / 1_048_576, humanize.intcomma(final.shape[0]))
         del final
         gc.collect()
 
@@ -138,7 +139,7 @@ def main():
             writer.close()
 
         logger.success("  listo  {:.1f} MB  ({} cols, {} filas)",
-                       out.stat().st_size / 1_048_576, n_cols, n_rows)
+                       out.stat().st_size / 1_048_576, n_cols, humanize.intcomma(n_rows))
 
 
 if __name__ == "__main__":
