@@ -1,4 +1,4 @@
-.PHONY: create-database process-data build-datasets train-datasets train-all
+.PHONY: create-database process-data build-datasets train-datasets train-all test-sets
 
 PY := uv run python
 
@@ -16,3 +16,6 @@ train-datasets:
 
 train-all:
 	$(MAKE) train-datasets ARGS="--levels 10,11,12"
+
+test-sets:
+	$(PY) -m scripts.build_test_sets
