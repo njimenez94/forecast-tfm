@@ -9,10 +9,13 @@ para poder saltear las que no hacen falta en una corrida dada (p.ej. iterar
 sobre selección de features sin repetir la comparación de modelos base, o
 reentrenar el modelo final con `CFG.default_lgbm_params` sin correr Optuna de nuevo).
 
-Editar `CFG` (nivel, target, fases, hiperparámetros de tuning) y correr:
-    make train-datasets
+Editar `CFG` (target, fases, hiperparámetros de tuning) y correr:
+    make train-datasets ARGS="--levels 1,9,12"   # o sin --levels: todos (1-12)
     # o
-    uv run python -m scripts.train_datasets
+    uv run python -m scripts.train_datasets --levels 1,9,12
+
+Niveles con `split_by` (10-12: un dataset por combinación dept/store, ver
+config/levels.py) no están soportados todavía por este pipeline y se saltean.
 
 Salidas:
     artifacts/results/{level}_{target}_model_comparison.csv   comparación de modelos (si corrió alguna fase de baseline)
@@ -23,9 +26,10 @@ Salidas:
     artifacts/models/{level}_{target}_artifact.pkl             artifact liviano (modelo + features + métricas,
                                                                  sin datos -- ver reconstruct_test_data())
 """
+import argparse
 import gc
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import SimpleNamespace
 
 import joblib
@@ -550,9 +554,8 @@ def export_artifact(state: SimpleNamespace) -> None:
     logger.success("Artifact guardado en {}", artifact_path)
 
 
-def main():
+def run_pipeline(cfg: Config) -> None:
     t_start = time.perf_counter()
-    cfg = CFG
 
     state = load_data(cfg)
     split_data(state, cfg)
@@ -598,6 +601,30 @@ def main():
 
     logger.info("Pipeline completo ({}/{}) en {:.1f}s", state.level_str, state.target,
                 time.perf_counter() - t_start)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Entrena LightGBM por nivel de agregación M5.")
+    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. Default: todos (1-12).")
+    args = ap.parse_args()
+
+    level_ids = [int(x) for x in args.levels.split(",")] if args.levels else [lvl.id for lvl in config.LEVELS]
+
+    for level_id in level_ids:
+        level = config.LEVELS_BY_ID[level_id]
+        if level.split_by:
+            logger.warning(
+                "Nivel {} ({}) tiene split_by={} -- un dataset por combinación de esas "
+                "columnas, no soportado todavía por este pipeline. Se saltea.",
+                level_id, level.name, level.split_by,
+            )
+            continue
+        cfg = replace(CFG, level_id=level_id)
+        try:
+            run_pipeline(cfg)
+        except Exception:
+            logger.exception("Nivel {} falló, sigue con el resto.", level_id)
+        gc.collect()
 
 
 if __name__ == "__main__":
