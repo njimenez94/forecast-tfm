@@ -13,3 +13,6 @@ build-datasets:
 
 train-datasets:
 	$(PY) -m scripts.train_datasets $(ARGS)
+
+train-all:
+	$(MAKE) train-datasets ARGS="--levels 1,2,3,4,5,6,7,8"

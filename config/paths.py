@@ -33,3 +33,11 @@ def featured_level_path(level, grain: str, split_values: dict | None = None) -> 
     if split_values:
         suffix = "__" + "_".join(str(split_values[c]) for c in level.split_by)
     return DATASETS / grain / f"dataset_level_{level.id:02d}_{grain}_{level.name}{suffix}.parquet"
+
+
+def featured_level_combos(level, grain: str) -> list[Path]:
+    """Todos los parquet de combinación split_by ya generados para un nivel/grain
+    (uno por valor de level.split_by, ver build_datasets.py). Lee el filesystem en vez
+    de enumerar combinaciones: son valores reales de los datos, no conocidos de antemano."""
+    pattern = f"dataset_level_{level.id:02d}_{grain}_{level.name}__*.parquet"
+    return sorted((DATASETS / grain).glob(pattern))

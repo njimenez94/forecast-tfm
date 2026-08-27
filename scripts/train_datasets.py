@@ -30,6 +30,7 @@ import argparse
 import gc
 import time
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import joblib
@@ -112,12 +113,15 @@ CFG = Config()
 
 # ============================== FASES ==============================
 
-def load_data(cfg: Config) -> SimpleNamespace:
+def load_data(cfg: Config, dataset_path: Path | None = None) -> SimpleNamespace:
+    """`dataset_path`: override para niveles con split_by (10-12), donde no hay un
+    único parquet por nivel -- ver main()/config.featured_level_combos()."""
     level = config.LEVELS_BY_ID[cfg.level_id]
     grain = level.grains[0]
-    level_str = f"level_{level.id:02d}_{grain}_{level.name}"
+    path = dataset_path or config.featured_level_path(level, grain)
+    level_str = path.stem.removeprefix("dataset_")
 
-    df = pd.read_parquet(config.featured_level_path(level, grain)).sort_values("date").reset_index(drop=True)
+    df = pd.read_parquet(path).sort_values("date").reset_index(drop=True)
 
     target = cfg.target
     id_cols = ["series_id", "date"]
@@ -504,9 +508,17 @@ def reconstruct_test_data(artifact: dict) -> tuple[pd.DataFrame, pd.Series, pd.D
 
     Fija el split al `test_start` guardado en el artifact (en vez de derivarlo del
     último día del parquet, el default de date_split): reproduce el split exacto
-    usado en el entrenamiento aunque el parquet se haya regenerado después."""
+    usado en el entrenamiento aunque el parquet se haya regenerado después.
+
+    `artifact["level"]` ya trae el sufijo de combinación para niveles split_by
+    (10-12, p.ej. "level_12_daily_item_store__CA_1_FOODS_1" -- ver load_data()), así
+    que alcanza para reconstruir el path exacto sin guardar split_values aparte."""
+    level = config.LEVELS_BY_ID[artifact["level_id"]]
+    grain = level.grains[0]
+    dataset_path = config.DATASETS / grain / f"dataset_{artifact['level']}.parquet"
+
     cfg = SimpleNamespace(level_id=artifact["level_id"], target=artifact["target"])
-    state = load_data(cfg)
+    state = load_data(cfg, dataset_path)
     state.features = artifact["features"]
     state.categorical_features = artifact["categorical_features"]
     state.numerical_features = artifact["numerical_features"]
@@ -554,10 +566,10 @@ def export_artifact(state: SimpleNamespace) -> None:
     logger.success("Artifact guardado en {}", artifact_path)
 
 
-def run_pipeline(cfg: Config) -> None:
+def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
     t_start = time.perf_counter()
 
-    state = load_data(cfg)
+    state = load_data(cfg, dataset_path)
     split_data(state, cfg)
     evaluate_model = make_evaluator(state)
 
@@ -612,19 +624,31 @@ def main():
 
     for level_id in level_ids:
         level = config.LEVELS_BY_ID[level_id]
-        if level.split_by:
-            logger.warning(
-                "Nivel {} ({}) tiene split_by={} -- un dataset por combinación de esas "
-                "columnas, no soportado todavía por este pipeline. Se saltea.",
-                level_id, level.name, level.split_by,
-            )
-            continue
         cfg = replace(CFG, level_id=level_id)
-        try:
-            run_pipeline(cfg)
-        except Exception:
-            logger.exception("Nivel {} falló, sigue con el resto.", level_id)
-        gc.collect()
+
+        if not level.split_by:
+            try:
+                run_pipeline(cfg)
+            except Exception:
+                logger.exception("Nivel {} falló, sigue con el resto.", level_id)
+            gc.collect()
+            continue
+
+        # split_by (10-12): un modelo por combinación (p.ej. dept_id x store_id en L12),
+        # un parquet por combinación ya generado por build-datasets.
+        combos = config.featured_level_combos(level, level.grains[0])
+        if not combos:
+            logger.warning("Nivel {} ({}): no hay parquets de combinación en data/datasets/{}/ "
+                            "-- correr build-datasets primero. Se saltea.",
+                            level_id, level.name, level.grains[0])
+            continue
+        logger.info("Nivel {} ({}): {} combinaciones", level_id, level.name, len(combos))
+        for path in combos:
+            try:
+                run_pipeline(cfg, dataset_path=path)
+            except Exception:
+                logger.exception("Nivel {} combo {} falló, sigue con el resto.", level_id, path.stem)
+            gc.collect()
 
 
 if __name__ == "__main__":
