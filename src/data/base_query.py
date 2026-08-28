@@ -109,16 +109,17 @@ ORDER BY series_id, date"""
 
 
 def build_cum_query(exog_sql: str, ns: list[int]) -> str:
-    """Añade columnas cumN = suma forward de N períodos, una por cada N en ns.
+    """Añade columnas cumN = suma de N períodos empezando HOY, una por cada N en ns.
 
-    cumN[t] = sales[t+1] + ... + sales[t+N], vía ROWS BETWEEN 1 FOLLOWING AND N FOLLOWING
-    (partición por series_id, orden por date). DuckDB no devuelve NULL cuando el frame tiene
-    menos de N filas disponibles (suma parcial silenciosa) — el CASE/COUNT fuerza NULL en
-    las últimas N filas de cada serie (ventana incompleta), que se filtran en train time
-    según el target elegido, no aquí.
+    cumN[t] = sales[t] + ... + sales[t+N-1], vía ROWS BETWEEN CURRENT ROW AND N-1 FOLLOWING
+    (partición por series_id, orden por date) -- "los próximos N días incluyendo el actual"
+    (p.ej. cum7 un lunes = venta de esa semana lunes-domingo). DuckDB no devuelve NULL cuando
+    el frame tiene menos de N filas disponibles (suma parcial silenciosa) — el CASE/COUNT
+    fuerza NULL en las últimas N filas de cada serie (ventana incompleta), que se filtran en
+    train time según el target elegido, no aquí.
     """
     def _cum_col(n: int) -> str:
-        frame = f"PARTITION BY series_id ORDER BY date ROWS BETWEEN 1 FOLLOWING AND {n} FOLLOWING"
+        frame = f"PARTITION BY series_id ORDER BY date ROWS BETWEEN CURRENT ROW AND {n - 1} FOLLOWING"
         return (
             f"CASE WHEN COUNT(sales) OVER ({frame}) = {n} "
             f"THEN CAST(SUM(sales) OVER ({frame}) AS FLOAT) ELSE NULL END AS cum{n}"

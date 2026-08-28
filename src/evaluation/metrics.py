@@ -57,19 +57,22 @@ def spec(y_true, y_pred, a1=0.75, a2=0.25):
     return float(np.sum(term * weight * mask) / n)
 
 
-def compute_scales(train_df, group_col=_SERIES_COL):
-    """Denominador RMSSE por serie: MSE del naive one-step in-sample desde la
-    primera venta no-cero (convención M5)."""
+def compute_naive_scales(train_df, group_col=_SERIES_COL, target_col="sales", m=1):
+    """Denominador RMSSE por serie: MSE del naive de m pasos (m=1 para 'sales'; m=N
+    para el target acumulado cumN, comparando cada ventana de N períodos con la
+    anterior no solapada) calculado in-sample sobre train, desde la primera venta
+    no-cero de la serie (siempre según la columna 'sales', para arrancar en el mismo
+    punto sea cual sea target_col)."""
     scales = {}
     for gid, sub in train_df.sort_values("date").groupby(group_col, sort=False):
-        y = sub["sales"].to_numpy(dtype=float)
-        nz = np.flatnonzero(y)
+        sales = sub["sales"].to_numpy(dtype=float)
+        nz = np.flatnonzero(sales)
         if nz.size == 0:
             continue
-        y = y[nz[0]:]
-        if y.size < 2:
+        y = sub[target_col].to_numpy(dtype=float)[nz[0]:]
+        if y.size <= m:
             continue
-        scales[gid] = float(np.mean(np.diff(y) ** 2))
+        scales[gid] = float(np.mean((y[m:] - y[:-m]) ** 2))
     return scales
 
 
@@ -82,21 +85,21 @@ def compute_weights(train_df, price_col=_PRICE_COL, group_col=_SERIES_COL,
     return dollar.to_dict()
 
 
-def calculate_rmsse(valid_df, scales, group_col=_SERIES_COL):
-    """RMSSE por serie. valid_df necesita: group_col, sales, forecast."""
+def calculate_rmsse(valid_df, scales, group_col=_SERIES_COL, target_col="sales"):
+    """RMSSE por serie. valid_df necesita: group_col, target_col, forecast."""
     out = {}
     for gid, sub in valid_df.groupby(group_col, sort=False):
         scale = scales.get(gid)
         if not scale:
             continue
-        num = np.mean((sub["sales"].to_numpy() - sub["forecast"].to_numpy()) ** 2)
+        num = np.mean((sub[target_col].to_numpy() - sub["forecast"].to_numpy()) ** 2)
         out[gid] = float(np.sqrt(num / scale))
     return out
 
 
-def calculate_wrmsse(valid_df, scales, weights=None, group_col=_SERIES_COL):
+def calculate_wrmsse(valid_df, scales, weights=None, group_col=_SERIES_COL, target_col="sales"):
     """WRMSSE = Σ w_i · RMSSE_i (pesos normalizados). weights=None → promedio."""
-    rmsse = calculate_rmsse(valid_df, scales, group_col)
+    rmsse = calculate_rmsse(valid_df, scales, group_col, target_col)
     if not rmsse:
         return float("nan")
     if weights is None:
@@ -108,12 +111,12 @@ def calculate_wrmsse(valid_df, scales, weights=None, group_col=_SERIES_COL):
     return float(sum(rmsse[g] * w[g] / total for g in rmsse))
 
 
-def calculate_spec(valid_df, weights=None, group_col=_SERIES_COL, a1=0.75, a2=0.25):
+def calculate_spec(valid_df, weights=None, group_col=_SERIES_COL, a1=0.75, a2=0.25, target_col="sales"):
     """SPEC por serie (necesita orden temporal), agregado como promedio ponderado
-    igual que WRMSSE. valid_df necesita: group_col, date, sales, forecast."""
+    igual que WRMSSE. valid_df necesita: group_col, date, target_col, forecast."""
     out = {}
     for gid, sub in valid_df.sort_values("date").groupby(group_col, sort=False):
-        y_true = sub["sales"].to_numpy()
+        y_true = sub[target_col].to_numpy()
         if y_true.size == 0:
             continue
         out[gid] = spec(y_true, sub["forecast"].to_numpy(), a1=a1, a2=a2)
@@ -129,54 +132,54 @@ def calculate_spec(valid_df, weights=None, group_col=_SERIES_COL, a1=0.75, a2=0.
 
 
 def compute_spec(train_df, valid_df, preds, group_col=_SERIES_COL,
-                  price_col=_PRICE_COL, a1=0.75, a2=0.25):
+                  price_col=_PRICE_COL, a1=0.75, a2=0.25, target_col="sales"):
     """Adjunta las predicciones a valid_df y calcula el SPEC final (mismo patrón
     que compute_wrmsse)."""
     if group_col not in valid_df.columns:
         return float("nan")
 
-    valid_with_preds = valid_df[[group_col, "date", "sales"]].copy()
+    valid_with_preds = valid_df[[group_col, "date", target_col]].copy()
     valid_with_preds["forecast"] = clip_closed_stores(valid_df, preds)
 
     weights = None
     if price_col in train_df.columns:
         weights = compute_weights(train_df, price_col, group_col)
 
-    return calculate_spec(valid_with_preds, weights, group_col, a1=a1, a2=a2)
+    return calculate_spec(valid_with_preds, weights, group_col, a1=a1, a2=a2, target_col=target_col)
 
 
-def compute_mae_scales(train_df, group_col=_SERIES_COL, m=1):
+def compute_mae_scales(train_df, group_col=_SERIES_COL, m=1, target_col="sales"):
     """Denominador MASE por serie: MAE del naive de m pasos in-sample desde la
-    primera venta no-cero (mismo criterio que compute_scales, pero con MAE en
+    primera venta no-cero (mismo criterio que compute_naive_scales, pero con MAE en
     vez de MSE, siguiendo Hyndman & Koehler, 2006)."""
     scales = {}
     for gid, sub in train_df.sort_values("date").groupby(group_col, sort=False):
-        y = sub["sales"].to_numpy(dtype=float)
-        nz = np.flatnonzero(y)
+        sales = sub["sales"].to_numpy(dtype=float)
+        nz = np.flatnonzero(sales)
         if nz.size == 0:
             continue
-        y = y[nz[0]:]
+        y = sub[target_col].to_numpy(dtype=float)[nz[0]:]
         if y.size <= m:
             continue
         scales[gid] = float(np.mean(np.abs(y[m:] - y[:-m])))
     return scales
 
 
-def calculate_mase(valid_df, scales, group_col=_SERIES_COL):
-    """MASE por serie. valid_df necesita: group_col, sales, forecast."""
+def calculate_mase(valid_df, scales, group_col=_SERIES_COL, target_col="sales"):
+    """MASE por serie. valid_df necesita: group_col, target_col, forecast."""
     out = {}
     for gid, sub in valid_df.groupby(group_col, sort=False):
         scale = scales.get(gid)
         if not scale:
             continue
-        mae_i = np.mean(np.abs(sub["sales"].to_numpy() - sub["forecast"].to_numpy()))
+        mae_i = np.mean(np.abs(sub[target_col].to_numpy() - sub["forecast"].to_numpy()))
         out[gid] = float(mae_i / scale)
     return out
 
 
-def calculate_wmase(valid_df, scales, weights=None, group_col=_SERIES_COL):
+def calculate_wmase(valid_df, scales, weights=None, group_col=_SERIES_COL, target_col="sales"):
     """MASE ponderado (mismo patrón que calculate_wrmsse). weights=None → promedio."""
-    mase = calculate_mase(valid_df, scales, group_col)
+    mase = calculate_mase(valid_df, scales, group_col, target_col)
     if not mase:
         return float("nan")
     if weights is None:
@@ -189,21 +192,21 @@ def calculate_wmase(valid_df, scales, weights=None, group_col=_SERIES_COL):
 
 
 def compute_mase(train_df, valid_df, preds, group_col=_SERIES_COL,
-                  price_col=_PRICE_COL, m=1):
+                  price_col=_PRICE_COL, m=1, target_col="sales"):
     """Adjunta las predicciones a valid_df y calcula el MASE final (mismo patrón
     que compute_wrmsse)."""
     if group_col not in valid_df.columns:
         return float("nan")
 
-    valid_with_preds = valid_df[[group_col, "date", "sales"]].copy()
+    valid_with_preds = valid_df[[group_col, "date", target_col]].copy()
     valid_with_preds["forecast"] = clip_closed_stores(valid_df, preds)
 
-    scales = compute_mae_scales(train_df, group_col, m=m)
+    scales = compute_mae_scales(train_df, group_col, m=m, target_col=target_col)
     weights = None
     if price_col in train_df.columns:
         weights = compute_weights(train_df, price_col, group_col)
 
-    return calculate_wmase(valid_with_preds, scales, weights, group_col)
+    return calculate_wmase(valid_with_preds, scales, weights, group_col, target_col=target_col)
 
 
 def clip_closed_stores(valid_df, preds):
@@ -217,7 +220,7 @@ def clip_closed_stores(valid_df, preds):
 
 
 def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
-                    price_col=_PRICE_COL, scales=None, weights=None):
+                    price_col=_PRICE_COL, scales=None, weights=None, target_col="sales", m=1):
     """Adjunta las predicciones a valid_df y calcula el WRMSSE final.
 
     `scales`/`weights` opcionales: si ya se calcularon antes para el mismo
@@ -227,15 +230,15 @@ def compute_wrmsse(train_df, valid_df, preds, group_col=_SERIES_COL,
     if group_col not in valid_df.columns:
         return float("nan")
 
-    valid_with_preds = valid_df[[group_col, "date", "sales"]].copy()
+    valid_with_preds = valid_df[[group_col, "date", target_col]].copy()
     valid_with_preds["forecast"] = clip_closed_stores(valid_df, preds)
 
     if scales is None:
-        scales = compute_scales(train_df, group_col)
+        scales = compute_naive_scales(train_df, group_col, target_col=target_col, m=m)
     if weights is None and price_col in train_df.columns:
         weights = compute_weights(train_df, price_col, group_col)
 
-    return calculate_wrmsse(valid_with_preds, scales, weights, group_col)
+    return calculate_wrmsse(valid_with_preds, scales, weights, group_col, target_col=target_col)
 
 
 def mae(y_true, y_pred):
@@ -289,38 +292,42 @@ def wape_metric(y_true, y_pred):
     return "wape", wape(y_true, y_pred), False
 
 
-def _wrmsse_scales_weights(train_df, group_col=_SERIES_COL, price_col=_PRICE_COL):
+def _wrmsse_scales_weights(train_df, group_col=_SERIES_COL, price_col=_PRICE_COL, target_col="sales", m=1):
     """Precalcula scales/weights una sola vez para un `train_df` fijo: ambas
     son invariantes entre rondas de boosting (no dependen de las
     predicciones), así que recalcularlas en cada llamada del eval metric
     (una por ronda) es trabajo repetido sobre el mismo resultado."""
-    scales = compute_scales(train_df, group_col)
+    scales = compute_naive_scales(train_df, group_col, target_col=target_col, m=m)
     weights = compute_weights(train_df, price_col, group_col) if price_col in train_df.columns else None
     return scales, weights
 
 
-def make_wrmsse_metric(train_df, valid_df):
+def make_wrmsse_metric(train_df, valid_df, target_col="sales", m=1):
     """Fábrica de eval metric de LightGBM para WRMSSE: cierra sobre train/valid ya
     que la callback de lgb sólo recibe (y_true, y_pred). Para el wrapper sklearn
-    (`LGBMRegressor.fit(eval_metric=...)`)."""
-    scales, weights = _wrmsse_scales_weights(train_df)
+    (`LGBMRegressor.fit(eval_metric=...)`).
+
+    `target_col`/`m`: columna objetivo real ('sales' o 'cumN') y su paso de naive
+    scale (1 para 'sales', N para cumN) -- ver compute_naive_scales."""
+    scales, weights = _wrmsse_scales_weights(train_df, target_col=target_col, m=m)
 
     def _wrmsse_metric(y_true, y_pred):
-        return "wrmsse", compute_wrmsse(train_df, valid_df, y_pred, scales=scales, weights=weights), False
+        return "wrmsse", compute_wrmsse(train_df, valid_df, y_pred, scales=scales, weights=weights, target_col=target_col), False
     return _wrmsse_metric
 
 
-def make_wrmsse_feval(train_df, valid_df):
+def make_wrmsse_feval(train_df, valid_df, target_col="sales", m=1):
     """Igual que `make_wrmsse_metric` pero con la firma `(preds, eval_data)` que
     espera `feval` en la API nativa (`lgb.train`) en vez de `(y_true, y_pred)`."""
-    scales, weights = _wrmsse_scales_weights(train_df)
+    scales, weights = _wrmsse_scales_weights(train_df, target_col=target_col, m=m)
 
     def _feval(preds, eval_data):
-        return "wrmsse", compute_wrmsse(train_df, valid_df, preds, scales=scales, weights=weights), False
+        return "wrmsse", compute_wrmsse(train_df, valid_df, preds, scales=scales, weights=weights, target_col=target_col), False
     return _feval
 
 
-def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_time=None, category=None):
+def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_time=None, category=None,
+                          target_col="sales", m=1):
     """WAPE/WRMSSE de un modelo sobre validación (clipando cierres conocidos).
     Pensada para acumular en una lista y comparar modelos, p.ej.:
     `model_results.append(evaluate_predictions(train, valid, y_valid, model.predict(X_valid), "LightGBM"))`
@@ -329,21 +336,23 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
     entrenamiento de cada modelo.
     `category` (opcional) permite etiquetar el modelo (p.ej. "Naive", "ML")
     para filtrar/comparar resultados por familia.
+    `target_col`/`m`: columna objetivo real ('sales' o 'cumN') y su paso de naive
+    scale -- ver compute_naive_scales. Default 'sales'/1: sin cambios de comportamiento.
     """
     y_pred_valid = clip_closed_stores(valid_df, y_pred_valid)
     result = {
         "model": name,
         "category": category,
         "wape": float(wape(y_valid, y_pred_valid)),
-        "wrmsse": compute_wrmsse(train_df, valid_df, y_pred_valid),
+        "wrmsse": compute_wrmsse(train_df, valid_df, y_pred_valid, target_col=target_col, m=m),
         "mae": mae(y_valid, y_pred_valid),
         "rmse": rmse(y_valid, y_pred_valid),
         "smape": float(smape(y_valid, y_pred_valid)),
         "bias": float(bias(y_valid, y_pred_valid)),
         "rmsle": rmsle(y_valid, y_pred_valid),
         "tracking_signal": tracking_signal(y_valid, y_pred_valid),
-        "spec": compute_spec(train_df, valid_df, y_pred_valid),
-        "mase": compute_mase(train_df, valid_df, y_pred_valid),
+        "spec": compute_spec(train_df, valid_df, y_pred_valid, target_col=target_col),
+        "mase": compute_mase(train_df, valid_df, y_pred_valid, m=m, target_col=target_col),
         "fit_time": fit_time,
     }
     label = f"{name} [{category}]" if category else name
@@ -361,7 +370,7 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
 
 
 def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sales",
-                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",)):
+                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",), m=1):
     """Clipa cierres, calcula WAPE/WRMSSE globales y arma el detalle de error por fila.
 
     Pensada para reusarse en cualquier etapa (modelo simple, post-Optuna, modelo
@@ -371,7 +380,7 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
 
     metrics = {
         "wape": float(wape(y_true, y_pred)),
-        "wrmsse": compute_wrmsse(train_df, eval_df, y_pred),
+        "wrmsse": compute_wrmsse(train_df, eval_df, y_pred, target_col=target_col, m=m),
     }
 
     df_pred = eval_df.copy()
@@ -388,7 +397,7 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
 
 
 def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIES_COL,
-                          weight_level=("date",)):
+                          weight_level=("date",), m=1):
     """WAPE/bias/WRMSSE por serie a partir del detalle de predicciones (salida de
     `build_predictions_report`, debe traer las columnas `y_pred`, `error`,
     `abs_error` y `gross_sales`). Incluye también las sumas por serie de
@@ -403,8 +412,8 @@ def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIE
     (group_col, "date") -> pondera cada fila por su propio gross_sales
     """
     weight_level = list(weight_level)
-    scales = compute_scales(train_df, group_col)
-    mae_scales = compute_mae_scales(train_df, group_col)
+    scales = compute_naive_scales(train_df, group_col, target_col=target_col, m=m)
+    mae_scales = compute_mae_scales(train_df, group_col, m=m, target_col=target_col)
 
     def _wrmsse_for_group(g):
         scale = scales.get(g.name)
@@ -455,7 +464,7 @@ def build_series_metrics(train_df, df_pred, target_col="sales", group_col=_SERIE
 
 def build_all_series_metrics(train_df, valid_df, y_true, predictions, target_col="sales",
                               group_col=_SERIES_COL, weight_level=("date",),
-                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",)):
+                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",), m=1):
     """`build_series_metrics` (WAPE/bias/WRMSSE/MASE/SPEC por serie) para varios
     modelos a la vez, concatenados en un único DataFrame con columna `model`.
 
@@ -469,11 +478,11 @@ def build_all_series_metrics(train_df, valid_df, y_true, predictions, target_col
     for name, y_pred in predictions.items():
         _, df_pred = build_predictions_report(
             train_df, valid_df, y_true, y_pred, target_col=target_col,
-            id_cols=id_cols, extra_cols=extra_cols,
+            id_cols=id_cols, extra_cols=extra_cols, m=m,
         )
         df_metrics = build_series_metrics(
             train_df, df_pred, target_col=target_col, group_col=group_col,
-            weight_level=weight_level,
+            weight_level=weight_level, m=m,
         )
         frames.append(df_metrics.reset_index().assign(model=name))
 

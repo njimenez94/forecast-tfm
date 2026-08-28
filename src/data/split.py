@@ -49,7 +49,7 @@ class DateSplit:
 
 
 def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str = "date",
-                test_start: pd.Timestamp | None = None) -> DateSplit:
+                test_start: pd.Timestamp | None = None, tail_reserve_days: int = 0) -> DateSplit:
     """Split temporal simple train/valid/test por fecha, sobre un dataframe ya con
     features (a diferencia de `prepare_level`, que arma exógenas/agregados para
     MLForecast). Los últimos `test_days` quedan como test, los `valid_days`
@@ -57,7 +57,14 @@ def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str 
 
     `test_start` fija el borde del split en vez de derivarlo de `last_date`: lo usa
     scripts.train_datasets.reconstruct_test_data() para reproducir exactamente el
-    split de un artifact ya entrenado, aunque el parquet se haya regenerado después."""
+    split de un artifact ya entrenado, aunque el parquet se haya regenerado después.
+
+    `tail_reserve_days`: descarta las últimas N filas de date antes de partir train/
+    valid/test -- para targets cumN, NULL en las últimas N filas de cada serie (ver
+    build_cum_query). Se aplica también cuando `test_start` viene fijo (reconstruct):
+    sin esto, `test` (sin cota superior) volvería a incluir esa cola NULL."""
+    if tail_reserve_days:
+        df = df[df[date_col] <= df[date_col].max() - pd.Timedelta(days=tail_reserve_days)]
     first_date = df[date_col].min()
     last_date = df[date_col].max()
     if test_start is None:

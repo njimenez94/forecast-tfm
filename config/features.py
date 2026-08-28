@@ -65,10 +65,22 @@ def test_days(grain: str) -> int:
 
 # Horizontes acumulados a experimentar (días para daily, semanas para weekly)
 # Genera targets cum7, cum14, ... donde cumN predice la suma de los próximos N períodos
+# (incluyendo el período actual, ver build_cum_query).
 CUM_HORIZONS = {
     "daily":  [7, 14, 21, 28, 35, 42, 364],
     "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
 }
+
+# Objetivos cumN a evaluar/entrenar en esta ronda (en períodos de la granularidad:
+# días para niveles daily, semanas para los weekly 10-12 -- mismos valores que
+# CUM_HORIZONS, un subset). El máximo (28) también fija cuánto se reserva al final de
+# cada serie en date_split (ver tail_reserve_days en scripts/train_dataset.py.split_data,
+# convertido a días de calendario vía to_days()): cumN es NULL en los últimos N
+# períodos de cada serie (ventana forward incompleta), y como el test/valid siempre
+# cae en el final de la serie, reservar el máximo -- no el N propio de cada target --
+# deja a cum7/14/21/28 evaluados sobre exactamente el mismo test/valid window, así las
+# métricas entre objetivos son comparables entre sí.
+CUM_EVAL_HORIZONS = [7, 14, 21, 28]
 
 # Lags que mlforecast genera automáticamente (en unidades de la frecuencia).
 # daily: denso 1-28 (cada día del bloque de horizonte VALID_PERIODS/TEST_PERIODS
