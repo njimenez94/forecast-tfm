@@ -63,12 +63,12 @@ class Config:
     target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
 
     # --- fases on/off ---
-    run_baseline_naive: bool = True
-    run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
-    run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
-    run_feature_selection: bool = True  # permutation importance + backward elimination
-    run_shap: bool = True
-    run_optuna: bool = True
+    run_baseline_naive: bool = False
+    run_baseline_stats: bool = False    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
+    run_baseline_ml: bool = False       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
+    run_feature_selection: bool = False  # permutation importance + backward elimination
+    run_shap: bool = False
+    run_optuna: bool = False
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
@@ -98,8 +98,15 @@ class Config:
 
     # --- modelo final ---
     final_n_estimators: int = 5_000
-    # "tweedie" o "regression_l2"/"rmse" (aplica tanto si corre Optuna como si no).
-    objective: str = "tweedie"
+    # level_id -> "tweedie" o "regression_l2"/"rmse"; niveles no listados usan
+    # `default_objective` (aplica tanto si corre Optuna como si no).
+    objective_by_level: dict = field(default_factory=lambda: {12: "tweedie"})
+    default_objective: str = "regression_l2"
+
+    @property
+    def objective(self) -> str:
+        return self.objective_by_level.get(self.level_id, self.default_objective)
+
     # Fijo si run_optuna=False; si run_optuna=True y objective=="tweedie", Optuna
     # tunea este valor (1.1-1.9) en vez de usar el fijo.
     tweedie_variance_power: float = 1.5
@@ -632,10 +639,7 @@ def main():
 
     for level_id in level_ids:
         level = config.LEVELS_BY_ID[level_id]
-        # TWEEDIE_LEVELS (10-12, ver config/model.py): series intermitentes,
-        # siempre tweedie sin importar qué objective tenga CFG para el resto.
-        objective = "tweedie" if level_id in config.TWEEDIE_LEVELS else CFG.objective
-        cfg = replace(CFG, level_id=level_id, objective=objective)
+        cfg = replace(CFG, level_id=level_id)
 
         if not level.split_by:
             try:
