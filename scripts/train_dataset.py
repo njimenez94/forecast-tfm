@@ -63,12 +63,12 @@ class Config:
     target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
 
     # --- fases on/off ---
-    run_baseline_naive: bool = False
-    run_baseline_stats: bool = False    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
-    run_baseline_ml: bool = False       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
-    run_feature_selection: bool = False  # permutation importance + backward elimination
-    run_shap: bool = False
-    run_optuna: bool = False
+    run_baseline_naive: bool = True
+    run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
+    run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
+    run_feature_selection: bool = True  # permutation importance + backward elimination
+    run_shap: bool = True
+    run_optuna: bool = True
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
