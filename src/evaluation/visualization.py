@@ -14,19 +14,26 @@ def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
         df_plot = df_plot[(df_plot["date"] >= since) & (df_plot["date"] <= until)]
 
     fig, ax = plt.subplots(figsize=(8, 4))
-    sns.lineplot(df_plot, x="date", y=target_col, label="Real", marker="o", ax=ax)
-    sns.lineplot(df_plot, x="date", y="y_pred", label="Predicción", marker="o", ax=ax)
+    if target_col   ==  'sales':
+        sns.lineplot(df_plot, x="date", y=target_col, label="Real", marker="o", ax=ax)
+        sns.lineplot(df_plot, x="date", y="y_pred", label="Predicción", marker="o", ax=ax)
+    else:
+        sns.lineplot(df_plot, x="date", y=target_col, label=target_col, marker="o", ax=ax)
     if date:
         ax.axvline(date, color="red", linestyle="--", linewidth=1)
 
     ax.set_title(series_id, loc="left")
     ax.set_xlabel("")
-    ax.set_ylabel("")
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%y"))
     plt.xticks(rotation=45, ha="right")
     ax.grid(axis="y", alpha=0.3)
-    plt.ylim(0)
+    
+    if target_col == 'bias':
+        lim = max(abs(df_pred[target_col].min()), abs(df_pred[target_col].max()))
+        plt.ylim(-lim, lim)
+    else:
+        plt.ylim(0, None)
     sns.despine()
     plt.tight_layout()
     plt.show()

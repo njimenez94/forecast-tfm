@@ -12,10 +12,6 @@ class Level:
     name: str
     dims: tuple[str, ...]
     grains: tuple[str, ...]  # ("daily",) | ("weekly",)
-    # Si no está vacío, build_datasets.py genera un parquet (y luego un modelo)
-    # independiente por cada combinación de valores de estas columnas, en vez de un
-    # único dataset para todo el nivel -- evita datasets/entrenamientos gigantes en
-    # los niveles de mayor cardinalidad (ver scripts/build_datasets.py).
     split_by: tuple[str, ...] = ()
 
 
