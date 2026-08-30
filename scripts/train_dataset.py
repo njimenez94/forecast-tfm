@@ -85,8 +85,8 @@ class Config:
     shap_sample_size: int = 300_000
 
     # --- Optuna ---
-    optuna_n_trials: int = 100_000
-    optuna_timeout_s: int = 15 * 60
+    optuna_n_trials: int = 500
+    optuna_timeout_s: int = 10 * 60
     optuna_n_estimators: int = 1_500
 
     # --- modelo final ---
