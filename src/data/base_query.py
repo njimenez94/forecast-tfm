@@ -136,6 +136,14 @@ FROM _exog
 ORDER BY series_id, date"""
 
 
+def build_level_query(dims, grain: str, cum_horizons: list[int]) -> str:
+    """Compone base + exog + cumN en el SQL final de un nivel/grain (ver
+    build_base_query/build_exog_query/build_cum_query)."""
+    base_sql = build_base_query(dims, grain)
+    exog_sql = build_exog_query(base_sql, grain)
+    return build_cum_query(exog_sql, cum_horizons)
+
+
 def count_series_query(dims) -> str:
     """Cuenta el nº de series (combinaciones distintas de dims) de un nivel."""
     dims = list(dims)

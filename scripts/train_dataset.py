@@ -28,7 +28,7 @@ artifacts de "sales" ya generados):
     artifacts/plots[/{target}]/{level}_{target}_shap_*.png                explicación SHAP del modelo simple
     artifacts/optuna_study.db                                             estudio Optuna (sqlite, uno por level/grain/target)
     artifacts/models[/{target}]/{level}_{target}_artifact.pkl            artifact liviano (modelo + features + métricas,
-                                                                            sin datos -- ver reconstruct_test_data())
+                                                                            sin datos -- ver src.data.split.reconstruct_test_data())
 """
 import argparse
 import gc
@@ -43,10 +43,9 @@ import pandas as pd
 from loguru import logger
 
 import config
-from src.data import build_feature_matrices, date_split
+from src.data.split import load_data, split_data
 from src.evaluation import (
-    build_all_series_metrics, build_predictions_report, evaluate_predictions,
-    make_wrmsse_metric, objective_metric,
+    build_all_series_metrics, build_predictions_report, evaluate_predictions, objective_metric,
 )
 from src.modeling import (
     backward_feature_selection, catboost_features, compute_permutation_importance,
@@ -139,94 +138,6 @@ def _artifacts_subdir(base: Path, target: str) -> Path:
 
 
 # ============================== FASES ==============================
-
-def load_data(cfg: Config, dataset_path: Path | None = None) -> SimpleNamespace:
-    """`dataset_path`: override para niveles con split_by (10-12), donde no hay un
-    único parquet por nivel -- ver main()/config.featured_level_combos()."""
-    level = config.LEVELS_BY_ID[cfg.level_id]
-    grain = level.grains[0]
-    path = dataset_path or config.featured_level_path(level, grain)
-    level_str = path.stem.removeprefix("dataset_")
-
-    df = pd.read_parquet(path).sort_values("date").reset_index(drop=True)
-
-    target = cfg.target
-    id_cols = ["series_id", "date"]
-    cum_cols = [c for c in df.columns if c.startswith("cum") and c[3:].isdigit()]
-    leaky_cols = [c for c in (["gross_sales"] + cum_cols) if c != target]
-
-    features = [c for c in df.columns if c not in id_cols + leaky_cols + [target]]
-    categorical_features = [
-        c for c in [
-            "item_id", "dept_id", "cat_id", "store_id", "state_id",
-            "event_name_1", "event_type_1", "event_name_2", "event_type_2",
-        ] if c in df.columns
-    ]
-    numerical_features = [c for c in features if c not in categorical_features]
-    features = categorical_features + numerical_features
-
-    logger.info("{} | target={} | {:,} filas | {} features ({} categóricas)",
-                level_str, target, len(df), len(features), len(categorical_features))
-
-    return SimpleNamespace(
-        level=level, grain=grain, level_str=level_str, df=df, target=target,
-        # m: paso del naive scale en WRMSSE/MASE (1 para 'sales', N para cumN) --
-        # ver src.evaluation.scaled.compute_naive_scales.
-        m=config.cum_n(target) or 1,
-        id_cols=id_cols, leaky_cols=leaky_cols,
-        features=features, categorical_features=categorical_features,
-        numerical_features=numerical_features,
-        model_results=[], predictions_valid={},
-    )
-
-
-def split_data(state: SimpleNamespace, cfg: Config, test_start: pd.Timestamp | None = None) -> None:
-    # Para targets cumN, reserva siempre el máximo de CUM_EVAL_HORIZONS (no el N propio
-    # de cfg.target): así cum7/14/21/28 comparten el mismo test/valid window y sus
-    # métricas son comparables entre sí (ver date_split/CUM_EVAL_HORIZONS). to_days()
-    # convierte de períodos de la granularidad (días si daily, semanas si weekly) a
-    # días de calendario -- en niveles weekly (10-12) "cum28" son 28 semanas, no días.
-    tail_reserve = (
-        config.to_days(state.grain, max(config.CUM_EVAL_HORIZONS))
-        if config.cum_n(cfg.target) is not None else 0
-    )
-    split = date_split(
-        state.df,
-        valid_days=config.valid_days(state.grain),
-        test_days=config.test_days(state.grain),
-        test_start=test_start,
-        tail_reserve_days=tail_reserve,
-    )
-    split.log_summary()
-
-    X_train, y_train, X_valid, y_valid, X_test, y_test = build_feature_matrices(
-        state.df, split, state.features, state.categorical_features, state.target, state.grain,
-    )
-    state.X_train, state.y_train = X_train, y_train
-    state.X_valid, state.y_valid = X_valid, y_valid
-    state.X_test, state.y_test = X_test, y_test
-
-    # train/valid/test solo se usan después para bookkeeping de evaluación (scales
-    # WRMSSE/MASE, pesos por precio, clip de cierres, gross_sales de reportes) --
-    # no las ~100 columnas de features (esas ya están en X_train/X_valid/X_test).
-    # Cargar el nivel 12 completo (mayor cardinalidad) puede acercarse al límite de
-    # RAM disponible; recortar acá evita cargar ese peso tres veces más.
-    eval_cols = [c for c in dict.fromkeys(
-        ["series_id", "date", "sales", "gross_sales", "avg_sell_price", "is_store_closed", state.target]
-    ) if c in state.df.columns]
-    state.train = split.train[eval_cols].copy()
-    state.valid = split.valid[eval_cols].copy()
-    state.test = split.test[eval_cols].copy()
-    state.first_date, state.valid_start, state.test_start = (
-        split.first_date, split.valid_start, split.test_start,
-    )
-    del split, state.df
-    gc.collect()
-
-    state.wrmsse_metric = make_wrmsse_metric(state.train, state.valid, target_col=state.target, m=state.m)
-
-    logger.info("Features: {} ({} categóricas)", len(state.features), len(state.categorical_features))
-
 
 def make_evaluator(state: SimpleNamespace):
     """Cierra sobre `state` para acumular cada modelo evaluado en
@@ -541,31 +452,6 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
     state.df_pred = df_pred
 
 
-def reconstruct_test_data(artifact: dict) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.DataFrame]:
-    """Reconstruye X_test/y_test/train/test de un artifact liviano (export_artifact ya
-    no las guarda), repitiendo load_data()+split_data() sobre el parquet de
-    data/datasets/ (make build-datasets). Usado por notebooks/03_predictions.ipynb.
-
-    Fija el split al `test_start` guardado en el artifact (en vez de derivarlo del
-    último día del parquet, el default de date_split): reproduce el split exacto
-    usado en el entrenamiento aunque el parquet se haya regenerado después.
-
-    `artifact["level"]` ya trae el sufijo de combinación para niveles split_by
-    (10-12, p.ej. "level_12_daily_item_store__CA_1_FOODS_1" -- ver load_data()), así
-    que alcanza para reconstruir el path exacto sin guardar split_values aparte."""
-    level = config.LEVELS_BY_ID[artifact["level_id"]]
-    grain = level.grains[0]
-    dataset_path = config.DATASETS / grain / f"dataset_{artifact['level']}.parquet"
-
-    cfg = SimpleNamespace(level_id=artifact["level_id"], target=artifact["target"])
-    state = load_data(cfg, dataset_path)
-    state.features = artifact["features"]
-    state.categorical_features = artifact["categorical_features"]
-    state.numerical_features = artifact["numerical_features"]
-    split_data(state, cfg, test_start=pd.Timestamp(artifact["test_start"]))
-    return state.X_test, state.y_test, state.train, state.test
-
-
 def export_artifact(state: SimpleNamespace) -> None:
     results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
 
@@ -575,8 +461,8 @@ def export_artifact(state: SimpleNamespace) -> None:
 
     # Solo modelo + metadata (features, métricas): liviano para respaldar/mover entre
     # máquinas sin arrastrar datos. df/X_*/y_*/train/valid/test NO se guardan --
-    # reconstruct_test_data() las recrea desde el parquet en data/datasets/ repitiendo
-    # load_data()+split_data() de este módulo (ver notebooks/03_predictions.ipynb).
+    # src.data.split.reconstruct_test_data() las recrea desde el parquet en
+    # data/datasets/ repitiendo load_data()+split_data() (ver notebooks/03_predictions.ipynb).
     artifact = {
         "level": state.level_str,
         "level_id": state.level.id,
@@ -610,8 +496,8 @@ def export_artifact(state: SimpleNamespace) -> None:
 def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
     t_start = time.perf_counter()
 
-    state = load_data(cfg, dataset_path)
-    split_data(state, cfg)
+    state = load_data(cfg.level_id, cfg.target, dataset_path)
+    split_data(state, cfg.target)
     evaluate_model = make_evaluator(state)
 
     if cfg.run_baseline_naive:

@@ -20,29 +20,16 @@ Uso:
 import argparse
 import gc
 
-import duckdb
 import humanize
 from loguru import logger
 
 import config
-from src.data.base_query import build_base_query, build_cum_query, build_exog_query, count_series_query
-from src.data.reader import read_query_str
-
-
-def _periods(db_path) -> dict[str, int]:
-    days = read_query_str(
-        db_path, "SELECT COUNT(DISTINCT d) AS n FROM sales_train_evaluation"
-    )["n"][0]
-    weeks = read_query_str(
-        db_path,
-        "SELECT COUNT(DISTINCT wm_yr_wk) AS n FROM calendar "
-        "WHERE d IN (SELECT DISTINCT d FROM sales_train_evaluation)",
-    )["n"][0]
-    return {"daily": int(days), "weekly": int(weeks)}
+from src.data.base_query import build_level_query, count_series_query
+from src.data.reader import count_periods, read_query_str, write_query_parquet
 
 
 def show_counts(levels, db_path) -> None:
-    periods = _periods(db_path)
+    periods = count_periods(db_path)
     logger.info(
         "Periodos disponibles: {} días / {} semanas",
         humanize.intcomma(periods["daily"]), humanize.intcomma(periods["weekly"]),
@@ -59,26 +46,10 @@ def show_counts(levels, db_path) -> None:
             )
 
 
-def _build_sql(lvl, grain: str) -> str:
-    """Construye el SQL final: sales + una columna cumN por horizonte configurado."""
-    base_sql = build_base_query(lvl.dims, grain)
-    exog_sql = build_exog_query(base_sql, grain)
-    return build_cum_query(exog_sql, config.CUM_HORIZONS[grain])
-
-
-def generate_level(db_path, sql: str, out) -> None:
-    with duckdb.connect(str(db_path)) as con:
-        # Límite conservador: el default (80% RAM) no cuenta el resto de procesos del
-        # host y provoca OOM-kill (Error 137) del proceso en niveles grandes (L12).
-        con.execute("PRAGMA memory_limit='3GB'")
-        con.execute("PRAGMA threads=4")
-        con.execute(f"COPY ({sql}) TO '{out}' (FORMAT PARQUET, COMPRESSION ZSTD)")
-
-
 def generate(levels, db_path, processed_dir) -> None:
     for grain in ("daily", "weekly"):
         (processed_dir / grain).mkdir(parents=True, exist_ok=True)
-    periods = _periods(db_path)
+    periods = count_periods(db_path)
 
     for lvl in levels:
         n_series = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
@@ -91,8 +62,8 @@ def generate(levels, db_path, processed_dir) -> None:
                 "  {} series × {} {}", humanize.intcomma(n_series), humanize.intcomma(n_periods), grain,
             )
             logger.info("  {} filas (aprox.)", humanize.intcomma(n_rows))
-            sql = _build_sql(lvl, grain)
-            generate_level(db_path, sql, out)
+            sql = build_level_query(lvl.dims, grain, config.CUM_HORIZONS[grain])
+            write_query_parquet(db_path, sql, out)
             logger.success("  listo  {}", humanize.naturalsize(out.stat().st_size, binary=True))
             gc.collect()
 

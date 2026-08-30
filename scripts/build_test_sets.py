@@ -22,7 +22,7 @@ import pandas as pd
 from loguru import logger
 
 import config
-from scripts.train_dataset import reconstruct_test_data
+from src.data.split import reconstruct_test_data
 from src.evaluation import evaluate_predictions
 from src.evaluation.scaled import clip_closed_stores
 

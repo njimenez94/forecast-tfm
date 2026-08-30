@@ -11,7 +11,6 @@ import gc
 import warnings
 
 import humanize
-import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -20,7 +19,7 @@ from loguru import logger
 import config
 from src.data.reader import read_parquet_pl
 from src.data.split import parse_level_file
-from src.features import add_features, add_lag_features
+from src.features import build_dataset
 
 warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 
@@ -44,25 +43,10 @@ def _partition_col(file) -> str | None:
     return None
 
 
-def _process(df_pl: pl.DataFrame, grain: str, static_cols: list[str]) -> pd.DataFrame:
-    df = add_features(df_pl).to_pandas()
-    final = add_lag_features(df, grain, static_cols)
-    final["date"] = pd.to_datetime(final["date"])
-
-    # float64->float32 (los day-counts de engineer.py salen float64 al pasar por
-    # to_pandas() con nulls) y str->category (dims de baja cardinalidad repetidas
-    # en cada fila): recorta ~30% de RAM al leer el parquet, sin tocar cada caller.
-    float_cols = final.select_dtypes("float64").columns
-    str_cols = final.select_dtypes("str").columns
-    final[float_cols] = final[float_cols].astype("float32")
-    final[str_cols] = final[str_cols].astype("category")
-    return final
-
-
 def _process_split(file, level, grain: str, static_cols: list[str]) -> None:
-    """Como _process, pero un parquet independiente por cada combinación de
-    level.split_by (p.ej. store_id x dept_id en nivel 12): datasets y modelos
-    entrenables por separado en vez de un único dataset gigante para todo el nivel."""
+    """Un parquet independiente por cada combinación de level.split_by (p.ej.
+    store_id x dept_id en nivel 12): datasets y modelos entrenables por separado
+    en vez de un único dataset gigante para todo el nivel."""
     cols = list(level.split_by)
     combos = pl.scan_parquet(file).select(cols).unique().sort(cols).collect().rows()
     logger.info("  separando por {} ({} datasets)", cols, len(combos))
@@ -70,7 +54,7 @@ def _process_split(file, level, grain: str, static_cols: list[str]) -> None:
     for i, combo in enumerate(combos, 1):
         split_values = dict(zip(cols, combo))
         filter_expr = pl.all_horizontal([pl.col(c) == v for c, v in split_values.items()])
-        final = _process(read_parquet_pl(file, filter_expr=filter_expr), grain, static_cols)
+        final = build_dataset(read_parquet_pl(file, filter_expr=filter_expr), grain, static_cols)
         out = config.featured_level_path(level, grain, split_values)
         final.to_parquet(out, compression="zstd", index=False)
         logger.success("  [{}/{}] [{}] {:.1f} MB  ({} filas)", i, len(combos), "/".join(map(str, combo)),
@@ -118,7 +102,7 @@ def main():
         part_col = _partition_col(file) if row_count > CHUNK_ROW_THRESHOLD else None
 
         if part_col is None:
-            final = _process(read_parquet_pl(file), grain, static_cols)
+            final = build_dataset(read_parquet_pl(file), grain, static_cols)
             final.to_parquet(out, compression="zstd", index=False)
             n_rows, n_cols = final.shape
         else:
@@ -127,7 +111,7 @@ def main():
             writer = None
             n_rows = n_cols = 0
             for value in values:
-                final = _process(read_parquet_pl(file, filter_expr=pl.col(part_col) == value), grain, static_cols)
+                final = build_dataset(read_parquet_pl(file, filter_expr=pl.col(part_col) == value), grain, static_cols)
                 table = pa.Table.from_pandas(final, preserve_index=False)
                 if writer is None:
                     writer = pq.ParquetWriter(out, table.schema, compression="zstd")
