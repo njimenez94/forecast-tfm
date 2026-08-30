@@ -43,7 +43,7 @@ import pandas as pd
 from loguru import logger
 
 import config
-from src.data.split import load_data, split_data
+from src.data.split import load_data, rolling_cv_folds, split_data
 from src.evaluation import (
     build_all_series_metrics, build_predictions_report, evaluate_predictions, objective_metric,
 )
@@ -90,6 +90,10 @@ class Config:
     optuna_n_estimators: int = 1_500
 
     # --- modelo final ---
+    # Folds rolling-origin sobre train+valid para elegir n_estimators antes del
+    # refit final sobre todos los datos (ver rolling_cv_folds). 1 = sin CV, un solo
+    # split como antes.
+    cv_folds: int = 3
     final_n_estimators: int = 5_000
     objective_by_level: dict = field(default_factory=lambda: {12: "tweedie"})
     default_objective: str = "regression_l2"
@@ -408,26 +412,45 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
         # va después de objective_kwargs para que gane sobre el valor fijo de cfg.
         model_params = {
             **objective_kwargs, **best_params,
-            "n_estimators": cfg.final_n_estimators, "random_state": cfg.random_state,
-            "n_jobs": -1, "verbosity": -1, "subsample_freq": 1,
+            "random_state": cfg.random_state, "n_jobs": -1, "verbosity": -1, "subsample_freq": 1,
         }
-        final_model = LGBMRegressor(**model_params)
         label = "LightGBM (final, Optuna)"
     else:
         model_params = {**cfg.default_lgbm_params, "seed": cfg.random_state, **objective_kwargs}
-        final_model = LGBMRegressor(**model_params)
         label = "LightGBM (final, params default)"
 
+    # CV rolling-origin sobre train+valid para un n_estimators robusto (ver
+    # rolling_cv_folds): el eval_metric acá es genérico (rmse/tweedie, igual que
+    # tune_optuna), no state.wrmsse_metric -- ese está atado al valid_df original y
+    # da resultados incorrectos sobre los folds más viejos. El último fold coincide
+    # con el split actual (train=X_train, valid=X_valid); sus predicciones se
+    # reusan para loggear la métrica "valid" (WRMSSE real) con evaluate_model.
+    folds = rolling_cv_folds(state.X_train, state.y_train, state.X_valid, state.y_valid,
+                              state.train["date"], state.valid_start, state.grain, cfg.cv_folds)
+    eval_metric = "tweedie" if cfg.objective == "tweedie" else "rmse"
+
     t0 = time.perf_counter()
-    final_model.fit(
-        state.X_train, state.y_train,
-        eval_set=[(state.X_valid, state.y_valid)],
-        eval_metric=state.wrmsse_metric,
-        categorical_feature=state.categorical_features,
-        callbacks=[lgb.early_stopping(50, first_metric_only=True), lgb.log_evaluation(10)],
-    )
+    best_iters, cv_model = [], None
+    for X_tr, y_tr, X_val, y_val in folds:
+        cv_model = LGBMRegressor(**{**model_params, "n_estimators": cfg.final_n_estimators})
+        cv_model.fit(
+            X_tr, y_tr, eval_set=[(X_val, y_val)], eval_metric=eval_metric,
+            categorical_feature=state.categorical_features,
+            callbacks=[lgb.early_stopping(50, first_metric_only=True, verbose=False)],
+        )
+        best_iters.append(cv_model.best_iteration_)
+    n_estimators = round(np.mean(best_iters))
+    logger.info("CV ({} folds) best_iteration: {} -> n_estimators final = {}",
+                cfg.cv_folds, best_iters, n_estimators)
+    evaluate_model(label, cv_model.predict(state.X_valid, num_iteration=cv_model.best_iteration_),
+                    fit_time=time.perf_counter() - t0, category="ML")
+
+    model_params = {**model_params, "n_estimators": n_estimators}
+    final_model = LGBMRegressor(**model_params)
+    X_trainval = pd.concat([state.X_train, state.X_valid])
+    y_trainval = pd.concat([state.y_train, state.y_valid])
+    final_model.fit(X_trainval, y_trainval, categorical_feature=state.categorical_features)
     fit_time = time.perf_counter() - t0
-    evaluate_model(label, final_model.predict(state.X_valid), fit_time=fit_time, category="ML")
 
     metrics_test, df_pred = build_predictions_report(
         state.train, state.test, state.y_test, final_model.predict(state.X_test),

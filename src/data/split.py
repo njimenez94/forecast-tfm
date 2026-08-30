@@ -195,6 +195,43 @@ def build_feature_matrices(df: pd.DataFrame, split: DateSplit, features: list[st
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
 
+def rolling_cv_folds(X_train: pd.DataFrame, y_train: pd.Series, X_valid: pd.DataFrame, y_valid: pd.Series,
+                     train_dates: pd.Series, valid_start: pd.Timestamp, grain: str,
+                     n_folds: int) -> list[tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]]:
+    """Folds rolling-origin sobre train+valid (todo lo anterior a test), para elegir
+    un n_estimators robusto antes de reentrenar el modelo final con todos los datos
+    (ver scripts/train_dataset.py fit_final_model).
+
+    El fold más reciente es exactamente (X_train, X_valid) ya armados por
+    build_feature_matrices; los `n_folds - 1` anteriores retroceden desde valid_start
+    en bloques de config.VALID_PERIODS[grain], recortando la cola de X_train, y
+    enmascaran ese recorte con mask_horizon_leakage/block_origins (mismo criterio que
+    X_valid) para que el n_estimators elegido no dependa de señal que un pronóstico
+    real no tendría en ese fold.
+
+    Devuelve una lista de (X_tr, y_tr, X_val, y_val) del fold más antiguo al más
+    reciente; con n_folds=1 devuelve solo el fold actual (X_train, X_valid).
+    """
+    period_days = 7 if grain == "weekly" else 1
+    block_days = config.VALID_PERIODS[grain] * period_days
+
+    folds = []
+    for i in range(n_folds - 1, 0, -1):
+        fold_valid_start = valid_start - pd.Timedelta(days=i * block_days)
+        fold_valid_end = fold_valid_start + pd.Timedelta(days=block_days)
+        train_mask = train_dates < fold_valid_start
+        val_mask = (train_dates >= fold_valid_start) & (train_dates < fold_valid_end)
+
+        val_dates = train_dates[val_mask]
+        origin = block_origins(val_dates, fold_valid_start, config.VALID_PERIODS[grain], grain)
+        X_val = mask_horizon_leakage(X_train[val_mask], val_dates, origin, grain)
+
+        folds.append((X_train[train_mask], y_train[train_mask], X_val, y_train[val_mask]))
+
+    folds.append((X_train, y_train, X_valid, y_valid))
+    return folds
+
+
 def parse_level_file(file: Path):
     """Extrae (level, grain) del nombre del parquet.
 
@@ -426,5 +463,29 @@ if __name__ == "__main__":
     assert blocks[0][1] == valid_start
     assert blocks[-1][2] == test_start
     assert all(b[2] == blocks[i + 1][1] for i, b in enumerate(blocks[:-1]))  # sin huecos/solapes
+
+    # ponytail: self-check para rolling_cv_folds -- 3 folds, sin fuga de fechas y
+    # con el mismo enmascarado por horizonte que build_feature_matrices.
+    n = 200
+    cv_dates = pd.Series(pd.date_range("2015-01-01", periods=n, freq="D"))
+    cv_X_train = pd.DataFrame({"lag7": np.arange(n, dtype=float)})
+    cv_y_train = pd.Series(np.arange(n, dtype=float))
+    cv_valid_start = cv_dates.iloc[-1] + pd.Timedelta(days=1)
+    cv_X_valid = pd.DataFrame({"lag7": np.arange(28, dtype=float)})
+    cv_y_valid = pd.Series(np.arange(28, dtype=float))
+
+    cv_folds = rolling_cv_folds(cv_X_train, cv_y_train, cv_X_valid, cv_y_valid,
+                                cv_dates, cv_valid_start, grain="daily", n_folds=3)
+    assert len(cv_folds) == 3
+    # último fold == split actual, sin recortar
+    assert cv_folds[-1][0] is cv_X_train and cv_folds[-1][2] is cv_X_valid
+    # folds más viejos: 28 filas de valid, train nunca llega a la fecha de corte
+    for i, (X_tr, _, X_val, _) in enumerate(cv_folds[:-1]):
+        assert len(X_val) == 28
+        assert len(X_tr) == n - (len(cv_folds) - 1 - i) * 28
+    # enmascarado de horizonte en el fold más viejo: lag7 solo válido para h<=7
+    oldest_val = cv_folds[0][2]["lag7"]
+    assert oldest_val.iloc[:7].notna().all()
+    assert oldest_val.iloc[7:].isna().all()
 
     print("src.data.split self-check OK")
