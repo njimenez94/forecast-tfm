@@ -43,10 +43,6 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
     label = f"{name} [{category}]" if category else name
     msg = (
         f"{label:>25s} | WAPE: {result['wape']:.2%} | WRMSSE: {result['wrmsse']:.4f} "
-        f"| MAE: {result['mae']:.3f} | RMSE: {result['rmse']:.3f} "
-        f"| SMAPE: {result['smape']:.2%} | Bias: {result['bias']:.2%} "
-        f"| RMSLE: {result['rmsle']:.4f} | TS: {result['tracking_signal']:.2f} "
-        f"| SPEC: {result['spec']:.3f} | MASE: {result['mase']:.4f}"
     )
     if fit_time is not None:
         msg += f" | fit: {fit_time:.2f}s"

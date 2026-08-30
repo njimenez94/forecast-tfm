@@ -20,6 +20,9 @@ data/processed/*
 fil-result/
 /fil-result
 
+# Logs de entrenamiento de CatBoost (por si allow_writing_files=False no aplica)
+catboost_info/
+
 # Artefactos generados: resultados, gráficos y estudio de Optuna no se versionan
 # (reproducibles con make create-database/process-data/build-datasets/train-datasets).
 # artifacts/models/*.pkl sí: son livianos (modelo + features + métricas, sin datos --

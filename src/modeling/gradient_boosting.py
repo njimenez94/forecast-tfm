@@ -48,6 +48,7 @@ def fit_catboost(X_train, y_train, categorical_features, random_state=42):
         random_state=random_state,
         cat_features=categorical_features,
         verbose=False,
+        allow_writing_files=False,
     )
     model.fit(X_train_cb, y_train)
     return model
