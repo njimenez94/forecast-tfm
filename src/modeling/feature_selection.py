@@ -45,15 +45,12 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
     menos importantes primero). Cada eliminación (de bloque o individual) se
     acepta si `objective_metric` (rmse o deviance de Tweedie, según
     `objective`) en validación no empeora más que `tolerance` respecto al
-    mejor valor actual -- el criterio de aceptación es exactamente el mismo
-    que una eliminación estrictamente uno a uno, el batching solo cambia
-    cuántas features se prueba remover por reentrenamiento. Si se acepta, las
-    features quedan fuera y el ranking se recalcula sobre el subconjunto
-    restante (importancias relativas cambian tras cada eliminación). El
-    proceso itera hasta que una pasada completa no logra eliminar ninguna
-    feature. El WRMSSE también se calcula en cada paso, pero solo para
-    informar/graficar -- quien decide es `objective_metric`, coherente con
-    la pérdida real del modelo.
+    mejor valor actual; si se acepta, las features quedan fuera y el ranking
+    se recalcula sobre el subconjunto restante (importancias relativas
+    cambian tras cada eliminación). El proceso itera hasta que una pasada
+    completa no logra eliminar ninguna feature. El WRMSSE también se calcula
+    en cada paso, pero solo para informar/graficar -- quien decide es
+    `objective_metric`, coherente con la pérdida real del modelo.
 
     Es "greedy" porque acepta la primera eliminación válida de cada
     iteración en vez de evaluar todas las combinaciones posibles y elegir
@@ -63,16 +60,27 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
 
     Batching (`max_batch_size`): con cientos de features candidatas, probar
     la eliminación de a una es O(n_features^2) reentrenamientos de LightGBM.
-    Para acelerar sin cambiar el criterio de decisión, cada intento prueba
-    remover un bloque de hasta `max_batch_size` features (las siguientes en
-    el ranking) de una sola vez. Si el bloque se acepta, se ahorraron
-    `max_batch_size - 1` reentrenamientos. Si se rechaza, se cae a probar
-    esas mismas features una por una (igual que el algoritmo original) para
-    no perder ninguna eliminación válida -- el costo extra de un bloque
-    rechazado es un único reentrenamiento de más (el del bloque) sobre el
-    baseline uno a uno, así que el peor caso (features todas relevantes,
-    ningún bloque se acepta) es solo ligeramente más lento, nunca peor que
-    eso. `max_batch_size=1` reproduce el algoritmo original exactamente.
+    Cada intento prueba remover un bloque de hasta `max_batch_size` features
+    (las siguientes en el ranking) de una sola vez; si se rechaza, cae a
+    probar esas mismas features una por una antes de darlas por buenas, así
+    que nunca se pierde una eliminación individual válida solo por venir en
+    un bloque rechazado (el costo extra de un bloque rechazado es un único
+    reentrenamiento de más -- el del bloque -- sobre el baseline uno a uno).
+    `max_batch_size=1` reproduce el algoritmo original exactamente.
+
+    OJO -- esto NO garantiza el mismo resultado final que correr todo uno a
+    uno: probar un bloque completo es una condición más fuerte que probar
+    sus features por separado (aceptar el bloque implica que remover TODAS
+    esas features a la vez no empeora la métrica), lo que puede detectar
+    grupos de features conjuntamente redundantes/correlacionadas que el
+    modo uno-a-uno deja adentro porque, individualmente, remover cada una
+    por separado sí empeora un poco (el modelo se apoya circunstancialmente
+    en las que quedan del grupo). En la práctica esto suele traducirse en
+    una selección final más chica (más agresiva podando redundancia), no en
+    perder features que sí aportan -- pero al ser greedy, el orden de las
+    pruebas importa y el óptimo global no está garantizado en ninguno de
+    los dos modos (ver párrafo anterior). Para reproducir bit a bit una
+    corrida anterior sin batching, usar `max_batch_size=1`.
 
     Args:
         X_train, y_train: features y target de entrenamiento.
@@ -90,8 +98,17 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
             para decidir la eliminación (vía `objective_metric`).
         tweedie_variance_power: power de Tweedie, solo aplica si
             `objective == "tweedie"`.
-        tolerance: máximo empeoramiento de `objective_metric` aceptable para
-            eliminar una feature. A mayor tolerance, selección más agresiva.
+        tolerance: máximo empeoramiento RELATIVO de `objective_metric` (fracción
+            de `best_score`, no valor absoluto) aceptable para eliminar
+            features -- p.ej. 0.001 = hasta 0.1% peor. Relativo porque la
+            escala de `objective_metric` varía mucho entre niveles (L1 total
+            vs. L12 item_store), así que un mismo `tolerance` absoluto no
+            significa lo mismo en todos los niveles; en cambio, un umbral
+            relativo sí es comparable. A mayor tolerance, selección más
+            agresiva y (con `max_batch_size>1`) más bloques se aceptan
+            enteros en vez de caer al fallback uno a uno, porque con
+            tolerance=0 el más mínimo ruido numérico entre entrenamientos ya
+            alcanza para rechazar cualquier bloque de más de una feature.
         random_state: semilla para reproducibilidad del LGBMRegressor.
         max_batch_size: máximo de features candidatas a remover juntas en un
             solo reentrenamiento (ver "Batching" arriba). 1 = sin batching.
@@ -131,7 +148,7 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
         nonlocal current_features, best_score, best_wrmsse, improved
         candidate_features = [f for f in current_features if f not in batch]
         score_candidate, wrmsse_candidate = train_and_eval(candidate_features)
-        accepted = score_candidate <= best_score + tolerance
+        accepted = score_candidate <= best_score * (1 + tolerance)
         selection_log.append({
             "n_features": len(candidate_features), "score": score_candidate,
             "wrmsse": wrmsse_candidate, "removed": ";".join(batch),

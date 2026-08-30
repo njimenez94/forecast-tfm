@@ -79,12 +79,28 @@ class Config:
     # --- selección de features ---
     permutation_sample_size: int = 15_000
     permutation_n_repeats: int = 5
+    # Relativo al score actual (ver backward_feature_selection), no absoluto -- así
+    # es comparable entre niveles con escalas de objective_metric muy distintas.
+    # OJO: >0 hace que el criterio de aceptación "arrastre" (best_score se
+    # actualiza a cada aceptación, incluso si es levemente peor que el anterior,
+    # así que el degrade tolerado se acumula paso a paso sin techo) -- esto ya
+    # pasaba con el algoritmo original uno-a-uno, no es nuevo del batching, pero
+    # con tolerance>0 el ORDEN de las pruebas importa mucho más: batch vs.
+    # uno-a-uno pueden terminar seleccionando conjuntos de features bien
+    # distintos (probado: 6 vs. 21 features en un caso sintético). Por eso
+    # se mantiene en 0.0 -- estricto, pero determinista y comparable entre
+    # ambos modos. Subirlo es una decisión de selección de features, no de
+    # performance, y hay que revisar el impacto real en cada nivel.
     backward_tolerance: float = 0.0
     # Cuántas features candidatas se prueba remover juntas en cada reentrenamiento
-    # de backward_feature_selection (ver docstring ahí). 1 = una por una (original,
-    # más lento con muchas features); >1 = por lotes, con fallback automático a
-    # uno-a-uno si el lote se rechaza, así no cambia qué features terminan
-    # seleccionadas, solo cuántos reentrenamientos hacen falta para decidirlo.
+    # de backward_feature_selection (ver docstring ahí, sección "Batching"). 1 =
+    # una por una (algoritmo original, más lento con muchas features); >1 = por
+    # lotes, con fallback automático a uno-a-uno si el lote se rechaza. Más rápido,
+    # y en la práctica tiende a podar mejor grupos de features redundantes entre
+    # sí -- pero la selección final puede diferir de la de max_batch_size=1 (no
+    # es un cambio de criterio de aceptación, es que un bloque completo es una
+    # prueba más exigente que sus features por separado). Para reproducir bit a
+    # bit una corrida sin batching, usar 1.
     feature_selection_batch_size: int = 8
 
     # --- SHAP ---
