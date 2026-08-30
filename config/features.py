@@ -16,9 +16,16 @@ def _stats(*windows: int) -> list:
     return tfms
 
 
+class _Momentum(Combine):
+    """Combine con nombre corto (momentum_lag{N}_{short}_{long}) en vez del autogenerado."""
+
+    def _get_name(self, lag: int) -> str:
+        return f"momentum_lag{lag}_{self.tfm1.window_size}_{self.tfm2.window_size}"
+
+
 def _momentum(short: int, long: int) -> Combine:
     """Media móvil corta / larga: >1 acelerando, <1 desacelerando (tendencia)."""
-    return Combine(RollingMean(short), RollingMean(long), operator.truediv)
+    return _Momentum(RollingMean(short), RollingMean(long), operator.truediv)
 
 # Horizontes de validación por granularidad (días para daily, semanas para weekly)
 HORIZON = {

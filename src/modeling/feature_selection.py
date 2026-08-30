@@ -118,7 +118,8 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
                 improved = True
                 logger.warning(f"ELIMINADA: '{feat}' -> {len(current_features)} features | {objective}={score_candidate:.4f} | WRMSSE={wrmsse_candidate:.4f}")
             else:
-                logger.success(f"mantiene: '{feat}' | {objective} empeoraría a {score_candidate:.4f}")
+                #logger.success(f"mantiene: '{feat}' | {objective} empeoraría a {score_candidate:.4f}")
+                continue
 
     logger.info(f"Seleccionadas {len(current_features)}/{len(features)} features | {objective} final: {best_score:.4f} | WRMSSE final: {best_wrmsse:.4f}")
     return current_features, best_score, best_wrmsse, pd.DataFrame(selection_log)
