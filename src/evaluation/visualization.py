@@ -13,7 +13,7 @@ def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
         until = date + pd.Timedelta(days=n)
         df_plot = df_plot[(df_plot["date"] >= since) & (df_plot["date"] <= until)]
 
-    fig, ax = plt.subplots(figsize=(14, 5))
+    fig, ax = plt.subplots(figsize=(8, 4))
     sns.lineplot(df_plot, x="date", y=target_col, label="Real", marker="o", ax=ax)
     sns.lineplot(df_plot, x="date", y="y_pred", label="Predicción", marker="o", ax=ax)
     if date:
@@ -62,7 +62,7 @@ def explain_prediction(test_df, X_test, df_pred, explainer, target_col, series_i
         max_display=max_display,
         show=False,
     )
-    plt.gcf().set_size_inches(10, plt.gcf().get_size_inches()[1])  # más ancho para que no se pisen los labels
+    plt.gcf().set_size_inches(7, plt.gcf().get_size_inches()[1])  # más ancho para que no se pisen los labels
     plt.title(
         f"{series_id_val} | {date_val:%Y-%m-%d} | "
         f"sales={sales_val:.0f} | pred={pred_val:.0f} | "
