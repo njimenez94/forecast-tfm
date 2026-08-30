@@ -86,7 +86,7 @@ CUM_EVAL_HORIZONS = [7, 14, 21, 28]
 # daily: denso 1-28 (cada día del bloque de horizonte VALID_PERIODS/TEST_PERIODS
 # tiene su propio lag puntual -- ver src.data.split.mask_horizon_leakage/block_origins,
 # que revalida cada fila por su propio h dentro del bloque de 28), después salta a
-# múltiplos gruesos (35, 42, 56, 91, 182, 364). 364 (no 364) para alinear
+# múltiplos gruesos (35, 42, 56, 91, 182, 364). 364 (no 365) para alinear
 # día-de-semana a un año. Filtro por leakage de targets cumN vía valid_lags.
 MLFORECAST_LAGS = {
     "daily": [*range(1, 29), 35, 42, 56, 91, 182, 364],
@@ -110,8 +110,10 @@ MLFORECAST_LAG_TRANSFORMS = {
         7:   _stats(7, 14),
         28:  _stats(7, 28, 91) + [_momentum(7, 28)],
         91:  _stats(28, 91) + [ExpandingMean()],
-        364: _stats(28, 91) + [SeasonalRollingMean(season_length=7, window_size=8)],
-        364: [RollingMean(28), RollingMean(91)],
+        364: _stats(28, 91) + [
+            SeasonalRollingMean(season_length=7, window_size=8),
+            SeasonalRollingMean(season_length=364, window_size=2),
+        ],
     },
     "weekly": {
         1:  _stats(4, 13),
