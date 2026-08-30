@@ -26,7 +26,7 @@ Cada script vive en [scripts/](scripts/) y se ejecuta como módulo (`uv run pyth
 |--------|--------|----------|
 | [scripts/create_database.py](scripts/create_database.py) | `make create-database` | Descomprime `backup/m5-forecasting-accuracy.zip` en `data/raw/` y crea la base DuckDB `data/m5.db`. Es el primer paso del pipeline. |
 | [scripts/process_data.py](scripts/process_data.py) | `make process-data` | Genera, por nivel de agregación (L1 → L12), un parquet en `data/processed/` con las ventas y los targets acumulados (`cumN`). Acepta `ARGS="--levels 1,9,12"` para limitar a ciertos niveles y `ARGS="--counts"` para solo contar series/filas. |
-| [scripts/build_datasets.py](scripts/build_datasets.py) | `make build-datasets` | Aplica `src.features.engineer` sobre cada parquet de `data/processed/` (lags, rolling, momentum) y guarda el dataset final en `artifacts/datasets/`. Acepta `ARGS="--levels 1,9,12"`. |
+| [scripts/build_datasets.py](scripts/build_datasets.py) | `make build-datasets` | Aplica `src.features` sobre cada parquet de `data/processed/` (lags, rolling, momentum) y guarda el dataset final en `artifacts/datasets/`. Acepta `ARGS="--levels 1,9,12"`. |
 | [scripts/train_datasets.py](scripts/train_datasets.py) | `make train-datasets` | Entrena un MLForecast por nivel/grain/target sobre `artifacts/datasets/`, evalúa en valid y test (WAPE, Bias, WRMSSE), guarda los modelos en `artifacts/models/` y las métricas en `output/experiment_results.parquet`. |
 
 ## Uso típico

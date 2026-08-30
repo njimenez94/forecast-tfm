@@ -136,7 +136,7 @@ EXCLUDE_AS_STATIC = {"series_id"}
 PRICE_LAG_COL = {"daily": "price_lag_7", "weekly": "price_lag_1"}
 
 # Features exógenas time-varying (pasadas al modelo y a predict X_df)
-# Las que siguen a "price_vs_max" las añade src/features/engineer.py sobre el
+# Las que siguen a "price_vs_max" las añade src/features/ sobre el
 # dataset base; solo existen en artifacts/datasets/ (no en data/processed/).
 #
 # zero_streak/pct_zero_28/pct_zero_90/adi_expanding/cv2_90/is_likely_stockout son

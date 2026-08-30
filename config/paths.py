@@ -16,7 +16,7 @@ OUTPUT_DIR = ROOT / "output"
 ARTIFACTS_DIR = ROOT / "artifacts"
 MODELS_DIR = ARTIFACTS_DIR / "models"
 
-# artifacts/datasets/: data/processed/ + features derivadas (src/features/engineer.py),
+# artifacts/datasets/: data/processed/ + features derivadas (src/features/),
 # listo para entrenar. Generado por scripts/build_datasets.py (make build-datasets).
 DATASETS = ROOT / "data" / "datasets"
 
