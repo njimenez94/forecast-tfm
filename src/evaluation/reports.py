@@ -62,6 +62,14 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
     metrics = {
         "wape": float(wape(y_true, y_pred)),
         "wrmsse": compute_wrmsse(train_df, eval_df, y_pred, target_col=target_col, m=m),
+        "mae": mae(y_true, y_pred),
+        "rmse": rmse(y_true, y_pred),
+        "smape": float(smape(y_true, y_pred)),
+        "bias": float(bias(y_true, y_pred)),
+        "rmsle": rmsle(y_true, y_pred),
+        "tracking_signal": tracking_signal(y_true, y_pred),
+        "spec": compute_spec(train_df, eval_df, y_pred, target_col=target_col),
+        "mase": compute_mase(train_df, eval_df, y_pred, m=m, target_col=target_col),
     }
 
     df_pred = eval_df.copy()
@@ -72,7 +80,7 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
     df_pred["bias"] = -df_pred["error"] / df_pred[target_col].abs()
 
     cols = list(id_cols) + [target_col] + list(extra_cols) + ["y_pred", "error", "abs_error", "wape", "bias"]
-    df_pred = df_pred[cols].sort_values("abs_error")
+    df_pred = df_pred[cols].sort_values(['series_id','date'])
 
     return metrics, df_pred
 
