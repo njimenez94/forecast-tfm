@@ -340,6 +340,8 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     import optuna
     from optuna.integration import LightGBMPruningCallback
 
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
     objective_kwargs = resolve_objective(cfg)
     eval_metric = "tweedie" if cfg.objective == "tweedie" else "rmse"
 
