@@ -31,6 +31,11 @@ HORIZON = {
 # para daily, semanas para weekly); to_days() convierte a días de calendario, que
 # es en lo que trabaja date_split.
 SEASON_LENGTH = {"daily": 7, "weekly": 52}
+
+# Ventanas para los baselines "seasonal naive" / "moving average" (ver
+# scripts/train_dataset.py:run_baseline_naive).
+SN_WINDOWS = {"daily": [1, 7, 28, 364], "weekly": [1, 4, 52]}
+MA_WINDOWS = {"daily": [7, 14, 21, 28, 35], "weekly": [2, 3, 4, 6, 8]}
 # Igual a TEST_PERIODS a propósito: es el horizonte real de despliegue, y también el
 # tamaño de bloque que src.data.split.build_feature_matrices usa para revalidar
 # horizonte en X_valid/X_test (ver block_origins). Con valid_days == valid_days(grain)

@@ -61,7 +61,7 @@ from src.modeling import (
 @dataclass
 class Config:
     # --- selección de dataset ---
-    level_id: int = 12
+    level_id: int = 1
     target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
 
     # --- fases on/off ---
@@ -70,17 +70,10 @@ class Config:
     run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
     run_feature_selection: bool = True  # permutation importance + backward elimination
     run_shap: bool = True
-    run_optuna: bool = True
+    run_optuna: bool = False
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
-    # Seasonal naive: varias ventanas para comparar (ver notebooks/02_model.ipynb).
-    sn_windows: dict = field(default_factory=lambda: {
-        "daily": [1, 7, 28, 364], "weekly": [1, 4, 52],
-    })
-    ma_windows: dict = field(default_factory=lambda: {
-        "daily": [7, 14, 21, 28, 35], "weekly": [2, 3, 4, 6, 8],
-    })
     random_state: int = 42
 
     # --- selección de features ---
@@ -94,14 +87,10 @@ class Config:
     # --- Optuna ---
     optuna_n_trials: int = 100_000
     optuna_timeout_s: int = 15 * 60
-    # n_estimators durante la búsqueda (con early stopping, no hace falta tunear
-    # tantos árboles); el refit final usa final_n_estimators, más alto.
     optuna_n_estimators: int = 1_500
 
     # --- modelo final ---
     final_n_estimators: int = 5_000
-    # level_id -> "tweedie" o "regression_l2"/"rmse"; niveles no listados usan
-    # `default_objective` (aplica tanto si corre Optuna como si no).
     objective_by_level: dict = field(default_factory=lambda: {12: "tweedie"})
     default_objective: str = "regression_l2"
 
@@ -157,7 +146,7 @@ def make_evaluator(state: SimpleNamespace):
 def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     grain_letter = state.grain[0]
 
-    for window in cfg.sn_windows[state.grain]:
+    for window in config.SN_WINDOWS[state.grain]:
         t0 = time.perf_counter()
         y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=window)
         evaluate_model(f"Seasonal naive ({window}{grain_letter})", y_pred,
@@ -171,7 +160,7 @@ def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> N
     evaluate_model("Historical mean", historical_mean(state.train, state.valid, state.target),
                     fit_time=time.perf_counter() - t0, category="Naive")
 
-    for window in cfg.ma_windows[state.grain]:
+    for window in config.MA_WINDOWS[state.grain]:
         t0 = time.perf_counter()
         y_pred = moving_average(state.train, state.valid, state.target, window=window)
         evaluate_model(f"Moving average ({window}{grain_letter})", y_pred,
