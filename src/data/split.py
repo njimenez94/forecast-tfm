@@ -87,7 +87,7 @@ def date_split(df: pd.DataFrame, valid_days: int, test_days: int, date_col: str 
     )
 
 
-_LAG_PREFIXES = ("lag", "rolling_", "expanding_", "seasonal_")
+_LAG_PREFIXES = ("lag", "rolling_", "expanding_", "seasonal_", "momentum_")
 
 
 def _lag_anchor(col: str) -> int | None:

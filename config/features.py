@@ -3,6 +3,7 @@ import operator
 
 from mlforecast.lag_transforms import (
     Combine, ExpandingMean, RollingMax, RollingMean, RollingMin, RollingStd, SeasonalRollingMean,
+    core_tfms,
 )
 
 TARGET = "sales"
@@ -26,6 +27,25 @@ class _Momentum(Combine):
 def _momentum(short: int, long: int) -> Combine:
     """Media móvil corta / larga: >1 acelerando, <1 desacelerando (tendencia)."""
     return _Momentum(RollingMean(short), RollingMean(long), operator.truediv)
+
+
+class _SeasonalMean(SeasonalRollingMean):
+    """SeasonalRollingMean con nombre corto (seasonal_mean_lag{N}_{season_length}_{window_size}).
+
+    ponytail: _set_core_tfm() del padre busca la impl en coreforecast por
+    self.__class__.__name__, así que subclasificar rompe ese lookup (no pasa con
+    Combine, que no lo usa) -- hay que armar el _core_tfm a mano con el nombre real.
+    """
+
+    def _get_name(self, lag: int) -> str:
+        return f"seasonal_mean_lag{lag}_{self.season_length}_{self.window_size}"
+
+    def _set_core_tfm(self, lag: int) -> "_SeasonalMean":
+        self._core_tfm = core_tfms.SeasonalRollingMean(
+            lag=lag, season_length=self.season_length, window_size=self.window_size,
+            min_samples=self.min_samples,
+        )
+        return self
 
 # Horizontes de validación por granularidad (días para daily, semanas para weekly)
 HORIZON = {
@@ -123,8 +143,8 @@ MLFORECAST_LAG_TRANSFORMS = {
         28:  _stats(7, 28, 91) + [_momentum(7, 28)],
         91:  _stats(28, 91) + [ExpandingMean()],
         364: _stats(28, 91) + [
-            SeasonalRollingMean(season_length=7, window_size=8),
-            SeasonalRollingMean(season_length=364, window_size=2),
+            _SeasonalMean(season_length=7, window_size=8),
+            _SeasonalMean(season_length=364, window_size=2),
         ],
     },
     "weekly": {
