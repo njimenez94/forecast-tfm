@@ -9,23 +9,26 @@ para poder saltear las que no hacen falta en una corrida dada (p.ej. iterar
 sobre selección de features sin repetir la comparación de modelos base, o
 reentrenar el modelo final con `CFG.default_lgbm_params` sin correr Optuna de nuevo).
 
-Editar `CFG` (target, fases, hiperparámetros de tuning) y correr:
-    make train-datasets ARGS="--levels 1,9,12"   # o sin --levels: todos (1-12)
+Editar `CFG` (fases, hiperparámetros de tuning) y correr:
+    make train-dataset ARGS="--levels 1,9,12"                 # target "sales" (CFG.target)
+    make train-dataset ARGS="--levels 12 --target cum28"      # target cumN, ver --target
     # o
-    uv run python -m scripts.train_datasets --levels 1,9,12
+    uv run python -m scripts.train_dataset --levels 1,9,12 --target cum28
 
 Niveles con `split_by` (10-12: un dataset por combinación dept/store, ver
 config/levels.py) entrenan un modelo por combinación, iterando sobre los
 parquets ya generados por build-datasets (ver main()).
 
-Salidas:
-    artifacts/results/{level}_{target}_model_comparison.csv   comparación de modelos (si corrió alguna fase de baseline)
-    artifacts/results/{level}_{target}_series_metrics.csv     métricas por serie de esos modelos
-    artifacts/results/{level}_{target}_feature_selection.csv  historial de backward elimination
-    artifacts/plots/{level}_{target}_shap_*.png                explicación SHAP del modelo simple
-    artifacts/optuna_study.db                                  estudio Optuna (sqlite, uno por level/grain/target)
-    artifacts/models/{level}_{target}_artifact.pkl             artifact liviano (modelo + features + métricas,
-                                                                 sin datos -- ver reconstruct_test_data())
+Salidas (target "sales" va directo en la carpeta base; cualquier otro target -- cumN --
+en una subcarpeta propia, ver _artifacts_subdir(), para no mezclarse con los ~150
+artifacts de "sales" ya generados):
+    artifacts/results[/{target}]/{level}_{target}_model_comparison.csv   comparación de modelos (si corrió alguna fase de baseline)
+    artifacts/results[/{target}]/{level}_{target}_series_metrics.csv     métricas por serie de esos modelos
+    artifacts/results[/{target}]/{level}_{target}_feature_selection.csv  historial de backward elimination
+    artifacts/plots[/{target}]/{level}_{target}_shap_*.png                explicación SHAP del modelo simple
+    artifacts/optuna_study.db                                             estudio Optuna (sqlite, uno por level/grain/target)
+    artifacts/models[/{target}]/{level}_{target}_artifact.pkl            artifact liviano (modelo + features + métricas,
+                                                                            sin datos -- ver reconstruct_test_data())
 """
 import argparse
 import gc
@@ -128,6 +131,13 @@ class Config:
 CFG = Config()
 
 
+def _artifacts_subdir(base: Path, target: str) -> Path:
+    """Subcarpeta por target salvo 'sales': deja los artifacts de cum7/14/21/28 (y
+    cualquier otro target futuro) separados de los ~150 archivos de 'sales' ya
+    generados en `base` sin tocarlos ni requerir migrarlos."""
+    return base if target == "sales" else base / target
+
+
 # ============================== FASES ==============================
 
 def load_data(cfg: Config, dataset_path: Path | None = None) -> SimpleNamespace:
@@ -160,6 +170,9 @@ def load_data(cfg: Config, dataset_path: Path | None = None) -> SimpleNamespace:
 
     return SimpleNamespace(
         level=level, grain=grain, level_str=level_str, df=df, target=target,
+        # m: paso del naive scale en WRMSSE/MASE (1 para 'sales', N para cumN) --
+        # ver src.evaluation.metrics.compute_naive_scales.
+        m=config.cum_n(target) or 1,
         id_cols=id_cols, leaky_cols=leaky_cols,
         features=features, categorical_features=categorical_features,
         numerical_features=numerical_features,
@@ -168,11 +181,21 @@ def load_data(cfg: Config, dataset_path: Path | None = None) -> SimpleNamespace:
 
 
 def split_data(state: SimpleNamespace, cfg: Config, test_start: pd.Timestamp | None = None) -> None:
+    # Para targets cumN, reserva siempre el máximo de CUM_EVAL_HORIZONS (no el N propio
+    # de cfg.target): así cum7/14/21/28 comparten el mismo test/valid window y sus
+    # métricas son comparables entre sí (ver date_split/CUM_EVAL_HORIZONS). to_days()
+    # convierte de períodos de la granularidad (días si daily, semanas si weekly) a
+    # días de calendario -- en niveles weekly (10-12) "cum28" son 28 semanas, no días.
+    tail_reserve = (
+        config.to_days(state.grain, max(config.CUM_EVAL_HORIZONS))
+        if config.cum_n(cfg.target) is not None else 0
+    )
     split = date_split(
         state.df,
         valid_days=config.valid_days(state.grain),
         test_days=config.test_days(state.grain),
         test_start=test_start,
+        tail_reserve_days=tail_reserve,
     )
     split.log_summary()
 
@@ -200,7 +223,7 @@ def split_data(state: SimpleNamespace, cfg: Config, test_start: pd.Timestamp | N
     del split, state.df
     gc.collect()
 
-    state.wrmsse_metric = make_wrmsse_metric(state.train, state.valid)
+    state.wrmsse_metric = make_wrmsse_metric(state.train, state.valid, target_col=state.target, m=state.m)
 
     logger.info("Features: {} ({} categóricas)", len(state.features), len(state.categorical_features))
 
@@ -211,7 +234,7 @@ def make_evaluator(state: SimpleNamespace):
     def evaluate_model(name, y_pred_valid, fit_time=None, category=None):
         result = evaluate_predictions(
             state.train, state.valid, state.y_valid, y_pred_valid, name,
-            fit_time=fit_time, category=category,
+            fit_time=fit_time, category=category, target_col=state.target, m=state.m,
         )
         state.model_results.append(result)
         state.predictions_valid[name] = y_pred_valid
@@ -295,7 +318,7 @@ def run_baseline_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None
 def save_model_comparison(state: SimpleNamespace) -> None:
     if not state.model_results:
         return
-    out_dir = config.ARTIFACTS_DIR / "results"
+    out_dir = _artifacts_subdir(config.ARTIFACTS_DIR / "results", state.target)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
@@ -303,7 +326,8 @@ def save_model_comparison(state: SimpleNamespace) -> None:
 
     if state.predictions_valid:
         series_metrics_df = build_all_series_metrics(
-            state.train, state.valid, state.y_valid, state.predictions_valid, target_col=state.target,
+            state.train, state.valid, state.y_valid, state.predictions_valid,
+            target_col=state.target, m=state.m,
         )
         series_metrics_df.to_csv(out_dir / f"{state.level_str}_{state.target}_series_metrics.csv", index=False)
 
@@ -346,7 +370,7 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
     state.X_valid = state.X_valid[state.features]
     state.X_test = state.X_test[state.features]
 
-    out_dir = config.ARTIFACTS_DIR / "results"
+    out_dir = _artifacts_subdir(config.ARTIFACTS_DIR / "results", state.target)
     out_dir.mkdir(parents=True, exist_ok=True)
     selection_log.to_csv(out_dir / f"{state.level_str}_{state.target}_feature_selection.csv", index=False)
 
@@ -376,7 +400,7 @@ def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     X_shap = state.X_test.sample(n=min(cfg.shap_sample_size, len(state.X_test)), random_state=cfg.random_state)
     shap_values = explainer.shap_values(X_shap)
 
-    plot_dir = config.ARTIFACTS_DIR / "plots"
+    plot_dir = _artifacts_subdir(config.ARTIFACTS_DIR / "plots", state.target)
     plot_dir.mkdir(parents=True, exist_ok=True)
     prefix = plot_dir / f"{state.level_str}_{state.target}_shap"
 
@@ -506,7 +530,8 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
     evaluate_model(label, final_model.predict(state.X_valid), fit_time=fit_time, category="ML")
 
     metrics_test, df_pred = build_predictions_report(
-        state.train, state.test, state.y_test, final_model.predict(state.X_test), target_col=state.target,
+        state.train, state.test, state.y_test, final_model.predict(state.X_test),
+        target_col=state.target, m=state.m,
     )
     logger.info("Test WAPE: {:.2%} | Test WRMSSE: {:.4f}", metrics_test["wape"], metrics_test["wrmsse"])
 
@@ -575,8 +600,9 @@ def export_artifact(state: SimpleNamespace) -> None:
         "test_start": str(state.test_start.date()),
     }
 
-    config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    artifact_path = config.MODELS_DIR / f"{state.level_str}_{state.target}_artifact.pkl"
+    out_dir = _artifacts_subdir(config.MODELS_DIR, state.target)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    artifact_path = out_dir / f"{state.level_str}_{state.target}_artifact.pkl"
     joblib.dump(artifact, artifact_path)
     logger.success("Artifact guardado en {}", artifact_path)
 
@@ -633,13 +659,16 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
 def main():
     ap = argparse.ArgumentParser(description="Entrena LightGBM por nivel de agregación M5.")
     ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. Default: todos (1-12).")
+    ap.add_argument("--target", default=CFG.target,
+                    help='Target: "sales" o "cumN" (ver config.CUM_EVAL_HORIZONS, p.ej. "cum28"). '
+                         f"Default: {CFG.target!r}.")
     args = ap.parse_args()
 
     level_ids = [int(x) for x in args.levels.split(",")] if args.levels else [lvl.id for lvl in config.LEVELS]
 
     for level_id in level_ids:
         level = config.LEVELS_BY_ID[level_id]
-        cfg = replace(CFG, level_id=level_id)
+        cfg = replace(CFG, level_id=level_id, target=args.target)
 
         if not level.split_by:
             try:

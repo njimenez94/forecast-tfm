@@ -2,7 +2,7 @@ from src.evaluation.metrics import (
     bias, build_all_series_metrics, build_predictions_report,
     build_series_metrics, calculate_mase, calculate_rmsse, calculate_spec,
     calculate_wmase, calculate_wrmsse, compute_mae_scales, compute_mase,
-    compute_scales, compute_spec, compute_weights, compute_wrmsse,
+    compute_naive_scales, compute_spec, compute_weights, compute_wrmsse,
     evaluate_predictions, make_wrmsse_feval, make_wrmsse_metric,
     objective_metric, smape, spec, wape, wape_metric,
 )
@@ -15,7 +15,7 @@ __all__ = [
     "bias",
     "smape",
     "spec",
-    "compute_scales",
+    "compute_naive_scales",
     "compute_mae_scales",
     "compute_weights",
     "calculate_rmsse",
