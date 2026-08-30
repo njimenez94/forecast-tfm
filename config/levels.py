@@ -35,3 +35,10 @@ LEVELS = [
 ]
 
 LEVELS_BY_ID = {lv.id: lv for lv in LEVELS}
+
+# Niveles activos por defecto (sin --levels) en process_data/build_datasets/train_dataset.
+# En experimentación: fuera los niveles densos (10-12, item-level). Para activarlos todos:
+# ACTIVE_LEVEL_IDS = tuple(LEVELS_BY_ID)
+ACTIVE_LEVEL_IDS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9)
+
+ACTIVE_LEVELS = [lv for lv in LEVELS if lv.id in ACTIVE_LEVEL_IDS]

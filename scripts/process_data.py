@@ -13,7 +13,7 @@ Siguiente paso del pipeline: scripts/build_datasets.py añade features derivadas
 sobre este dataset y guarda el resultado en artifacts/datasets/.
 
 Uso:
-    python -m scripts.process_data                  # genera todos los niveles
+    python -m scripts.process_data                  # niveles activos (config.ACTIVE_LEVEL_IDS)
     python -m scripts.process_data --levels 1,9,12  # solo esos niveles
     python -m scripts.process_data --counts         # solo series/filas, sin materializar
 """
@@ -70,14 +70,15 @@ def generate(levels, db_path, processed_dir) -> None:
 
 def parse_levels(arg: str | None):
     if not arg:
-        return config.LEVELS
+        return config.ACTIVE_LEVELS
     ids = {int(x) for x in arg.split(",")}
     return [lvl for lvl in config.LEVELS if lvl.id in ids]
 
 
 def main():
     ap = argparse.ArgumentParser(description="Genera datasets por nivel de agregación M5.")
-    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. Por defecto: todos.")
+    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
+                    "Por defecto: config.ACTIVE_LEVEL_IDS.")
     ap.add_argument("--counts", action="store_true",
                     help="Solo mostrar series/filas por nivel, sin materializar.")
     args = ap.parse_args()

@@ -3,7 +3,7 @@ el resultado -- dataframe final, con lags/rolling/momentum ya materializados, li
 para entrenar cualquier modelo sin pasar por mlforecast -- en artifacts/datasets/.
 
 Uso:
-    python -m scripts.build_datasets                  # todos los niveles
+    python -m scripts.build_datasets                  # niveles activos (config.ACTIVE_LEVEL_IDS)
     python -m scripts.build_datasets --levels 1,9,12   # solo esos niveles
 """
 import argparse
@@ -67,9 +67,10 @@ def main():
     ap = argparse.ArgumentParser(
         description="Genera el dataset final (features + lags/rolling) en artifacts/datasets/."
     )
-    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. Por defecto: todos.")
+    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
+                    "Por defecto: config.ACTIVE_LEVEL_IDS.")
     args = ap.parse_args()
-    level_ids = {int(x) for x in args.levels.split(",")} if args.levels else None
+    level_ids = {int(x) for x in args.levels.split(",")} if args.levels else set(config.ACTIVE_LEVEL_IDS)
 
     files = sorted(config.PROCESSED_DIR.glob("*/level_*.parquet"))
     if not files:

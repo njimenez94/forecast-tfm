@@ -533,13 +533,14 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
 
 def main():
     ap = argparse.ArgumentParser(description="Entrena LightGBM por nivel de agregación M5.")
-    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. Default: todos (1-12).")
+    ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
+                    "Default: config.ACTIVE_LEVEL_IDS.")
     ap.add_argument("--target", default=CFG.target,
                     help='Target: "sales" o "cumN" (ver config.CUM_EVAL_HORIZONS, p.ej. "cum28"). '
                          f"Default: {CFG.target!r}.")
     args = ap.parse_args()
 
-    level_ids = [int(x) for x in args.levels.split(",")] if args.levels else [lvl.id for lvl in config.LEVELS]
+    level_ids = [int(x) for x in args.levels.split(",")] if args.levels else list(config.ACTIVE_LEVEL_IDS)
 
     for level_id in level_ids:
         level = config.LEVELS_BY_ID[level_id]
