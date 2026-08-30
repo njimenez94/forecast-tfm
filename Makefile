@@ -1,4 +1,4 @@
-.PHONY: create-database process-data build-datasets train-dataset test-sets
+.PHONY: create-database process-data build-datasets train-dataset pipeline test-sets
 
 PY := uv run python
 
@@ -16,3 +16,5 @@ train-dataset:
 
 test-sets:
 	$(PY) -m scripts.build_test_sets
+
+pipeline: process-data build-datasets train-dataset
