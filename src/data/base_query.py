@@ -21,7 +21,19 @@ _EVENTS = ("event_name_1", "event_type_1", "event_name_2", "event_type_2")
 _PRICE_LAG = {"daily": 7, "weekly": 1}
 
 
-def build_base_query(dims, grain: str) -> str:
+def _where_clause(filters, alias: str = "s") -> str:
+    """WHERE opcional a partir de un dict {dim: (valores,)}, p.ej. {"dept_id": ("FOODS_3",)}.
+    Vacío/None -> sin filtrar (comportamiento por defecto)."""
+    if not filters:
+        return ""
+    conds = []
+    for dim, values in filters.items():
+        vals = ", ".join(f"'{v}'" for v in values)
+        conds.append(f"{alias}.{dim} IN ({vals})")
+    return "WHERE " + " AND ".join(conds) + "\n"
+
+
+def build_base_query(dims, grain: str, filters=None) -> str:
     dims = list(dims)
     if grain not in ("daily", "weekly"):
         raise ValueError(f"grain inválido: {grain!r} (usa 'daily' o 'weekly')")
@@ -63,6 +75,7 @@ def build_base_query(dims, grain: str) -> str:
         "LEFT JOIN calendar c ON s.d = c.d\n"
         "LEFT JOIN sell_prices p\n"
         "    ON s.store_id = p.store_id AND s.item_id = p.item_id AND c.wm_yr_wk = p.wm_yr_wk\n"
+        + _where_clause(filters) +
         "GROUP BY " + ", ".join(group) + "\n"
         "ORDER BY series_id, date"
     )
@@ -136,18 +149,21 @@ FROM _exog
 ORDER BY series_id, date"""
 
 
-def build_level_query(dims, grain: str, cum_horizons: list[int]) -> str:
+def build_level_query(dims, grain: str, cum_horizons: list[int], filters=None) -> str:
     """Compone base + exog + cumN en el SQL final de un nivel/grain (ver
-    build_base_query/build_exog_query/build_cum_query)."""
-    base_sql = build_base_query(dims, grain)
+    build_base_query/build_exog_query/build_cum_query). `filters` (opcional) restringe
+    las filas de origen, p.ej. {"dept_id": ("FOODS_3",)} -- ver Level.filters."""
+    base_sql = build_base_query(dims, grain, filters)
     exog_sql = build_exog_query(base_sql, grain)
     return build_cum_query(exog_sql, cum_horizons)
 
 
-def count_series_query(dims) -> str:
-    """Cuenta el nº de series (combinaciones distintas de dims) de un nivel."""
+def count_series_query(dims, filters=None) -> str:
+    """Cuenta el nº de series (combinaciones distintas de dims) de un nivel, aplicando
+    `filters` si se pasa (ver Level.filters)."""
     dims = list(dims)
     if not dims:
         return "SELECT 1 AS n"
     cols = ", ".join(f"s.{d}" for d in dims)
-    return f"SELECT COUNT(*) AS n FROM (SELECT DISTINCT {cols} FROM sales_train_evaluation s)"
+    where = _where_clause(filters)
+    return f"SELECT COUNT(*) AS n FROM (SELECT DISTINCT {cols} FROM sales_train_evaluation s\n{where})"

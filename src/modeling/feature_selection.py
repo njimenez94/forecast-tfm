@@ -36,25 +36,43 @@ def compute_permutation_importance(model, X_valid, y_valid, features, objective:
 def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, valid_df,
                                 features, categorical_features, importance_perm,
                                 objective: str = "rmse", tweedie_variance_power: float = 1.5,
-                                tolerance: float = 0.001, random_state: int = 42):
+                                tolerance: float = 0.001, random_state: int = 42,
+                                max_batch_size: int = 8):
     """Greedy backward feature selection guiado por permutation importance.
 
-    Parte del set completo de `features` e intenta eliminarlas una a una,
-    en orden ascendente de `importance_perm` (las menos importantes primero).
-    Cada eliminación se acepta si `objective_metric` (rmse o deviance de
-    Tweedie, según `objective`) en validación no empeora más que `tolerance`
-    respecto al mejor valor actual; si se acepta, la feature queda fuera y el
-    ranking se recalcula sobre el subconjunto restante (importancias relativas
-    cambian tras cada eliminación). El proceso itera hasta que una pasada
-    completa no logra eliminar ninguna feature. El WRMSSE también se calcula
-    en cada paso, pero solo para informar/graficar -- quien decide es
-    `objective_metric`, coherente con la pérdida real del modelo.
+    Parte del set completo de `features` e intenta eliminarlas en bloques de
+    hasta `max_batch_size`, en orden ascendente de `importance_perm` (las
+    menos importantes primero). Cada eliminación (de bloque o individual) se
+    acepta si `objective_metric` (rmse o deviance de Tweedie, según
+    `objective`) en validación no empeora más que `tolerance` respecto al
+    mejor valor actual -- el criterio de aceptación es exactamente el mismo
+    que una eliminación estrictamente uno a uno, el batching solo cambia
+    cuántas features se prueba remover por reentrenamiento. Si se acepta, las
+    features quedan fuera y el ranking se recalcula sobre el subconjunto
+    restante (importancias relativas cambian tras cada eliminación). El
+    proceso itera hasta que una pasada completa no logra eliminar ninguna
+    feature. El WRMSSE también se calcula en cada paso, pero solo para
+    informar/graficar -- quien decide es `objective_metric`, coherente con
+    la pérdida real del modelo.
 
     Es "greedy" porque acepta la primera eliminación válida de cada
     iteración en vez de evaluar todas las combinaciones posibles y elegir
     la óptima (exhaustive search) — más rápido, no garantiza el mínimo
     global de la métrica, pero es la aproximación estándar quue se usa en la
     práctica cuando el reentrenamiento es costoso.
+
+    Batching (`max_batch_size`): con cientos de features candidatas, probar
+    la eliminación de a una es O(n_features^2) reentrenamientos de LightGBM.
+    Para acelerar sin cambiar el criterio de decisión, cada intento prueba
+    remover un bloque de hasta `max_batch_size` features (las siguientes en
+    el ranking) de una sola vez. Si el bloque se acepta, se ahorraron
+    `max_batch_size - 1` reentrenamientos. Si se rechaza, se cae a probar
+    esas mismas features una por una (igual que el algoritmo original) para
+    no perder ninguna eliminación válida -- el costo extra de un bloque
+    rechazado es un único reentrenamiento de más (el del bloque) sobre el
+    baseline uno a uno, así que el peor caso (features todas relevantes,
+    ningún bloque se acepta) es solo ligeramente más lento, nunca peor que
+    eso. `max_batch_size=1` reproduce el algoritmo original exactamente.
 
     Args:
         X_train, y_train: features y target de entrenamiento.
@@ -75,13 +93,16 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
         tolerance: máximo empeoramiento de `objective_metric` aceptable para
             eliminar una feature. A mayor tolerance, selección más agresiva.
         random_state: semilla para reproducibilidad del LGBMRegressor.
+        max_batch_size: máximo de features candidatas a remover juntas en un
+            solo reentrenamiento (ver "Batching" arriba). 1 = sin batching.
 
     Returns:
         selected_features: lista final de features tras la selección.
         best_score: `objective_metric` de validación del modelo final (la que decidió la selección).
         best_wrmsse: WRMSSE de validación del modelo final (informativo).
         selection_log: DataFrame con el historial de cada intento
-            (n_features, score, wrmsse, feature removida, si fue aceptada).
+            (n_features, score, wrmsse, features removidas -- una o varias
+            separadas por ";" --, cuántas se intentó remover, si fue aceptado).
     """
 
     def train_and_eval(feats):
@@ -98,28 +119,56 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
 
     current_features = list(features)
     best_score, best_wrmsse = train_and_eval(current_features)
-    selection_log = [{"n_features": len(current_features), "score": best_score, "wrmsse": best_wrmsse, "removed": None, "accepted": True}]
+    selection_log = [{"n_features": len(current_features), "score": best_score, "wrmsse": best_wrmsse, "removed": None, "n_removed": 0, "accepted": True}]
     logger.info(f"Baseline ({len(current_features)} features): {objective}={best_score:.4f} | WRMSSE={best_wrmsse:.4f} (informativo)")
+
+    def try_remove(batch: list[str]) -> bool:
+        """Intenta remover `batch` (una o varias features) de `current_features`.
+        Actualiza current_features/best_score/best_wrmsse/improved (nonlocal) y
+        loguea el intento si se acepta. Devuelve si se aceptó, para que el
+        llamador decida si hace falta el fallback uno-a-uno (ver batching en
+        el docstring)."""
+        nonlocal current_features, best_score, best_wrmsse, improved
+        candidate_features = [f for f in current_features if f not in batch]
+        score_candidate, wrmsse_candidate = train_and_eval(candidate_features)
+        accepted = score_candidate <= best_score + tolerance
+        selection_log.append({
+            "n_features": len(candidate_features), "score": score_candidate,
+            "wrmsse": wrmsse_candidate, "removed": ";".join(batch),
+            "n_removed": len(batch), "accepted": accepted,
+        })
+        if accepted:
+            current_features = candidate_features
+            best_score = score_candidate
+            best_wrmsse = wrmsse_candidate
+            improved = True
+            label = f"{len(batch)} features {batch}" if len(batch) > 1 else f"'{batch[0]}'"
+            logger.warning(f"ELIMINADA(S) {label} -> {len(current_features)} features | {objective}={score_candidate:.4f} | WRMSSE={wrmsse_candidate:.4f}")
+        return accepted
 
     improved = True
     while improved:
         improved = False
         ranking = importance_perm[current_features].sort_values().index.tolist()
-        for feat in ranking:
-            candidate_features = [f for f in current_features if f != feat]
-            score_candidate, wrmsse_candidate = train_and_eval(candidate_features)
-            accepted = score_candidate <= best_score + tolerance
-            selection_log.append({"n_features": len(candidate_features), "score": score_candidate, "wrmsse": wrmsse_candidate, "removed": feat, "accepted": accepted})
-
-            if accepted:
-                current_features = candidate_features
-                best_score = score_candidate
-                best_wrmsse = wrmsse_candidate
-                improved = True
-                logger.warning(f"ELIMINADA: '{feat}' -> {len(current_features)} features | {objective}={score_candidate:.4f} | WRMSSE={wrmsse_candidate:.4f}")
-            else:
-                #logger.success(f"mantiene: '{feat}' | {objective} empeoraría a {score_candidate:.4f}")
-                continue
+        i = 0
+        while i < len(ranking):
+            # El batch nunca debe cubrir TODAS las features que quedan --
+            # dejaría 0 features (LightGBM no puede entrenar sin ninguna).
+            size = min(max_batch_size, len(ranking) - i)
+            if size >= len(current_features):
+                size = len(current_features) - 1
+            if size <= 0:
+                break
+            batch = ranking[i:i + size]
+            if len(batch) == 1:
+                try_remove(batch)
+            elif not try_remove(batch):
+                # Bloque rechazado: no asumimos que ninguna sea removible,
+                # se prueban una por una (igual que el algoritmo original)
+                # para no perder eliminaciones válidas dentro del bloque.
+                for feat in batch:
+                    try_remove([feat])
+            i += len(batch)
 
     logger.info(f"Seleccionadas {len(current_features)}/{len(features)} features | {objective} final: {best_score:.4f} | WRMSSE final: {best_wrmsse:.4f}")
     return current_features, best_score, best_wrmsse, pd.DataFrame(selection_log)

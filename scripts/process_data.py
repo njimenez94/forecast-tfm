@@ -35,7 +35,7 @@ def show_counts(levels, db_path) -> None:
         humanize.intcomma(periods["daily"]), humanize.intcomma(periods["weekly"]),
     )
     for lvl in levels:
-        n = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
+        n = int(read_query_str(db_path, count_series_query(lvl.dims, lvl.filters))["n"][0])
         for grain in lvl.grains:
             rows = n * periods[grain]
             logger.info(
@@ -52,17 +52,19 @@ def generate(levels, db_path, processed_dir) -> None:
     periods = count_periods(db_path)
 
     for lvl in levels:
-        n_series = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
+        n_series = int(read_query_str(db_path, count_series_query(lvl.dims, lvl.filters))["n"][0])
         for grain in lvl.grains:
             out = config.dataset_level_path(lvl, grain)
             n_periods = periods[grain]
             n_rows = n_series * n_periods
             logger.info("[L{} {}/{}] → {}", lvl.id, lvl.name, grain, out.name)
+            if lvl.filters:
+                logger.info("  filtro: {}", lvl.filters)
             logger.info(
                 "  {} series × {} {}", humanize.intcomma(n_series), humanize.intcomma(n_periods), grain,
             )
             logger.info("  {} filas (aprox.)", humanize.intcomma(n_rows))
-            sql = build_level_query(lvl.dims, grain, config.CUM_HORIZONS[grain])
+            sql = build_level_query(lvl.dims, grain, config.CUM_HORIZONS[grain], lvl.filters)
             write_query_parquet(db_path, sql, out)
             logger.success("  listo  {}", humanize.naturalsize(out.stat().st_size, binary=True))
             gc.collect()

@@ -29,9 +29,11 @@ def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
     plt.xticks(rotation=45, ha="right")
     ax.grid(axis="y", alpha=0.3)
     
-    if target_col == 'bias':
+    if target_col == ['bias', 'spec']:
         lim = max(abs(df_pred[target_col].min()), abs(df_pred[target_col].max()))
         plt.ylim(-lim, lim)
+    elif target_col == 'wape':
+        plt.ylim(0, 1.0)
     else:
         plt.ylim(0, None)
     sns.despine()

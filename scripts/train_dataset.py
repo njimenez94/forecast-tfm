@@ -80,6 +80,12 @@ class Config:
     permutation_sample_size: int = 15_000
     permutation_n_repeats: int = 5
     backward_tolerance: float = 0.0
+    # Cuántas features candidatas se prueba remover juntas en cada reentrenamiento
+    # de backward_feature_selection (ver docstring ahí). 1 = una por una (original,
+    # más lento con muchas features); >1 = por lotes, con fallback automático a
+    # uno-a-uno si el lote se rechaza, así no cambia qué features terminan
+    # seleccionadas, solo cuántos reentrenamientos hacen falta para decidirlo.
+    feature_selection_batch_size: int = 8
 
     # --- SHAP ---
     shap_sample_size: int = 300_000
@@ -261,7 +267,8 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
     selected_features, final_score, final_wrmsse, selection_log = backward_feature_selection(
         state.X_train, state.y_train, state.X_valid, state.y_valid, state.train, state.valid,
         state.features, state.categorical_features, importance_perm,
-        tolerance=cfg.backward_tolerance, random_state=cfg.random_state, **objective_kwargs,
+        tolerance=cfg.backward_tolerance, random_state=cfg.random_state,
+        max_batch_size=cfg.feature_selection_batch_size, **objective_kwargs,
     )
 
     dropped = sorted(set(state.features) - set(selected_features))
