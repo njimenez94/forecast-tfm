@@ -171,7 +171,7 @@ def load_data(cfg: Config, dataset_path: Path | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         level=level, grain=grain, level_str=level_str, df=df, target=target,
         # m: paso del naive scale en WRMSSE/MASE (1 para 'sales', N para cumN) --
-        # ver src.evaluation.metrics.compute_naive_scales.
+        # ver src.evaluation.scaled.compute_naive_scales.
         m=config.cum_n(target) or 1,
         id_cols=id_cols, leaky_cols=leaky_cols,
         features=features, categorical_features=categorical_features,

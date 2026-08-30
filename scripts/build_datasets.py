@@ -1,4 +1,4 @@
-"""Aplica src.features.engineer sobre cada dataset base (data/processed/) y guarda
+"""Aplica src.features sobre cada dataset base (data/processed/) y guarda
 el resultado -- dataframe final, con lags/rolling/momentum ya materializados, listo
 para entrenar cualquier modelo sin pasar por mlforecast -- en artifacts/datasets/.
 
@@ -20,7 +20,7 @@ from loguru import logger
 import config
 from src.data.reader import read_parquet_pl
 from src.data.split import parse_level_file
-from src.features.engineer import add_features, add_lag_features
+from src.features import add_features, add_lag_features
 
 warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 

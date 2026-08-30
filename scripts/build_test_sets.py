@@ -23,7 +23,8 @@ from loguru import logger
 
 import config
 from scripts.train_dataset import reconstruct_test_data
-from src.evaluation.metrics import clip_closed_stores, evaluate_predictions
+from src.evaluation import evaluate_predictions
+from src.evaluation.scaled import clip_closed_stores
 
 DESCRIPTIVE_COLS = ["item_id", "dept_id", "cat_id", "store_id", "state_id"]
 OUT_DIR = config.ARTIFACTS_DIR / "test_sets"

@@ -4,7 +4,8 @@ from loguru import logger
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import make_scorer
 
-from src.evaluation.metrics import clip_closed_stores, compute_wrmsse, objective_metric
+from src.evaluation.objectives import objective_metric
+from src.evaluation.scaled import clip_closed_stores, compute_wrmsse
 
 
 def compute_permutation_importance(model, X_valid, y_valid, features, objective: str = "rmse",
