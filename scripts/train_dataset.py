@@ -420,8 +420,14 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     study.optimize(objective, n_trials=cfg.optuna_n_trials, timeout=cfg.optuna_timeout_s,
                     show_progress_bar=True)
 
-    logger.info("Mejor {} (Optuna): {:.4f} | WRMSSE: {:.4f} (informativo)",
-                cfg.objective, study.best_trial.value, study.best_trial.user_attrs["wrmsse"])
+    # user_attrs["wrmsse"] puede faltar en trials de corridas viejas del mismo
+    # study persistido en sqlite (load_if_exists=True mezcla historial entre
+    # ejecuciones) -- es solo informativo, no participa en qué hiperparámetros
+    # elige Optuna (eso sale de study.best_trial.params).
+    best_wrmsse = study.best_trial.user_attrs.get("wrmsse")
+    wrmsse_str = f"{best_wrmsse:.4f}" if best_wrmsse is not None else "N/A (trial de una corrida anterior sin este dato)"
+    logger.info("Mejor {} (Optuna): {:.4f} | WRMSSE: {} (informativo)",
+                cfg.objective, study.best_trial.value, wrmsse_str)
     logger.info("Mejores hiperparámetros: {}", study.best_trial.params)
     return study.best_trial.params
 
