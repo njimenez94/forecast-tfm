@@ -68,8 +68,8 @@ class Config:
     run_baseline_naive: bool = True
     run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
     run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
-    run_feature_selection: bool = False  # permutation importance + backward elimination
-    run_shap: bool = False
+    run_feature_selection: bool = True  # permutation importance + backward elimination
+    run_shap: bool = True
     run_optuna: bool = True
     save_artifact: bool = True
 
@@ -558,8 +558,6 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
         run_baseline_ml(state, cfg, evaluate_model)
         logger.info("Fase ML (hiperparámetros default): {:.1f}s", time.perf_counter() - t0)
 
-    save_model_comparison(state)
-
     if cfg.run_feature_selection:
         t0 = time.perf_counter()
         select_features(state, cfg)
@@ -577,6 +575,7 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
         logger.info("Fase Optuna: {:.1f}s", time.perf_counter() - t0)
 
     fit_final_model(state, cfg, evaluate_model, best_params)
+    save_model_comparison(state)
 
     if cfg.save_artifact:
         export_artifact(state)
