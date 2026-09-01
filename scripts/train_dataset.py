@@ -1,13 +1,17 @@
-"""Entrena un modelo LightGBM para un nivel/target, replicando el flujo de
+"""Entrena un modelo para un nivel/target, replicando el flujo de
 notebooks/02_model.ipynb: split temporal, comparación de modelos base (naive,
-estadísticos clásicos, ML con hiperparámetros default), selección de features
-(permutation importance + backward elimination), explicación SHAP, tuning con
-Optuna y ajuste del modelo final.
+estadísticos clásicos), bench de modelos ML (LightGBM/XGBoost/CatBoost/HistGB/Ridge,
+cada uno tuneado con una ronda corta de Optuna), selección del modelo "ganador"
+(mejor familia tree-based del bench), selección de features (permutation importance +
+backward elimination) y explicación SHAP sobre el ganador, tuning más fino con Optuna
+(ronda larga, post-feature-selection) y ajuste del modelo final.
 
 El pipeline está separado en fases activables/desactivables (`Config.run_*`),
 para poder saltear las que no hacen falta en una corrida dada (p.ej. iterar
-sobre selección de features sin repetir la comparación de modelos base, o
-reentrenar el modelo final con `CFG.default_lgbm_params` sin correr Optuna de nuevo).
+sobre selección de features sin repetir el bench de modelos, o reentrenar el
+modelo final con los hiperparámetros del bench sin correr la ronda larga de
+Optuna de nuevo). `run_bench_ml` siempre tunea con Optuna (no hay modo
+"hiperparámetros default"); `run_optuna` controla solo la ronda larga final.
 
 Editar `CFG` (fases, hiperparámetros de tuning) y correr:
     make train-dataset ARGS="--levels 1,9,12"                 # target "sales" (CFG.target)
@@ -22,13 +26,18 @@ parquets ya generados por build-datasets (ver main()).
 Salidas (target "sales" va directo en la carpeta base; cualquier otro target -- cumN --
 en una subcarpeta propia, ver _artifacts_subdir(), para no mezclarse con los ~150
 artifacts de "sales" ya generados):
-    artifacts/results[/{target}]/{level}_{target}_model_comparison.csv   comparación de modelos (si corrió alguna fase de baseline)
+    artifacts/results[/{target}]/{level}_{target}_model_comparison.csv   comparación de modelos,
+                                                                            con columna `stage`
+                                                                            (naive/statistical/bench/
+                                                                            post_feature_selection/final)
     artifacts/results[/{target}]/{level}_{target}_series_metrics.csv     métricas por serie de esos modelos
     artifacts/results[/{target}]/{level}_{target}_feature_selection.csv  historial de backward elimination
-    artifacts/plots[/{target}]/{level}_{target}_shap_*.png                explicación SHAP del modelo simple
-    artifacts/optuna_study.db                                             estudio Optuna (sqlite, uno por level/grain/target)
-    artifacts/models[/{target}]/{level}_{target}_artifact.pkl            artifact liviano (modelo + features + métricas,
-                                                                            sin datos -- ver src.data.split.reconstruct_test_data())
+    artifacts/plots[/{target}]/{level}_{target}_shap_*.png                explicación SHAP del ganador
+    artifacts/optuna_study.db                                             estudios Optuna (sqlite, uno por
+                                                                            level/grain/target/familia/etapa)
+    artifacts/models[/{target}]/{level}_{target}_artifact.pkl            artifact liviano (modelo + features +
+                                                                            métricas + winner_family, sin datos --
+                                                                            ver src.data.split.reconstruct_test_data())
 """
 import argparse
 import gc
@@ -47,10 +56,11 @@ from src.data.split import load_data, rolling_cv_folds, split_data
 from src.evaluation import (
     build_all_series_metrics, build_predictions_report, evaluate_predictions, objective_metric,
 )
+from src.evaluation.scaled import clip_closed_stores
 from src.modeling import (
-    backward_feature_selection, catboost_features, compute_permutation_importance,
-    drift, fit_catboost, fit_ets, fit_histgb, fit_lightgbm, fit_prophet, fit_ridge,
-    fit_sarima, fit_tbats, fit_theta, fit_xgboost, histgb_features, historical_mean,
+    ALL_FAMILIES, MODEL_FAMILIES, TREE_FAMILIES,
+    backward_feature_selection, compute_permutation_importance,
+    drift, fit_ets, fit_prophet, fit_sarima, fit_tbats, fit_theta, historical_mean,
     moving_average, seasonal_naive,
 )
 
@@ -67,10 +77,13 @@ class Config:
     # --- fases on/off ---
     run_baseline_naive: bool = True
     run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
-    run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
+    # LightGBM/XGBoost/CatBoost/HistGB/Ridge, CADA UNO tuneado con una ronda corta de
+    # Optuna (no es opcional -- si esta fase corre, todas las familias se tunean). El
+    # ganador (mejor familia tree-based) sigue a feature selection / SHAP / Optuna final.
+    run_bench_ml: bool = True
     run_feature_selection: bool = True  # permutation importance + backward elimination
     run_shap: bool = True
-    run_optuna: bool = True
+    run_optuna: bool = True             # ronda larga de Optuna, post-feature-selection, solo sobre el ganador
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
@@ -106,7 +119,11 @@ class Config:
     # --- SHAP ---
     shap_sample_size: int = 300_000
 
-    # --- Optuna ---
+    # --- Optuna: bench (TODAS las familias de ALL_FAMILIES, corto) ---
+    optuna_bench_n_trials: int = 200
+    optuna_bench_timeout_s: int = 5 * 60
+
+    # --- Optuna: final (largo, solo sobre la familia ganadora, post-feature-selection) ---
     optuna_n_trials: int = 500
     optuna_timeout_s: int = 10 * 60
     optuna_n_estimators: int = 1_500
@@ -124,22 +141,11 @@ class Config:
     def objective(self) -> str:
         return self.objective_by_level.get(self.level_id, self.default_objective)
 
-    # Fijo si run_optuna=False; si run_optuna=True y objective=="tweedie", Optuna
-    # tunea este valor (1.1-1.9) en vez de usar el fijo.
+    # Fijo si run_optuna=False (fit_final_model cae al fallback de bench_params en
+    # ese caso, ver abajo); si run_optuna=True y objective=="tweedie", Optuna
+    # tunea este valor (1.1-1.9) para las familias que lo soportan (lightgbm/xgboost)
+    # en vez de usar el fijo.
     tweedie_variance_power: float = 1.5
-    # Hiperparámetros del modelo final cuando NO corre Optuna (fallback, sin tunear).
-    default_lgbm_params: dict = field(default_factory=lambda: {
-        "metric": "mae",
-        "learning_rate": 0.05,
-        "n_estimators": 200,
-        "num_leaves": 31,
-        "min_data_in_leaf": 20,
-        "feature_fraction": 0.8,
-        "bagging_fraction": 0.8,
-        "bagging_freq": 1,
-        "verbose": -1,
-        "n_jobs": -1,
-    })
 
 
 CFG = Config()
@@ -154,13 +160,20 @@ def _artifacts_subdir(base: Path, target: str) -> Path:
 
 # ============================== FASES ==============================
 
-def make_evaluator(state: SimpleNamespace):
-    """Cierra sobre `state` para acumular cada modelo evaluado en
-    `model_results`/`predictions_valid`, igual que `evaluate_model` en el notebook."""
-    def evaluate_model(name, y_pred_valid, fit_time=None, category=None):
+def make_evaluator(state: SimpleNamespace, cfg: Config):
+    """Cierra sobre `state`/`cfg` para acumular cada modelo evaluado en
+    `model_results`/`predictions_valid`, igual que `evaluate_model` en el notebook.
+    Calcula `objective_score` (rmse o deviance de Tweedie, según `cfg.objective`) para
+    cada modelo -- es la métrica decisional real (ver `objective_metric`), la que usa
+    `pick_winner` para elegir el ganador entre familias (comparar por `rmse`/`wrmsse`
+    directamente sería incorrecto en niveles tweedie)."""
+    def evaluate_model(name, y_pred_valid, fit_time=None, category=None, stage=None):
+        y_pred_clipped = clip_closed_stores(state.valid, y_pred_valid)
+        objective_score = objective_metric(state.y_valid, y_pred_clipped, cfg.objective, cfg.tweedie_variance_power)
         result = evaluate_predictions(
             state.train, state.valid, state.y_valid, y_pred_valid, name,
-            fit_time=fit_time, category=category, target_col=state.target, m=state.m,
+            fit_time=fit_time, category=category, stage=stage, objective_score=objective_score,
+            target_col=state.target, m=state.m,
         )
         state.model_results.append(result)
         state.predictions_valid[name] = y_pred_valid
@@ -176,21 +189,21 @@ def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> N
         t0 = time.perf_counter()
         y_pred = seasonal_naive(state.train, state.valid, state.target, season_length=window)
         evaluate_model(f"Seasonal naive ({window}{grain_letter})", y_pred,
-                        fit_time=time.perf_counter() - t0, category="Naive")
+                        fit_time=time.perf_counter() - t0, category="Naive", stage="naive")
 
     t0 = time.perf_counter()
     evaluate_model("Drift", drift(state.train, state.valid, state.target),
-                    fit_time=time.perf_counter() - t0, category="Naive")
+                    fit_time=time.perf_counter() - t0, category="Naive", stage="naive")
 
     t0 = time.perf_counter()
     evaluate_model("Historical mean", historical_mean(state.train, state.valid, state.target),
-                    fit_time=time.perf_counter() - t0, category="Naive")
+                    fit_time=time.perf_counter() - t0, category="Naive", stage="naive")
 
     for window in config.MA_WINDOWS[state.grain]:
         t0 = time.perf_counter()
         y_pred = moving_average(state.train, state.valid, state.target, window=window)
         evaluate_model(f"Moving average ({window}{grain_letter})", y_pred,
-                        fit_time=time.perf_counter() - t0, category="Naive")
+                        fit_time=time.perf_counter() - t0, category="Naive", stage="naive")
 
 
 def run_baseline_stats(state: SimpleNamespace, evaluate_model) -> None:
@@ -205,40 +218,106 @@ def run_baseline_stats(state: SimpleNamespace, evaluate_model) -> None:
     ]:
         t0 = time.perf_counter()
         y_pred = fn(state.train, state.valid, state.target, **kwargs)
-        evaluate_model(name, y_pred, fit_time=time.perf_counter() - t0, category="Statistical")
+        evaluate_model(name, y_pred, fit_time=time.perf_counter() - t0, category="Statistical", stage="statistical")
 
 
-def run_baseline_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
-    t0 = time.perf_counter()
-    lgbm_model = fit_lightgbm(state.X_train, state.y_train, state.categorical_features,
-                               random_state=cfg.random_state, **resolve_objective(cfg))
-    evaluate_model("LightGBM", lgbm_model.predict(state.X_valid),
-                    fit_time=time.perf_counter() - t0, category="ML")
-    state.lgbm_model = lgbm_model
+def tune_optuna_family(state: SimpleNamespace, cfg: Config, family_name: str,
+                        n_trials: int, timeout: int, study_name: str) -> dict:
+    """Ronda de Optuna para una familia de modelo puntual: tunea `family.optuna_param_space`
+    contra `objective_metric` (rmse/tweedie deviance, coherente con `cfg.objective` --
+    el WRMSSE se guarda como user_attr solo para informar, igual que antes). Usada tanto
+    por `run_bench_ml` (corta, todas las familias) como por `tune_optuna` (larga, solo
+    el ganador, post-feature-selection).
 
-    t0 = time.perf_counter()
-    xgb_model = fit_xgboost(state.X_train, state.y_train, random_state=cfg.random_state)
-    evaluate_model("XGBoost", xgb_model.predict(state.X_valid),
-                    fit_time=time.perf_counter() - t0, category="ML")
+    Devuelve los hiperparámetros combinados (`objective`/`n_estimators` fijos de la
+    familia + los tuneados por Optuna) listos para pasar directo a `family.fit(...)` --
+    a diferencia de `study.best_trial.params` a secas (que solo trae lo sugerido vía
+    `trial.suggest_*`), así el caller no tiene que reconstruir el resto del dict.
+    """
+    import optuna
 
-    t0 = time.perf_counter()
-    catboost_model = fit_catboost(state.X_train, state.y_train, state.categorical_features,
-                                   random_state=cfg.random_state)
-    X_valid_cb = catboost_features(state.X_valid, state.categorical_features)
-    evaluate_model("CatBoost", catboost_model.predict(X_valid_cb),
-                    fit_time=time.perf_counter() - t0, category="ML")
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    t0 = time.perf_counter()
-    hgb_model = fit_histgb(state.X_train, state.y_train, random_state=cfg.random_state)
-    X_valid_hgb = histgb_features(state.X_valid, hgb_model.high_cardinality_features_)
-    evaluate_model("HistGradientBoosting", hgb_model.predict(X_valid_hgb),
-                    fit_time=time.perf_counter() - t0, category="ML")
+    family = MODEL_FAMILIES[family_name]
+    fixed_params = family.resolve_objective(cfg.objective, cfg.tweedie_variance_power)
+    if family.n_estimators_param:
+        fixed_params = {**fixed_params, family.n_estimators_param: cfg.optuna_n_estimators}
 
-    t0 = time.perf_counter()
-    ridge_model = fit_ridge(state.X_train, state.y_train, state.numerical_features,
-                             random_state=cfg.random_state)
-    evaluate_model("Ridge", ridge_model.predict(state.X_valid[state.numerical_features]),
-                    fit_time=time.perf_counter() - t0, category="ML")
+    def objective(trial):
+        params = {**fixed_params, **family.optuna_param_space(trial, cfg)}
+        fitted = family.fit(
+            state.X_train, state.y_train, state.X_valid, state.y_valid,
+            state.categorical_features, state.numerical_features,
+            params, early_stopping_rounds=30, random_state=cfg.random_state,
+        )
+        y_pred = clip_closed_stores(state.valid, fitted.predict(state.X_valid))
+        score = objective_metric(state.y_valid, y_pred, cfg.objective, cfg.tweedie_variance_power)
+        _, wrmsse_val, _ = state.wrmsse_metric(state.y_valid, y_pred)
+        trial.set_user_attr("wrmsse", wrmsse_val)
+        return score
+
+    config.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    study = optuna.create_study(
+        study_name=study_name,
+        direction="minimize",
+        storage=f"sqlite:///{config.ARTIFACTS_DIR / 'optuna_study.db'}",
+        load_if_exists=True,
+        sampler=optuna.samplers.TPESampler(seed=cfg.random_state),
+    )
+    study.optimize(objective, n_trials=n_trials, timeout=timeout, show_progress_bar=True)
+
+    # user_attrs["wrmsse"] puede faltar en trials de corridas viejas del mismo
+    # study persistido en sqlite (load_if_exists=True mezcla historial entre
+    # ejecuciones) -- es solo informativo, no participa en qué hiperparámetros
+    # elige Optuna (eso sale de study.best_trial.params).
+    best_wrmsse = study.best_trial.user_attrs.get("wrmsse")
+    wrmsse_str = f"{best_wrmsse:.4f}" if best_wrmsse is not None else "N/A (trial de una corrida anterior sin este dato)"
+    logger.info("[{}] Mejor {} (Optuna): {:.4f} | WRMSSE: {} (informativo)",
+                family_name, cfg.objective, study.best_trial.value, wrmsse_str)
+    logger.info("[{}] Mejores hiperparámetros: {}", family_name, study.best_trial.params)
+
+    return {**fixed_params, **study.best_trial.params}
+
+
+def run_bench_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
+    """Reemplaza a la vieja comparación de hiperparámetros default: cada familia de
+    `ALL_FAMILIES` se tunea con una ronda corta de Optuna (`optuna_bench_*`) y se
+    evalúa ya con sus mejores hiperparámetros encontrados. `pick_winner` decide el
+    ganador entre estos resultados (solo familias tree-based, ver TREE_FAMILIES)."""
+    state.bench_models = {}
+    state.bench_params = {}
+    state.bench_scores = {}
+
+    for family_name in ALL_FAMILIES:
+        t0 = time.perf_counter()
+        best_params = tune_optuna_family(
+            state, cfg, family_name,
+            n_trials=cfg.optuna_bench_n_trials, timeout=cfg.optuna_bench_timeout_s,
+            study_name=f"study_{state.level_str}_{state.target}_bench_{family_name}",
+        )
+        fitted = MODEL_FAMILIES[family_name].fit(
+            state.X_train, state.y_train, state.X_valid, state.y_valid,
+            state.categorical_features, state.numerical_features,
+            best_params, early_stopping_rounds=30, random_state=cfg.random_state,
+        )
+        fit_time = time.perf_counter() - t0
+        result = evaluate_model(family_name, fitted.predict(state.X_valid),
+                                 fit_time=fit_time, category="ML", stage="bench")
+
+        state.bench_models[family_name] = fitted
+        state.bench_params[family_name] = best_params
+        state.bench_scores[family_name] = result["objective_score"]
+
+
+def pick_winner(state: SimpleNamespace, cfg: Config) -> str:
+    """Elige la mejor familia tree-based del bench (por `objective_score`, no
+    `rmse`/`wrmsse` directamente -- coherente en niveles tweedie). Ridge participa del
+    bench pero nunca puede ganar (no es compatible con `shap.TreeExplainer`)."""
+    winner = min(TREE_FAMILIES, key=lambda f: state.bench_scores[f])
+    state.winner_family = winner
+    logger.success("Modelo ganador (bench, {} familias tree-based comparadas): {} | {}={:.4f}",
+                    len(TREE_FAMILIES), winner, cfg.objective, state.bench_scores[winner])
+    return winner
 
 
 def save_model_comparison(state: SimpleNamespace) -> None:
@@ -261,30 +340,35 @@ def save_model_comparison(state: SimpleNamespace) -> None:
 
 
 def select_features(state: SimpleNamespace, cfg: Config) -> None:
-    objective_kwargs = resolve_objective(cfg)
+    family = MODEL_FAMILIES[state.winner_family]
+    fitted = state.bench_models[state.winner_family]
+    params = state.bench_params[state.winner_family]
 
-    lgbm_model = getattr(state, "lgbm_model", None)
-    if lgbm_model is None:
-        lgbm_model = fit_lightgbm(state.X_train, state.y_train, state.categorical_features,
-                                   random_state=cfg.random_state, **objective_kwargs)
-
-    importance_gain = pd.Series(
-        lgbm_model.booster_.feature_importance(importance_type="gain"), index=state.features,
-    ).sort_values(ascending=False)
-    logger.info("Top 10 gain importance:\n{}", importance_gain.head(10))
+    importance_gain = family.gain_importance(fitted, state.features)
+    if importance_gain is not None:
+        logger.info("Top 10 gain importance ({}):\n{}", state.winner_family, importance_gain.head(10))
 
     importance_perm = compute_permutation_importance(
-        lgbm_model, state.X_valid, state.y_valid, state.features,
+        fitted, state.X_valid, state.y_valid, state.features,
         sample_size=cfg.permutation_sample_size, n_repeats=cfg.permutation_n_repeats,
-        random_state=cfg.random_state, **objective_kwargs,
+        random_state=cfg.random_state, objective=cfg.objective, tweedie_variance_power=cfg.tweedie_variance_power,
     )
-    logger.info("Top 10 permutation importance:\n{}", importance_perm.head(10))
+    logger.info("Top 10 permutation importance ({}):\n{}", state.winner_family, importance_perm.head(10))
+
+    def fit_predict_fn(feats, cat_feats):
+        num_feats = [f for f in state.numerical_features if f in feats]
+        fitted_candidate = family.fit(
+            state.X_train[feats], state.y_train, state.X_valid[feats], state.y_valid,
+            cat_feats, num_feats, params, early_stopping_rounds=30, random_state=cfg.random_state,
+        )
+        return fitted_candidate.predict(state.X_valid[feats])
 
     selected_features, final_score, final_wrmsse, selection_log = backward_feature_selection(
         state.X_train, state.y_train, state.X_valid, state.y_valid, state.train, state.valid,
-        state.features, state.categorical_features, importance_perm,
+        state.features, state.categorical_features, importance_perm, fit_predict_fn,
+        objective=cfg.objective, tweedie_variance_power=cfg.tweedie_variance_power,
         tolerance=cfg.backward_tolerance, random_state=cfg.random_state,
-        max_batch_size=cfg.feature_selection_batch_size, **objective_kwargs,
+        max_batch_size=cfg.feature_selection_batch_size,
     )
 
     dropped = sorted(set(state.features) - set(selected_features))
@@ -306,25 +390,25 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
 
 
 def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
-    import lightgbm as lgb
     import matplotlib.pyplot as plt
     import shap
-    from lightgbm import LGBMRegressor
 
-    model = LGBMRegressor(**resolve_objective(cfg))
+    family = MODEL_FAMILIES[state.winner_family]
+    params = state.bench_params[state.winner_family]
+
     t0 = time.perf_counter()
-    model.fit(
-        state.X_train, state.y_train,
-        eval_set=[(state.X_valid, state.y_valid)],
-        eval_metric=[state.wrmsse_metric],
-        callbacks=[lgb.early_stopping(100, first_metric_only=True), lgb.log_evaluation(10)],
+    fitted = family.fit(
+        state.X_train, state.y_train, state.X_valid, state.y_valid,
+        state.categorical_features, state.numerical_features,
+        params, early_stopping_rounds=100, random_state=cfg.random_state,
     )
     fit_time = time.perf_counter() - t0
-    evaluate_model("LightGBM (selected features)", model.predict(state.X_valid),
-                    fit_time=fit_time, category="ML")
+    evaluate_model(f"{state.winner_family} (selected features)", fitted.predict(state.X_valid),
+                    fit_time=fit_time, category="ML", stage="post_feature_selection")
 
-    explainer = shap.TreeExplainer(model)
-    X_shap = state.X_test.sample(n=min(cfg.shap_sample_size, len(state.X_test)), random_state=cfg.random_state)
+    explainer = shap.TreeExplainer(fitted.estimator)
+    X_shap_raw = state.X_test.sample(n=min(cfg.shap_sample_size, len(state.X_test)), random_state=cfg.random_state)
+    X_shap = fitted.prepare(X_shap_raw)
     shap_values = explainer.shap_values(X_shap)
 
     plot_dir = _artifacts_subdir(config.ARTIFACTS_DIR / "plots", state.target)
@@ -347,108 +431,30 @@ def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     plt.savefig(f"{prefix}_dependence_{top_feature}.png", dpi=120)
     plt.close()
 
-    logger.info("SHAP: feature más importante = {} | plots guardados en {}", top_feature, plot_dir)
-
-
-def resolve_objective(cfg: Config) -> dict:
-    """Objective de `cfg.objective`, mismo criterio con o sin Optuna."""
-    kwargs = {"objective": cfg.objective}
-    if cfg.objective == "tweedie":
-        kwargs["tweedie_variance_power"] = cfg.tweedie_variance_power
-    return kwargs
+    logger.info("SHAP ({}): feature más importante = {} | plots guardados en {}",
+                state.winner_family, top_feature, plot_dir)
 
 
 def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
-    import lightgbm as lgb
-    import optuna
-    from optuna.integration import LightGBMPruningCallback
-
-    optuna.logging.set_verbosity(optuna.logging.WARNING)
-
-    objective_kwargs = resolve_objective(cfg)
-    eval_metric = "tweedie" if cfg.objective == "tweedie" else "rmse"
-
-    def objective(trial):
-        params = dict(
-            **objective_kwargs,
-            learning_rate=trial.suggest_float("learning_rate", 0.03, 0.15, log=True),
-            n_estimators=cfg.optuna_n_estimators,
-            num_leaves=trial.suggest_int("num_leaves", 31, 255),
-            max_depth=trial.suggest_int("max_depth", 5, 10),
-            min_child_samples=trial.suggest_int("min_child_samples", 20, 200),
-            subsample=trial.suggest_float("subsample", 0.6, 1.0),
-            subsample_freq=1,
-            colsample_bytree=trial.suggest_float("colsample_bytree", 0.6, 1.0),
-            reg_alpha=trial.suggest_float("reg_alpha", 1e-3, 5, log=True),
-            reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 5, log=True),
-            random_state=cfg.random_state,
-            n_jobs=-1,
-            verbosity=-1,
-        )
-        if cfg.objective == "tweedie":
-            params["tweedie_variance_power"] = trial.suggest_float("tweedie_variance_power", 1.1, 1.9)
-
-        model = lgb.LGBMRegressor(**params)
-        model.fit(
-            state.X_train, state.y_train,
-            eval_set=[(state.X_valid, state.y_valid)],
-            eval_metric=eval_metric,
-            categorical_feature=state.categorical_features,
-            callbacks=[
-                lgb.early_stopping(30, first_metric_only=True, verbose=False),
-                LightGBMPruningCallback(trial, eval_metric),
-            ],
-        )
-        y_pred = model.predict(state.X_valid, num_iteration=model.best_iteration_)
-        # Optuna decide por `objective_metric` (coherente con cfg.objective); el
-        # WRMSSE se calcula y se guarda como user_attr solo para informar.
-        tweedie_power = params.get("tweedie_variance_power", cfg.tweedie_variance_power)
-        score = objective_metric(state.y_valid, y_pred, cfg.objective, tweedie_power)
-        _, final_wrmsse, _ = state.wrmsse_metric(state.y_valid, y_pred)
-        trial.set_user_attr("wrmsse", final_wrmsse)
-        return score
-
-    config.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-    study = optuna.create_study(
-        study_name=f"study_{state.level_str}_{state.target}",
-        direction="minimize",
-        storage=f"sqlite:///{config.ARTIFACTS_DIR / 'optuna_study.db'}",
-        load_if_exists=True,
-        sampler=optuna.samplers.TPESampler(seed=cfg.random_state),
-        pruner=optuna.pruners.MedianPruner(n_warmup_steps=10, n_startup_trials=5),
+    """Ronda larga de Optuna (post-feature-selection), solo sobre la familia ganadora."""
+    return tune_optuna_family(
+        state, cfg, state.winner_family,
+        n_trials=cfg.optuna_n_trials, timeout=cfg.optuna_timeout_s,
+        study_name=f"study_{state.level_str}_{state.target}_final_{state.winner_family}",
     )
-    study.optimize(objective, n_trials=cfg.optuna_n_trials, timeout=cfg.optuna_timeout_s,
-                    show_progress_bar=True)
-
-    # user_attrs["wrmsse"] puede faltar en trials de corridas viejas del mismo
-    # study persistido en sqlite (load_if_exists=True mezcla historial entre
-    # ejecuciones) -- es solo informativo, no participa en qué hiperparámetros
-    # elige Optuna (eso sale de study.best_trial.params).
-    best_wrmsse = study.best_trial.user_attrs.get("wrmsse")
-    wrmsse_str = f"{best_wrmsse:.4f}" if best_wrmsse is not None else "N/A (trial de una corrida anterior sin este dato)"
-    logger.info("Mejor {} (Optuna): {:.4f} | WRMSSE: {} (informativo)",
-                cfg.objective, study.best_trial.value, wrmsse_str)
-    logger.info("Mejores hiperparámetros: {}", study.best_trial.params)
-    return study.best_trial.params
 
 
 def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_params: dict) -> None:
-    import lightgbm as lgb
-    from lightgbm import LGBMRegressor
-
-    objective_kwargs = resolve_objective(cfg)
+    family = MODEL_FAMILIES[state.winner_family]
 
     if best_params:
-        # best_params puede traer tweedie_variance_power tuneado (ver tune_optuna) --
-        # va después de objective_kwargs para que gane sobre el valor fijo de cfg.
-        model_params = {
-            **objective_kwargs, **best_params,
-            "random_state": cfg.random_state, "n_jobs": -1, "verbosity": -1, "subsample_freq": 1,
-        }
-        label = "LightGBM (final, Optuna)"
+        label = f"{state.winner_family} (final, Optuna)"
     else:
-        model_params = {**cfg.default_lgbm_params, "seed": cfg.random_state, **objective_kwargs}
-        label = "LightGBM (final, params default)"
+        # run_optuna=False: en vez de un dict de hiperparámetros hardcodeado (como
+        # antes), se reusan los ya tuneados en el bench (ronda corta) -- siempre están
+        # disponibles porque el bench corre siempre (ver Config.run_bench_ml).
+        best_params = state.bench_params[state.winner_family]
+        label = f"{state.winner_family} (final, bench Optuna)"
 
     # CV rolling-origin sobre train+valid para un n_estimators robusto (ver
     # rolling_cv_folds): el eval_metric acá es genérico (rmse/tweedie, igual que
@@ -458,49 +464,64 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
     # reusan para loggear la métrica "valid" (WRMSSE real) con evaluate_model.
     folds = rolling_cv_folds(state.X_train, state.y_train, state.X_valid, state.y_valid,
                               state.train["date"], state.valid_start, state.grain, cfg.cv_folds)
-    eval_metric = "tweedie" if cfg.objective == "tweedie" else "rmse"
+
+    def with_final_n_estimators(params):
+        if not family.n_estimators_param:
+            return params
+        return {**params, family.n_estimators_param: cfg.final_n_estimators}
 
     t0 = time.perf_counter()
-    best_iters, cv_model = [], None
+    best_iters, cv_fitted = [], None
     for X_tr, y_tr, X_val, y_val in folds:
-        cv_model = LGBMRegressor(**{**model_params, "n_estimators": cfg.final_n_estimators})
-        cv_model.fit(
-            X_tr, y_tr, eval_set=[(X_val, y_val)], eval_metric=eval_metric,
-            categorical_feature=state.categorical_features,
-            callbacks=[lgb.early_stopping(50, first_metric_only=True, verbose=False)],
+        cv_fitted = family.fit(
+            X_tr, y_tr, X_val, y_val, state.categorical_features, state.numerical_features,
+            with_final_n_estimators(best_params), early_stopping_rounds=50, random_state=cfg.random_state,
         )
-        best_iters.append(cv_model.best_iteration_)
-    n_estimators = round(np.mean(best_iters))
+        best_iters.append(cv_fitted.best_iteration)
+    valid_iters = [bi for bi in best_iters if bi is not None]
+    n_estimators = round(np.mean(valid_iters)) if valid_iters else cfg.final_n_estimators
     logger.info("CV ({} folds) best_iteration: {} -> n_estimators final = {}",
                 cfg.cv_folds, best_iters, n_estimators)
-    evaluate_model(label, cv_model.predict(state.X_valid, num_iteration=cv_model.best_iteration_),
-                    fit_time=time.perf_counter() - t0, category="ML")
+    evaluate_model(label, cv_fitted.predict(state.X_valid),
+                    fit_time=time.perf_counter() - t0, category="ML", stage="final")
 
-    model_params = {**model_params, "n_estimators": n_estimators}
-    final_model = LGBMRegressor(**model_params)
+    model_params = best_params if not family.n_estimators_param else {
+        **best_params, family.n_estimators_param: n_estimators,
+    }
     X_trainval = pd.concat([state.X_train, state.X_valid])
     y_trainval = pd.concat([state.y_train, state.y_valid])
-    final_model.fit(X_trainval, y_trainval, categorical_feature=state.categorical_features)
+    final_fitted = family.fit(
+        X_trainval, y_trainval, state.X_valid, state.y_valid,
+        state.categorical_features, state.numerical_features,
+        model_params, early_stopping_rounds=None, random_state=cfg.random_state,
+    )
     fit_time = time.perf_counter() - t0
 
     metrics_test, df_pred = build_predictions_report(
-        state.train, state.test, state.y_test, final_model.predict(state.X_test),
+        state.train, state.test, state.y_test, final_fitted.predict(state.X_test),
         target_col=state.target, m=state.m,
     )
     logger.info("Test WAPE: {:.2%} | Test WRMSSE: {:.4f}", metrics_test["wape"], metrics_test["wrmsse"])
 
-    state.final_model = final_model
+    state.final_model = final_fitted
     state.model_params = model_params
     state.metrics_test = metrics_test
     state.df_pred = df_pred
 
 
-def export_artifact(state: SimpleNamespace) -> None:
+def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
     results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
 
-    feature_importance = pd.Series(
-        state.final_model.booster_.feature_importance(importance_type="gain"), index=state.features,
-    ).sort_values(ascending=False)
+    family = MODEL_FAMILIES[state.winner_family]
+    feature_importance = family.gain_importance(state.final_model, state.features)
+    if feature_importance is None:
+        # Familias sin importancia nativa (p.ej. histgb): permutation importance sobre
+        # validación, misma función que usa select_features (ya model-agnostic).
+        feature_importance = compute_permutation_importance(
+            state.final_model, state.X_valid, state.y_valid, state.features,
+            sample_size=cfg.permutation_sample_size, n_repeats=cfg.permutation_n_repeats,
+            random_state=cfg.random_state, objective=cfg.objective, tweedie_variance_power=cfg.tweedie_variance_power,
+        )
 
     # Solo modelo + metadata (features, métricas): liviano para respaldar/mover entre
     # máquinas sin arrastrar datos. df/X_*/y_*/train/valid/test NO se guardan --
@@ -509,6 +530,7 @@ def export_artifact(state: SimpleNamespace) -> None:
     artifact = {
         "level": state.level_str,
         "level_id": state.level.id,
+        "winner_family": state.winner_family,
         "model": state.final_model,
         "model_params": state.model_params,
         "features": state.features,
@@ -533,7 +555,7 @@ def export_artifact(state: SimpleNamespace) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = out_dir / f"{state.level_str}_{state.target}_artifact.pkl"
     joblib.dump(artifact, artifact_path)
-    logger.success("Artifact guardado en {}", artifact_path)
+    logger.success("Artifact guardado en {} (modelo: {})", artifact_path, state.winner_family)
 
 
 def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
@@ -541,7 +563,7 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
 
     state = load_data(cfg.level_id, cfg.target, dataset_path)
     split_data(state, cfg.target)
-    evaluate_model = make_evaluator(state)
+    evaluate_model = make_evaluator(state, cfg)
 
     if cfg.run_baseline_naive:
         t0 = time.perf_counter()
@@ -553,10 +575,17 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
         run_baseline_stats(state, evaluate_model)
         logger.info("Fase estadísticos clásicos: {:.1f}s", time.perf_counter() - t0)
 
-    if cfg.run_baseline_ml:
+    if cfg.run_bench_ml:
         t0 = time.perf_counter()
-        run_baseline_ml(state, cfg, evaluate_model)
-        logger.info("Fase ML (hiperparámetros default): {:.1f}s", time.perf_counter() - t0)
+        run_bench_ml(state, cfg, evaluate_model)
+        pick_winner(state, cfg)
+        logger.info("Fase bench ML (Optuna corto, {} familias): {:.1f}s",
+                    len(ALL_FAMILIES), time.perf_counter() - t0)
+
+    if not hasattr(state, "winner_family"):
+        logger.warning("run_bench_ml=False: no hay modelo ganador, se saltea el resto del pipeline ML.")
+        save_model_comparison(state)
+        return
 
     if cfg.run_feature_selection:
         t0 = time.perf_counter()
@@ -572,20 +601,20 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
     if cfg.run_optuna:
         t0 = time.perf_counter()
         best_params = tune_optuna(state, cfg)
-        logger.info("Fase Optuna: {:.1f}s", time.perf_counter() - t0)
+        logger.info("Fase Optuna final: {:.1f}s", time.perf_counter() - t0)
 
     fit_final_model(state, cfg, evaluate_model, best_params)
     save_model_comparison(state)
 
     if cfg.save_artifact:
-        export_artifact(state)
+        export_artifact(state, cfg)
 
     logger.info("Pipeline completo ({}/{}) en {:.1f}s", state.level_str, state.target,
                 time.perf_counter() - t_start)
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Entrena LightGBM por nivel de agregación M5.")
+    ap = argparse.ArgumentParser(description="Entrena modelos ML (bench Optuna + ganador) por nivel de agregación M5.")
     ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
                     "Default: config.ACTIVE_LEVEL_IDS.")
     ap.add_argument("--target", default=CFG.target,

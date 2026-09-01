@@ -12,7 +12,7 @@ from src.evaluation.scaled import (
 
 
 def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_time=None, category=None,
-                          target_col="sales", m=1):
+                          stage=None, objective_score=None, target_col="sales", m=1):
     """WAPE/WRMSSE de un modelo sobre validación (clipando cierres conocidos).
     Pensada para acumular en una lista y comparar modelos, p.ej.:
     `model_results.append(evaluate_predictions(train, valid, y_valid, model.predict(X_valid), "LightGBM"))`
@@ -21,6 +21,13 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
     entrenamiento de cada modelo.
     `category` (opcional) permite etiquetar el modelo (p.ej. "Naive", "ML")
     para filtrar/comparar resultados por familia.
+    `stage` (opcional) etiqueta en qué fase del pipeline se generó este resultado
+    (p.ej. "bench", "post_feature_selection", "final" -- ver scripts/train_dataset.py).
+    `objective_score` (opcional) es el valor ya calculado de `objective_metric`
+    (rmse o deviance de Tweedie, según el objective del nivel) para este modelo --
+    lo decide el caller (conoce cfg.objective), acá solo se guarda tal cual para
+    poder comparar modelos por la métrica decisional real, coherente entre niveles
+    rmse y tweedie (a diferencia de comparar directamente por `rmse` o `wrmsse`).
     `target_col`/`m`: columna objetivo real ('sales' o 'cumN') y su paso de naive
     scale -- ver compute_naive_scales. Default 'sales'/1: sin cambios de comportamiento.
     """
@@ -28,6 +35,8 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
     result = {
         "model": name,
         "category": category,
+        "stage": stage,
+        "objective_score": objective_score,
         "wape": float(wape(y_valid, y_pred_valid)),
         "wrmsse": compute_wrmsse(train_df, valid_df, y_pred_valid, target_col=target_col, m=m),
         "mae": mae(y_valid, y_pred_valid),

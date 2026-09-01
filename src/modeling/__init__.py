@@ -1,4 +1,5 @@
 from src.modeling.baseline import drift, historical_mean, moving_average, seasonal_naive
+from src.modeling.families import ALL_FAMILIES, MODEL_FAMILIES, TREE_FAMILIES
 from src.modeling.gradient_boosting import (
     catboost_features, fit_catboost, fit_histgb, fit_lightgbm, fit_xgboost, histgb_features,
 )
@@ -9,6 +10,9 @@ from src.modeling.feature_selection import (
 )
 
 __all__ = [
+    "ALL_FAMILIES",
+    "MODEL_FAMILIES",
+    "TREE_FAMILIES",
     "backward_feature_selection",
     "compute_permutation_importance",
     "seasonal_naive",

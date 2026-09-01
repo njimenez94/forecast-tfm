@@ -1,4 +1,3 @@
-import lightgbm as lgb
 import pandas as pd
 from loguru import logger
 from sklearn.inspection import permutation_importance
@@ -34,7 +33,7 @@ def compute_permutation_importance(model, X_valid, y_valid, features, objective:
 
 
 def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, valid_df,
-                                features, categorical_features, importance_perm,
+                                features, categorical_features, importance_perm, fit_predict_fn,
                                 objective: str = "rmse", tweedie_variance_power: float = 1.5,
                                 tolerance: float = 0.001, random_state: int = 42,
                                 max_batch_size: int = 8):
@@ -93,9 +92,14 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
         importance_perm: ranking de permutation importance (Series o dict
             indexado por nombre de feature) usado para decidir el orden de
             intento de eliminación.
-        objective: objective de LightGBM ("rmse" o "tweedie", ver
-            config.lgbm_params) usado tanto para entrenar cada candidato como
-            para decidir la eliminación (vía `objective_metric`).
+        fit_predict_fn: callable `(feats, cat_feats) -> y_pred_valid` que entrena el
+            modelo candidato (familia y sus hiperparámetros ya fijos -- ver
+            `src.modeling.families` y `scripts/train_dataset.py:select_features`)
+            sobre `X_train[feats]`/`y_train` y devuelve sus predicciones sobre
+            `X_valid[feats]`. Reentrenado en cada intento de eliminación.
+        objective: objective del modelo ("rmse" o "tweedie") usado para decidir
+            la eliminación (vía `objective_metric`); coherente con el objective
+            real con el que `fit_predict_fn` entrena cada candidato.
         tweedie_variance_power: power de Tweedie, solo aplica si
             `objective == "tweedie"`.
         tolerance: máximo empeoramiento RELATIVO de `objective_metric` (fracción
@@ -124,12 +128,7 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
 
     def train_and_eval(feats):
         cat_feats = [c for c in categorical_features if c in feats]
-        params = {"objective": objective, "random_state": random_state, "verbosity": -1}
-        if objective == "tweedie":
-            params["tweedie_variance_power"] = tweedie_variance_power
-        m = lgb.LGBMRegressor(**params)
-        m.fit(X_train[feats], y_train, categorical_feature=cat_feats)
-        y_pred = clip_closed_stores(valid_df, m.predict(X_valid[feats]))
+        y_pred = clip_closed_stores(valid_df, fit_predict_fn(feats, cat_feats))
         score = objective_metric(y_valid, y_pred, objective, tweedie_variance_power)
         wrmsse = compute_wrmsse(train_df, valid_df, y_pred)
         return score, wrmsse
