@@ -68,9 +68,9 @@ class Config:
     run_baseline_naive: bool = True
     run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
     run_baseline_ml: bool = True       # LightGBM/XGBoost/CatBoost/HistGB/Ridge, hiperparámetros default
-    run_feature_selection: bool = True  # permutation importance + backward elimination
-    run_shap: bool = True
-    run_optuna: bool = True
+    run_feature_selection: bool = False  # permutation importance + backward elimination
+    run_shap: bool = False
+    run_optuna: bool = False
     save_artifact: bool = True
 
     # --- comparación de modelos base ---

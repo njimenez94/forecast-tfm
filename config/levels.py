@@ -30,10 +30,10 @@ LEVELS = [
     Level(7,  "state_dept", ("dept_id", "cat_id", "state_id"),                              ("daily",)),
     Level(8,  "store_cat",  ("cat_id", "store_id", "state_id"),                             ("daily",)),
     Level(9,  "store_dept", ("dept_id", "cat_id", "store_id", "state_id"),                  ("daily",)),
-    Level(10, "item",       ("dept_id", "cat_id", "item_id"),                               ("weekly", "daily"), ("dept_id",),
+    Level(10, "item",       ("dept_id", "cat_id", "item_id"),                               ("daily",), ("dept_id",),
           filters={"dept_id": ("FOODS_3",)}),
-    Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),                   ("weekly", "daily"), ("state_id", "dept_id")),
-    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"),       ("weekly", "daily"), ("store_id", "dept_id"),
+    Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),                   ("daily",), ("state_id", "dept_id")),
+    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"),       ("daily",), ("store_id", "dept_id"),
           filters={"dept_id": ("FOODS_3",), "store_id": ("CA_3",)}),
 ]
 
