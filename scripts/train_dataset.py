@@ -301,7 +301,7 @@ def run_bench_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
             best_params, early_stopping_rounds=30, random_state=cfg.random_state,
         )
         fit_time = time.perf_counter() - t0
-        result = evaluate_model(family_name, fitted.predict(state.X_valid),
+        result = evaluate_model(f"{family_name} (Optuna bench)", fitted.predict(state.X_valid),
                                  fit_time=fit_time, category="ML", stage="bench")
 
         state.bench_models[family_name] = fitted
@@ -403,7 +403,7 @@ def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
         params, early_stopping_rounds=100, random_state=cfg.random_state,
     )
     fit_time = time.perf_counter() - t0
-    evaluate_model(f"{state.winner_family} (selected features)", fitted.predict(state.X_valid),
+    evaluate_model(f"{state.winner_family} (Optuna bench, selected features)", fitted.predict(state.X_valid),
                     fit_time=fit_time, category="ML", stage="post_feature_selection")
 
     explainer = shap.TreeExplainer(fitted.estimator)
