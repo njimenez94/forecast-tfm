@@ -1,0 +1,29 @@
+flowchart LR
+    Total["Total<br><i>unit sales</i>"] --> CA["State<br><i>CA</i>"] & TX["State<br><i>TX</i>"] & WI["State<br><i>WI</i>"]
+    CA --> CA1["Store<br><i>CA_1</i>"] & CA2["Store<br><i>CA_2</i>"] & CA3["Store<br><i>CA_3</i>"] & CA4["Store<br><i>CA_4</i>"]
+    TX --> TX1["Store<br><i>TX_1</i>"] & TX2["Store<br><i>TX_2</i>"] & TX3["Store<br><i>TX_3</i>"]
+    WI --> WI1["Store<br><i>WI_1</i>"] & WI2["Store<br><i>WI_2</i>"] & WI3["Store<br><i>WI_3</i>"]
+    CA1 --> Cat["Category"]
+    CA2 --> Cat
+    CA3 --> Cat
+    CA4 --> Cat
+    TX1 --> Cat
+    TX2 --> Cat
+    TX3 --> Cat
+    WI1 --> Cat
+    WI2 --> Cat
+    WI3 --> Cat
+    Cat --> FOODS["Category<br><i>FOODS</i>"] & HOBBIES["Category<br><i>HOBBIES</i>"] & HOUSEHOLD["Category<br><i>HOUSEHOLD</i>"]
+    FOODS --> F1["Department<br><i>FOODS_1</i>"] & F2["Department<br><i>FOODS_2</i>"] & F3["Department<br><i>FOODS_3</i>"]
+    HOBBIES --> H1["Department<br><i>HOBBIES_1</i>"] & H2["Department<br><i>HOBBIES_2</i>"]
+    HOUSEHOLD --> HH1["Department<br><i>HOUSEHOLD_1</i>"] & HH2["Department<br><i>HOUSEHOLD_2</i>"]
+    F1 --> P5["Product<br><i>1-219 (216 items)</i>"]
+    F2 --> P6["Product<br><i>1-399 (398 items)</i>"]
+    F3 --> P7["Product<br><i>1-827 (823 items)</i>"]
+    H1 --> P1["Product<br><i>1-424 (416 items)</i>"]
+    H2 --> P2["Product<br><i>1-149 (149 items)</i>"]
+    HH1 --> P3["Product<br><i>1-541 (532 items)</i>"]
+    HH2 --> P4["Product<br><i>1-516 (515 items)</i>"]
+
+    style Total fill:#1a1a1a,color:#fff,stroke:#666
+    style Cat fill:#1a1a1a,color:#fff,stroke:#666
