@@ -43,8 +43,9 @@ artifacts de "sales" ya generados):
     artifacts/optuna_study.db                                             estudios Optuna (sqlite, uno por
                                                                             level/grain/target/familia/etapa)
     artifacts/models[/{target}]/{level}_{target}_artifact.pkl            artifact liviano (modelo + features +
-                                                                            métricas + winner_family, sin datos --
-                                                                            ver src.data.split.reconstruct_test_data())
+                                                                            métricas + winner_family + explainer
+                                                                            SHAP, sin datos -- ver
+                                                                            src.data.split.reconstruct_test_data())
 """
 import argparse
 import gc
@@ -85,19 +86,20 @@ class Config:
     target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
 
     # --- fases on/off ---
-    # Valores base = perfil "optimized" (ver config/training.py). --profile (main())
-    # los pisa con los de config.TRAINING_PROFILES antes de cada corrida -- editar acá
-    # solo para agregar un parámetro nuevo al esquema, no para bajar la calidad de una
-    # corrida puntual (para eso usar --profile fast/moderate).
+    # Defaults tomados de config.OPTIMIZED (única fuente de verdad, ver
+    # config/training.py) -- así este dataclass no repite a mano los valores del
+    # perfil. --profile (main()) los pisa con los de config.TRAINING_PROFILES antes
+    # de cada corrida igual; para bajar la calidad de una corrida puntual usar
+    # --profile fast/moderate, no editar los defaults acá.
     run_baseline_naive: bool = True
-    run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
+    run_baseline_stats: bool = config.OPTIMIZED.run_baseline_stats  # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
     # LightGBM/XGBoost/CatBoost/HistGB/Ridge, CADA UNO tuneado con una ronda corta de
     # Optuna (no es opcional -- si esta fase corre, todas las familias se tunean). El
     # ganador (mejor familia tree-based) sigue a feature selection / SHAP / Optuna final.
     run_bench_ml: bool = True
-    run_feature_selection: bool = True  # permutation importance + backward elimination
-    run_shap: bool = True
-    run_optuna: bool = True             # ronda larga de Optuna, post-feature-selection, solo sobre el ganador
+    run_feature_selection: bool = config.OPTIMIZED.run_feature_selection  # permutation importance + backward elimination
+    run_shap: bool = config.OPTIMIZED.run_shap
+    run_optuna: bool = config.OPTIMIZED.run_optuna  # ronda larga de Optuna, post-feature-selection, solo sobre el ganador
     save_artifact: bool = True
 
     # --- comparación de modelos base ---
@@ -134,20 +136,20 @@ class Config:
     shap_sample_size: int = 300_000
 
     # --- Optuna: bench (TODAS las familias de ALL_FAMILIES, corto) ---
-    optuna_bench_n_trials: int = 200
-    optuna_bench_timeout_s: int = 5 * 60
+    optuna_bench_n_trials: int = config.OPTIMIZED.optuna_bench_n_trials
+    optuna_bench_timeout_s: int = config.OPTIMIZED.optuna_bench_timeout_s
 
     # --- Optuna: final (largo, solo sobre la familia ganadora, post-feature-selection) ---
-    optuna_n_trials: int = 500
-    optuna_timeout_s: int = 10 * 60
-    optuna_n_estimators: int = 1_500
+    optuna_n_trials: int = config.OPTIMIZED.optuna_n_trials
+    optuna_timeout_s: int = config.OPTIMIZED.optuna_timeout_s
+    optuna_n_estimators: int = config.OPTIMIZED.optuna_n_estimators
 
     # --- modelo final ---
     # Folds rolling-origin sobre train+valid para elegir n_estimators antes del
     # refit final sobre todos los datos (ver rolling_cv_folds). 1 = sin CV, un solo
     # split como antes.
-    cv_folds: int = 3
-    final_n_estimators: int = 5_000
+    cv_folds: int = config.OPTIMIZED.cv_folds
+    final_n_estimators: int = config.OPTIMIZED.final_n_estimators
     objective_by_level: dict = field(default_factory=lambda: {12: "tweedie"})
     default_objective: str = "regression_l2"
 
@@ -310,8 +312,12 @@ def tune_optuna_family(state: SimpleNamespace, cfg: Config, family_name: str,
     # elige Optuna (eso sale de study.best_trial.params).
     best_wrmsse = study.best_trial.user_attrs.get("wrmsse")
     wrmsse_str = f"{best_wrmsse:.4f}" if best_wrmsse is not None else "N/A (trial de una corrida anterior sin este dato)"
-    logger.info("[{}] Mejor {} (Optuna): {:.4f} | WRMSSE: {} (informativo)",
-                family_name, cfg.objective, study.best_trial.value, wrmsse_str)
+    logger.info(
+        "[{}] Optuna terminó -- elige hiperparámetros por {} (no por WRMSSE): mejor {} = {:.4f} "
+        "| WRMSSE de ESE trial: {} (solo referencia, puede no ser el mínimo posible; el WRMSSE "
+        "definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)",
+        family_name, cfg.objective, cfg.objective, study.best_trial.value, wrmsse_str,
+    )
     logger.info("[{}] Mejores hiperparámetros: {}", family_name, study.best_trial.params)
 
     return {**fixed_params, **study.best_trial.params}
@@ -548,6 +554,8 @@ def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_pa
 
 
 def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
+    import shap
+
     results_df = pd.DataFrame(state.model_results).sort_values("wrmsse")
 
     family = MODEL_FAMILIES[state.winner_family]
@@ -561,6 +569,13 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
             random_state=cfg.random_state, objective=cfg.objective, tweedie_variance_power=cfg.tweedie_variance_power,
         )
 
+    # TreeExplainer se construye acá (sobre el estimador nativo, no el FittedModel
+    # wrapper -- ver families.py) y se guarda ya armado en el artifact: todos los
+    # consumidores (notebooks, api/) lo cargan listo en vez de reconstruirlo cada vez,
+    # que además requeriría acordarse de pasar `model.estimator` en lugar de `model`
+    # (todas las familias ganadoras son tree-based, ver pick_winner).
+    explainer = shap.TreeExplainer(state.final_model.estimator)
+
     # Solo modelo + metadata (features, métricas): liviano para respaldar/mover entre
     # máquinas sin arrastrar datos. df/X_*/y_*/train/valid/test NO se guardan --
     # src.data.split.reconstruct_test_data() las recrea desde el parquet en
@@ -570,6 +585,7 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
         "level_id": state.level.id,
         "winner_family": state.winner_family,
         "model": state.final_model,
+        "explainer": explainer,
         "model_params": state.model_params,
         "features": state.features,
         "categorical_features": state.categorical_features,
