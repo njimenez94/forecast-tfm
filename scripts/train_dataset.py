@@ -168,7 +168,7 @@ CFG = Config()
 
 # Perfil que se usa cuando se corre sin --profile (ver config/training.py). Editar
 # acá, junto con CFG, para cambiar el default sin tener que pasar el flag.
-PROFILE = "fast" # fast moderate optimized 
+PROFILE = "optimized" # fast moderate optimized 
 
 
 def _artifacts_subdir(base: Path, target: str) -> Path:
