@@ -304,6 +304,8 @@ def tune_optuna_family(state: SimpleNamespace, cfg: Config, family_name: str,
         load_if_exists=True,
         sampler=optuna.samplers.TPESampler(seed=cfg.random_state),
     )
+    logger.info("[{}] Optuna arrancando: hasta {} trials (timeout {}s) -- study {!r}",
+                family_name, n_trials, timeout, study_name)
     study.optimize(objective, n_trials=n_trials, timeout=timeout, show_progress_bar=True)
 
     # user_attrs["wrmsse"] puede faltar en trials de corridas viejas del mismo
@@ -332,7 +334,8 @@ def run_bench_ml(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     state.bench_params = {}
     state.bench_scores = {}
 
-    for family_name in ALL_FAMILIES:
+    for i, family_name in enumerate(ALL_FAMILIES, 1):
+        logger.info("Bench ML: familia {}/{} -- {}", i, len(ALL_FAMILIES), family_name)
         t0 = time.perf_counter()
         best_params = tune_optuna_family(
             state, cfg, family_name,
