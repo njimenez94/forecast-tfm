@@ -33,3 +33,8 @@ catboost_info/
 # ver scripts/train_datasets.py:reconstruct_test_data()).
 artifacts/*
 !artifacts/models/
+
+# Historial de versiones locales (export_artifact) y su índice: rolling, se regenera
+# reentrenando -- no versionar en git, igual que el resto de artifacts/.
+artifacts/models/versions/
+artifacts/models/registry.json

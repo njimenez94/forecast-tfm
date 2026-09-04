@@ -4,7 +4,36 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
+# Base: lo mínimo para correr api/ (servir un modelo ya entrenado) sin arrastrar el
+# stack de modelado/notebooks -- ver [dependency-groups].modeling para el resto.
+# mlforecast está acá (no en modeling) porque config/features.py lo importa a nivel
+# de módulo (lag_transforms), y api/ hace `import config`. pyarrow también: los
+# artifact .pkl traen DataFrames (results_df/feature_importance) con dtypes
+# respaldados por pyarrow, joblib.load() los necesita para reconstruirlos aunque
+# api/ no los use -- a diferencia de statsforecast/prophet/catboost, pyarrow
+# instala de un wheel binario (no compila nada), así que no reintroduce el
+# problema de necesitar g++ en la imagen.
 dependencies = [
+    "fastapi>=0.141.1",
+    "joblib>=1.5.2",
+    "lightgbm>=4.6.0",
+    "loguru>=0.7.3",
+    "mlforecast>=1.0.2",
+    "numpy>=2.4.6",
+    "pandas>=3.0.3",
+    "pyarrow>=24.0.0",
+    "uvicorn[standard]>=0.52.1",
+]
+
+[dependency-groups]
+dev = [
+    "nbconvert>=7.17.1",
+    "scikit-learn>=1.8.0",
+]
+# Entrenamiento/EDA/notebooks: pesado (catboost/prophet/statsforecast compilan
+# extensiones nativas) y no lo necesita api/ en runtime -- ver Dockerfile
+# (`uv sync --no-default-groups` para la imagen de la API).
+modeling = [
     "catboost>=1.2.10",
     "dataframe-image>=0.2.7",
     "duckdb>=1.5.3",
@@ -13,20 +42,14 @@ dependencies = [
     "ipython>=9.14.1",
     "ipywidgets>=8.1.8",
     "kaggle>=2.2.4",
-    "lightgbm>=4.6.0",
-    "loguru>=0.7.3",
     "marimo[sql]>=0.23.16",
     "matplotlib>=3.11.0",
     "matplotlib-inline>=0.2.2",
-    "mlforecast>=1.0.2",
     "nbformat>=5.10.4",
-    "numpy>=2.4.6",
     "optuna-integration>=4.9.0",
-    "pandas>=3.0.3",
     "plotly>=6.8.0",
     "polars[pyarrow,rtcompat]>=1.41.2",
     "prophet>=1.4.0",
-    "pyarrow>=24.0.0",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
     "shap>=0.52.0",
@@ -35,15 +58,15 @@ dependencies = [
     "xgboost>=3.4.1",
 ]
 
-[dependency-groups]
-dev = [
-    "nbconvert>=7.17.1",
-    "scikit-learn>=1.8.0",
-]
+[tool.uv]
+# `uv sync` a secas sigue instalando todo (dev + modeling), igual que antes de
+# separar los grupos -- el flujo de notebooks/scripts no cambia. Solo el Dockerfile
+# de la API pasa `--no-default-groups` explícitamente para quedarse con la base.
+default-groups = ["dev", "modeling"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src", "config"]
+packages = ["src", "config", "api"]

@@ -41,8 +41,10 @@ artifacts de "sales" ya generados):
 """
 import argparse
 import gc
+import json
 import time
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -156,6 +158,26 @@ def _artifacts_subdir(base: Path, target: str) -> Path:
     cualquier otro target futuro) separados de los ~150 archivos de 'sales' ya
     generados en `base` sin tocarlos ni requerir migrarlos."""
     return base if target == "sales" else base / target
+
+
+def _update_registry(key: str, version: str, path: Path, artifact: dict) -> None:
+    """Anota una versión nueva en artifacts/models/registry.json (read-modify-write,
+    sin locking: entrenamiento local de a uno por vez, igual que hoy). No reemplaza
+    al archivo plano `{level_str}_{target}_artifact.pkl` (ese lo sigue leyendo
+    notebooks/03_predictions.ipynb tal cual) -- el registry es solo para que la API
+    (api/) pueda listar/servir versiones puntuales."""
+    registry_path = config.MODELS_DIR / "registry.json"
+    registry = json.loads(registry_path.read_text()) if registry_path.exists() else {}
+    entry = registry.setdefault(key, {"latest": None, "versions": {}})
+    entry["versions"][version] = {
+        "path": str(path.relative_to(config.ROOT)),
+        "trained_at": version,
+        "winner_family": artifact.get("winner_family"),
+        "wape_test": artifact["wape_test"],
+        "wrmsse_test": artifact["wrmsse_test"],
+    }
+    entry["latest"] = version
+    registry_path.write_text(json.dumps(registry, indent=2))
 
 
 # ============================== FASES ==============================
@@ -556,6 +578,16 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
     artifact_path = out_dir / f"{state.level_str}_{state.target}_artifact.pkl"
     joblib.dump(artifact, artifact_path)
     logger.success("Artifact guardado en {} (modelo: {})", artifact_path, state.winner_family)
+
+    # Copia versionada + registry.json: permite a api/ servir una versión puntual y
+    # conservar el historial, sin tocar el flujo del archivo plano de arriba.
+    version = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    versions_dir = out_dir / "versions"
+    versions_dir.mkdir(parents=True, exist_ok=True)
+    versioned_path = versions_dir / f"{state.level_str}_{state.target}_artifact_{version}.pkl"
+    joblib.dump(artifact, versioned_path)
+    _update_registry(f"{state.level_str}_{state.target}", version, versioned_path, artifact)
+    logger.success("Versión {} registrada en registry.json", version)
 
 
 def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:

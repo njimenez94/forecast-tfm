@@ -1,0 +1,16 @@
+.venv
+.git
+.claude
+data
+notebooks
+docs
+report
+backup
+output
+queries
+artifacts/results
+artifacts/plots
+artifacts/optuna_study.db
+__pycache__
+*.pyc
+*.ipynb
