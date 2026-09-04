@@ -12,12 +12,19 @@ sobre selección de features sin repetir el bench de modelos, o reentrenar el
 modelo final con los hiperparámetros del bench sin correr la ronda larga de
 Optuna de nuevo). `run_bench_ml` siempre tunea con Optuna (no hay modo
 "hiperparámetros default"); `run_optuna` controla solo la ronda larga final.
+Estas fases + el presupuesto de Optuna vienen agrupadas en perfiles
+(`--profile`, ver config/training.py): `fast` (smoke-test), `moderate`
+(primera versión en producción, sin las fases caras de interpretabilidad) y
+`optimized` (pipeline completo, default de `Config` -- para las métricas
+finales del TFM). Sin --profile se usa la constante `PROFILE` (justo abajo de
+`CFG`, en este mismo archivo) -- editarla ahí para cambiar el default sin
+tener que acordarse del flag.
 
-Editar `CFG` (fases, hiperparámetros de tuning) y correr:
-    make train-dataset ARGS="--levels 1,9,12"                 # todos los targets (sales + cada cumN)
-    make train-dataset ARGS="--levels 12 --target cum28"      # un solo target, ver --target
+Editar `CFG`/`PROFILE` y correr:
+    make train-dataset ARGS="--levels 1,9,12"                              # perfil PROFILE (default), todos los targets
+    make train-dataset ARGS="--levels 12 --target cum28 --profile fast"    # un target, perfil fast
     # o
-    uv run python -m scripts.train_dataset --levels 1,9,12 --target cum28
+    uv run python -m scripts.train_dataset --levels 1,9,12 --target cum28 --profile optimized
 
 Niveles con `split_by` (10-12: un dataset por combinación dept/store, ver
 config/levels.py) entrenan un modelo por combinación, iterando sobre los
@@ -43,7 +50,7 @@ import argparse
 import gc
 import json
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -78,6 +85,10 @@ class Config:
     target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
 
     # --- fases on/off ---
+    # Valores base = perfil "optimized" (ver config/training.py). --profile (main())
+    # los pisa con los de config.TRAINING_PROFILES antes de cada corrida -- editar acá
+    # solo para agregar un parámetro nuevo al esquema, no para bajar la calidad de una
+    # corrida puntual (para eso usar --profile fast/moderate).
     run_baseline_naive: bool = True
     run_baseline_stats: bool = True    # SARIMA/ETS/Theta/TBATS/Prophet: serie x serie, lento
     # LightGBM/XGBoost/CatBoost/HistGB/Ridge, CADA UNO tuneado con una ronda corta de
@@ -152,6 +163,10 @@ class Config:
 
 
 CFG = Config()
+
+# Perfil que se usa cuando se corre sin --profile (ver config/training.py). Editar
+# acá, junto con CFG, para cambiar el default sin tener que pasar el flag.
+PROFILE = "optimized" # fast moderate optimized 
 
 
 def _artifacts_subdir(base: Path, target: str) -> Path:
@@ -653,15 +668,25 @@ def main():
     ap.add_argument("--target", default=None,
                     help='Target: "sales" o "cumN" (ver config.CUM_EVAL_HORIZONS, p.ej. "cum28"). '
                          'Default: todos -- "sales" + cada cumN en config.CUM_EVAL_HORIZONS.')
+    ap.add_argument("--profile", default=PROFILE,
+                    choices=sorted(config.TRAINING_PROFILES),
+                    help="Perfil de entrenamiento (ver config/training.py): fast (smoke-test, "
+                         "sin stats/feature-selection/shap/optuna final), moderate (primera "
+                         "versión en producción, sin las fases caras de interpretabilidad) u "
+                         f"optimized (pipeline completo, para las métricas finales del TFM). "
+                         f"Default: {PROFILE!r} (ver PROFILE arriba de main()).")
     args = ap.parse_args()
 
     level_ids = [int(x) for x in args.levels.split(",")] if args.levels else list(config.ACTIVE_LEVEL_IDS)
     targets = [args.target] if args.target else ["sales", *(f"cum{n}" for n in config.CUM_EVAL_HORIZONS)]
+    profile = config.TRAINING_PROFILES[args.profile]
+    profile_overrides = {k: v for k, v in asdict(profile).items() if k != "name"}
+    logger.info("Perfil de entrenamiento: {}", profile.name)
 
     for target in targets:
         for level_id in level_ids:
             level = config.LEVELS_BY_ID[level_id]
-            cfg = replace(CFG, level_id=level_id, target=target)
+            cfg = replace(CFG, level_id=level_id, target=target, **profile_overrides)
 
             if not level.split_by:
                 try:
