@@ -18,6 +18,7 @@ from loguru import logger
 
 import config
 from src.data.reader import read_parquet_pl
+from src.logging_setup import configure_logging
 from src.data.split import parse_level_file
 from src.features import build_dataset
 
@@ -128,4 +129,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_logging("build_datasets")
     main()

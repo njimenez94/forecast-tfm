@@ -2,6 +2,7 @@
 import zipfile
 from loguru import logger
 import config
+from src.logging_setup import configure_logging
 
 from pathlib import Path
 import duckdb
@@ -57,4 +58,5 @@ def main():
     load_files()
 
 if __name__ == "__main__":
+    configure_logging("create_database")
     main()

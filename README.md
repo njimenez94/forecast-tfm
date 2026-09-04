@@ -26,6 +26,31 @@ make test-sets                                 # 5. predicciones finales + métr
 
 `make pipeline` encadena 2-4 (`process-data build-datasets train-dataset`); `create-database` y `test-sets` corren aparte. Los targets que aceptan filtros usan `ARGS="--levels 1,9,12"` (sin espacios entre comas).
 
+## Cómo correrlo desde cero (para reproducirlo en otra PC)
+
+Requisitos: [uv](https://docs.astral.sh/uv/) instalado y una cuenta de Kaggle que haya aceptado las reglas de la competencia [m5-forecasting-accuracy](https://www.kaggle.com/competitions/m5-forecasting-accuracy).
+
+```bash
+git clone <repo> && cd forecast-tfm
+uv sync                                        # instala Python 3.13 (ver .python-version) y dependencias
+
+export KAGGLE_API_TOKEN=tu_token               # generado en https://www.kaggle.com/settings/api
+# (alternativa: uv run kaggle auth login, autentica por navegador)
+
+make create-database                           # descarga y arma data/m5.db (~2GB, tarda según tu conexión)
+make process-data
+make build-datasets
+make train-dataset ARGS="--levels 1,9,12"      # ver nota abajo sobre el tiempo que tarda esto
+make test-sets                                 # opcional: predicciones finales + métricas de test
+```
+
+**Sobre el tiempo de `train-dataset`:** con la configuración por defecto (bench de todas las familias + Optuna corto y largo + SHAP por nivel) puede tardar horas o días según cuántos niveles se corran. Para solo verificar que el pipeline anda de punta a punta sin esperar tanto:
+
+- Correr un solo nivel liviano: `ARGS="--levels 1"`.
+- O reducir las fases/tiempos de tuning editando `CFG` en [scripts/train_dataset.py](scripts/train_dataset.py) (por ejemplo bajar `optuna_bench_timeout_s` / `optuna_timeout_s`, o poner `run_baseline_stats=False` para saltear los modelos estadísticos clásicos, que son los más lentos).
+
+Los artifacts livianos por nivel quedan en `artifacts/models/*.pkl` (sí están versionados en git, a diferencia del resto de `artifacts/` y de `data/`, ver [Estructura](#estructura)).
+
 ## Pipeline (script → make → salida)
 
 | # | Script | `make` | Qué hace | Salida |

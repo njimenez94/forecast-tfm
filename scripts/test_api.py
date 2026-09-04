@@ -19,6 +19,7 @@ from loguru import logger
 
 from api.registry import resolve_artifact_path
 from src.data.split import reconstruct_test_data
+from src.logging_setup import configure_logging
 
 
 def main() -> None:
@@ -68,4 +69,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_logging("test_api")
     main()

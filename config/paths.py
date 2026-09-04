@@ -17,6 +17,10 @@ OUTPUT_DIR = ROOT / "output"
 ARTIFACTS_DIR = ROOT / "artifacts"
 MODELS_DIR = ARTIFACTS_DIR / "models"
 
+# logs/<name>/: un archivo por ejecución (timestamp), separado por script/servicio.
+# Ver src/logging_setup.py::configure_logging.
+LOGS_DIR = ROOT / "logs"
+
 # artifacts/datasets/: data/processed/ + features derivadas (src/features/),
 # listo para entrenar. Generado por scripts/build_datasets.py (make build-datasets).
 DATASETS = ROOT / "data" / "datasets"

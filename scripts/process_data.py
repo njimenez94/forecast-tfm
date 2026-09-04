@@ -26,6 +26,7 @@ from loguru import logger
 import config
 from src.data.base_query import build_level_query, count_series_query
 from src.data.reader import count_periods, read_query_str, write_query_parquet
+from src.logging_setup import configure_logging
 
 
 def show_counts(levels, db_path) -> None:
@@ -93,4 +94,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_logging("process_data")
     main()

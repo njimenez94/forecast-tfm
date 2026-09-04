@@ -55,6 +55,7 @@ from loguru import logger
 
 import config
 from src.data.split import load_data, rolling_cv_folds, split_data
+from src.logging_setup import configure_logging
 from src.evaluation import (
     build_all_series_metrics, build_predictions_report, evaluate_predictions, objective_metric,
 )
@@ -686,4 +687,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_logging("train_dataset")
     main()

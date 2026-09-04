@@ -23,6 +23,7 @@ from loguru import logger
 
 import config
 from src.data.split import reconstruct_test_data
+from src.logging_setup import configure_logging
 from src.evaluation import evaluate_predictions
 from src.evaluation.scaled import clip_closed_stores
 
@@ -86,4 +87,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_logging("build_test_sets")
     main()

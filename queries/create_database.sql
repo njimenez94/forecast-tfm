@@ -1,5 +1,6 @@
-PRAGMA memory_limit='4GB';
-PRAGMA threads=4;
+PRAGMA memory_limit='2.5GB';
+PRAGMA threads=2;
+PRAGMA temp_directory='data/duckdb_tmp';
 
 DROP TABLE IF EXISTS calendar;
 DROP TABLE IF EXISTS sell_prices;
