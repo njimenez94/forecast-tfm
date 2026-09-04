@@ -17,6 +17,10 @@ data/raw/*
 data/processed/*
 !data/**/.gitkeep
 
+# Dataset crudo de Kaggle descargado por scripts/create_database.py: no redistribuir
+# (reglas de la competencia, ver docs/guia_tfm.md).
+backup/
+
 fil-result/
 /fil-result
 

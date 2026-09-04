@@ -11,11 +11,21 @@ SQL_PATH = "queries/create_database.sql"
 raw_dir = config.RAW_DIR
 raw_zip = config.RAW_ZIP
 db_path= config.DB_PATH
+competition = config.COMPETITION
+
+def download_dataset():
+    logger.info(f"No se encontró {raw_zip}, descargando '{competition}' desde Kaggle...")
+    import kaggle
+
+    raw_zip.parent.mkdir(parents=True, exist_ok=True)
+    kaggle.api.authenticate()
+    kaggle.api.competition_download_files(competition, path=str(raw_zip.parent), quiet=False)
+    logger.info(f"Descarga completa: {raw_zip}")
 
 def extract_files():
     logger.info("Comienza extraccion de datos...")
     if not raw_zip.exists():
-        raise FileNotFoundError(f"No se encontró el zip en {raw_zip}")
+        download_dataset()
 
     raw_dir.mkdir(parents=True, exist_ok=True)
 

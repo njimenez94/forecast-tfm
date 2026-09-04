@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+COMPETITION = "m5-forecasting-accuracy"
 RAW_DIR = ROOT / "data" / "raw"
 RAW_ZIP = ROOT / "backup" / "m5-forecasting-accuracy.zip"
 DB_PATH = ROOT / "data" / "m5.db"
