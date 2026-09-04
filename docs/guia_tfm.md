@@ -54,37 +54,6 @@ El estudio y análisis de este dataset deberá cumplir, de forma general, las fa
 
 ---
 
-## 2. Creación de un pipeline de preparación/disponibilización de datos (perfil Data Engineer)
-
-### a. Objetivos
-
-- Preparar un pipeline (conjunto de scripts) que permita realizar una o varias ETLs (Extraction, Transformation, Loading) de diferentes fuentes e integrarlas en una base de datos que pudiera ser utilizada para realizar un modelo.
-- Estas ETLs deberán ser configurables en cuanto a la periodicidad de su ejecución y deberán contar con soluciones para monitorizar su progreso/debugging.
-
-### b. Tecnologías
-
-- Cualquiera de las estudiadas en el Máster.
-- Se puede optar por una tecnología en particular o una combinación de tecnologías.
-
-### c. Documentación
-
-- Se deberá documentar la arquitectura técnica elegida: sus componentes, inter-relaciones y tecnologías empleadas en cada elemento.
-- Además de la solución técnica, la documentación deberá incluir detalles del caso de uso de negocio que solucionaría, incluyendo referencias a alternativas existentes y diferenciando las mejoras que la propuesta introduce.
-- En cuanto al código: se podrá incluir un repositorio GitHub o referir algún otro repositorio en la nube (Google, Amazon, Azure, etc.).
-- Se deberá incluir un video (o varios mini-videos) que expliquen la funcionalidad de cada módulo de la solución (demostrando el proceso: captura de entradas y resultados de salidas).
-
-### d. Extensión
-
-- No se espera una solución perfectamente disponible para un entorno empresarial, pero sí demostrar que es perfectamente funcional de extremo a extremo.
-- Que cumpla el objetivo de capturar diferentes fuentes de datos.
-- Que estos se disponibilicen en tabla(s) listas para ser explotadas por procesos de modelización, BI, etc.
-
-### e. Realización de un video
-
-- Mismas condiciones que en la opción 1: máximo 5 minutos, formato .MP4, tamaño recomendado no mayor a 50 MB.
-
----
-
 ## 3. El alumno puede proponer un trabajo que no encaje en las propuestas anteriores
 
 ### a. Objetivos
@@ -143,34 +112,34 @@ El estudio y análisis de este dataset deberá cumplir, de forma general, las fa
 - Además de Memoria, Video y Anexos (imprescindibles), el alumno puede subir otros materiales que considere relevantes.
 
 ---
-
-## ¿Qué hacer si voy a usar datos de mi empresa?
-
-- Asegurarse con antelación de contar con el visto bueno de la empresa (a veces se echan atrás a última hora).
-- La empresa puede pedir firmar un **NDA** (Non-Disclosure Agreement) para evitar la fuga de propiedad intelectual. Esto no forma parte del procedimiento oficial del TFM.
-- Consideraciones a comunicar al departamento legal de la empresa:
-  1. Es responsabilidad del alumno asegurarse de tener licencia para usar los datos. Si es necesario, el máster proporcionará una plantilla de NDA que firmarán, a título personal, Carlos Ortega y Santiago Mota.
-  2. La autoría y propiedad del TFM será de los alumnos. Solo los profesores citados accederán al material entregado, con el fin de calificar los trabajos, y una vez cerradas las actas se eliminará el material.
-  3. No se firmarán acuerdos en los 30 días previos a la entrega del TFM; el alumno debe gestionar el proceso antes de esa fecha. Si no se llega a un acuerdo, será responsabilidad del alumno presentar un proyecto alternativo.
-  4. Si alguno de los tutores no firma el NDA, queda excluido del acuerdo de confidencialidad. Es responsabilidad del alumno que ambos aparezcan en el documento a firmar.
-
----
-
+ 
 ## Checklist
-
-- [ ] ¿Has visto los derechos de uso de los datos?
-- [ ] ¿Tienes el código compartido en un GitHub o en un Drive/Dropbox?
-  - [ ] ¿Es accesible desde el link?
-  - [ ] ¿Santiago Mota y Carlos Ortega tienen permisos de acceso?
-- [ ] ¿La memoria ocupa 20 hojas?
-- [ ] ¿Tienes el código en los Anexos?
-- [ ] ¿El proyecto es reproducible?
-- [ ] ¿Has incluido un apartado de conclusiones?
-- [ ] ¿Has incluido el vídeo?
-  - [ ] ¿Es de 5 minutos?
-  - [ ] ¿Describe tu proyecto (no es un elevator pitch)?
-- [ ] ¿Has incluido una breve bibliografía/referencias (media cara)?
-
+ 
+- ¿Has visto los derechos de uso de los datos?
+  
+  R: Sí. Según la Regla 7.A de M5 Forecasting - Accuracy (Kaggle), el uso está permitido para "academic research and education", uso no comercial. No se puede redistribuir ni republicar los datos crudos a terceros ajenos a la competencia (por ejemplo, subir el CSV completo a un repo público de GitHub sin restricción).**Fuente**: *kaggle.com/c/m5-forecasting-accuracy/rules*
+- ¿Tienes el código compartido en un GitHub o en un Drive/Dropbox?
+  R: 
+  - ¿Es accesible desde el link?
+    R: 
+  - ¿Santiago Mota y Carlos Ortega tienen permisos de acceso?
+    R: 
+- ¿La memoria ocupa 20 hojas?
+  R: 
+- ¿Tienes el código en los Anexos?
+  R: 
+- ¿El proyecto es reproducible?
+  R: 
+- ¿Has incluido un apartado de conclusiones?
+  R: 
+- ¿Has incluido el vídeo?
+  R: 
+  - ¿Es de 5 minutos?
+    R: 
+  - ¿Describe tu proyecto (no es un elevator pitch)?
+    R: 
+- ¿Has incluido una breve bibliografía/referencias (media cara)?
+  R: 
 ---
 
 ## Preguntas frecuentes

@@ -12,6 +12,7 @@ dependencies = [
     "ipykernel>=7.3.0",
     "ipython>=9.14.1",
     "ipywidgets>=8.1.8",
+    "kaggle>=2.2.4",
     "lightgbm>=4.6.0",
     "loguru>=0.7.3",
     "marimo[sql]>=0.23.16",
