@@ -34,11 +34,14 @@ def count_periods(db_path) -> dict[str, int]:
     return {"daily": int(days), "weekly": int(weeks)}
 
 
-def write_query_parquet(db_path, sql: str, out, *, memory_limit: str = "3GB", threads: int = 4) -> None:
+def write_query_parquet(db_path, sql: str, out, *, memory_limit: str = "2GB", threads: int = 4) -> None:
     """Ejecuta sql sobre DuckDB y escribe el resultado directo a parquet (COPY TO, sin
     traer el resultado a Python). Límites de memoria conservadores: el default de
     DuckDB (80% RAM) no cuenta el resto de procesos del host y provoca OOM-kill
-    (Error 137) en niveles grandes (L12)."""
+    (Error 137) en niveles grandes (L12). Bajado de 3GB a 2GB: con VS Code/Pylance +
+    un kernel de Jupyter abiertos, el host (WSL2, ~5.8GB) ya va sobre el 60-70% de RAM
+    antes de arrancar process_data, y earlyoom mata el proceso (SIGTERM, Error 143)
+    incluso con el cap anterior."""
     with duckdb.connect(str(db_path)) as con:
         con.execute(f"PRAGMA memory_limit='{memory_limit}'")
         con.execute(f"PRAGMA threads={threads}")
