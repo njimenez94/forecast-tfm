@@ -14,8 +14,8 @@ Optuna de nuevo). `run_bench_ml` siempre tunea con Optuna (no hay modo
 "hiperparámetros default"); `run_optuna` controla solo la ronda larga final.
 
 Editar `CFG` (fases, hiperparámetros de tuning) y correr:
-    make train-dataset ARGS="--levels 1,9,12"                 # target "sales" (CFG.target)
-    make train-dataset ARGS="--levels 12 --target cum28"      # target cumN, ver --target
+    make train-dataset ARGS="--levels 1,9,12"                 # todos los targets (sales + cada cumN)
+    make train-dataset ARGS="--levels 12 --target cum28"      # un solo target, ver --target
     # o
     uv run python -m scripts.train_dataset --levels 1,9,12 --target cum28
 
@@ -650,40 +650,42 @@ def main():
     ap = argparse.ArgumentParser(description="Entrena modelos ML (bench Optuna + ganador) por nivel de agregación M5.")
     ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
                     "Default: config.ACTIVE_LEVEL_IDS.")
-    ap.add_argument("--target", default=CFG.target,
+    ap.add_argument("--target", default=None,
                     help='Target: "sales" o "cumN" (ver config.CUM_EVAL_HORIZONS, p.ej. "cum28"). '
-                         f"Default: {CFG.target!r}.")
+                         'Default: todos -- "sales" + cada cumN en config.CUM_EVAL_HORIZONS.')
     args = ap.parse_args()
 
     level_ids = [int(x) for x in args.levels.split(",")] if args.levels else list(config.ACTIVE_LEVEL_IDS)
+    targets = [args.target] if args.target else ["sales", *(f"cum{n}" for n in config.CUM_EVAL_HORIZONS)]
 
-    for level_id in level_ids:
-        level = config.LEVELS_BY_ID[level_id]
-        cfg = replace(CFG, level_id=level_id, target=args.target)
+    for target in targets:
+        for level_id in level_ids:
+            level = config.LEVELS_BY_ID[level_id]
+            cfg = replace(CFG, level_id=level_id, target=target)
 
-        if not level.split_by:
-            try:
-                run_pipeline(cfg)
-            except Exception:
-                logger.exception("Nivel {} falló, sigue con el resto.", level_id)
-            gc.collect()
-            continue
+            if not level.split_by:
+                try:
+                    run_pipeline(cfg)
+                except Exception:
+                    logger.exception("Nivel {} target {} falló, sigue con el resto.", level_id, target)
+                gc.collect()
+                continue
 
-        # split_by (10-12): un modelo por combinación (p.ej. dept_id x store_id en L12),
-        # un parquet por combinación ya generado por build-datasets.
-        combos = config.featured_level_combos(level, level.grains[0])
-        if not combos:
-            logger.warning("Nivel {} ({}): no hay parquets de combinación en data/datasets/{}/ "
-                            "-- correr build-datasets primero. Se saltea.",
-                            level_id, level.name, level.grains[0])
-            continue
-        logger.info("Nivel {} ({}): {} combinaciones", level_id, level.name, len(combos))
-        for path in combos:
-            try:
-                run_pipeline(cfg, dataset_path=path)
-            except Exception:
-                logger.exception("Nivel {} combo {} falló, sigue con el resto.", level_id, path.stem)
-            gc.collect()
+            # split_by (10-12): un modelo por combinación (p.ej. dept_id x store_id en L12),
+            # un parquet por combinación ya generado por build-datasets.
+            combos = config.featured_level_combos(level, level.grains[0])
+            if not combos:
+                logger.warning("Nivel {} ({}): no hay parquets de combinación en data/datasets/{}/ "
+                                "-- correr build-datasets primero. Se saltea.",
+                                level_id, level.name, level.grains[0])
+                continue
+            logger.info("Nivel {} ({}): {} combinaciones", level_id, level.name, len(combos))
+            for path in combos:
+                try:
+                    run_pipeline(cfg, dataset_path=path)
+                except Exception:
+                    logger.exception("Nivel {} combo {} target {} falló, sigue con el resto.", level_id, path.stem, target)
+                gc.collect()
 
 
 if __name__ == "__main__":
