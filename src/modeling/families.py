@@ -7,6 +7,7 @@ hardcodear LightGBM en cada fase.
 Ridge es la única familia no tree-based (`is_tree_based=False`): participa del bench
 de Optuna pero nunca puede ser el modelo ganador (no es compatible con
 `shap.TreeExplainer`, ver `pick_winner` en train_dataset.py)."""
+import functools
 from dataclasses import dataclass
 from typing import Callable
 
@@ -15,6 +16,14 @@ from loguru import logger
 from sklearn.base import BaseEstimator, RegressorMixin
 
 from src.modeling.gradient_boosting import catboost_features, histgb_features
+
+
+def _identity(X):
+    return X
+
+
+def _select_columns(X, columns):
+    return X[columns]
 
 
 class FittedModel(RegressorMixin, BaseEstimator):
@@ -81,7 +90,7 @@ def _fit_lightgbm(X_train, y_train, X_valid, y_valid, categorical_features, nume
         if early_stopping_rounds else []
     model.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], eval_metric=eval_metric,
               categorical_feature=categorical_features, callbacks=callbacks)
-    return FittedModel(model, lambda X: X, getattr(model, "best_iteration_", None))
+    return FittedModel(model, _identity, getattr(model, "best_iteration_", None))
 
 
 def _lgbm_gain_importance(fitted: FittedModel, features: list[str]) -> pd.Series:
@@ -125,7 +134,7 @@ def _fit_xgboost(X_train, y_train, X_valid, y_valid, categorical_features, numer
         model_params["early_stopping_rounds"] = early_stopping_rounds
     model = XGBRegressor(**model_params)
     model.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], verbose=False)
-    return FittedModel(model, lambda X: X, getattr(model, "best_iteration", None))
+    return FittedModel(model, _identity, getattr(model, "best_iteration", None))
 
 
 def _xgb_gain_importance(fitted: FittedModel, features: list[str]) -> pd.Series:
@@ -154,7 +163,7 @@ def _fit_catboost(X_train, y_train, X_valid, y_valid, categorical_features, nume
                    params, early_stopping_rounds, random_state) -> FittedModel:
     from catboost import CatBoostRegressor
 
-    prepare = lambda X: catboost_features(X, categorical_features)
+    prepare = functools.partial(catboost_features, categorical_features=categorical_features)
     model_params = {
         **params, "random_state": random_state, "cat_features": categorical_features,
         "verbose": False, "allow_writing_files": False,
@@ -206,7 +215,7 @@ def _fit_histgb(X_train, y_train, X_valid, y_valid, categorical_features, numeri
         col for col in X_train.columns
         if isinstance(X_train[col].dtype, pd.CategoricalDtype) and len(X_train[col].cat.categories) > max_bins
     ]
-    prepare = lambda X: histgb_features(X, high_card)
+    prepare = functools.partial(histgb_features, high_cardinality_features=high_card)
 
     model_params = {**params, "categorical_features": cat_feats, "max_bins": max_bins, "random_state": random_state}
     if early_stopping_rounds:
@@ -243,7 +252,7 @@ def _fit_ridge(X_train, y_train, X_valid, y_valid, categorical_features, numeric
     from sklearn.linear_model import Ridge
     from sklearn.pipeline import make_pipeline
 
-    prepare = lambda X: X[numerical_features]
+    prepare = functools.partial(_select_columns, columns=numerical_features)
     model = make_pipeline(SimpleImputer(strategy="median"), Ridge(random_state=random_state, **params))
     model.fit(prepare(X_train), y_train)
     return FittedModel(model, prepare, None)
