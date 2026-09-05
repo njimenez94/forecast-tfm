@@ -5,8 +5,7 @@ SELECT
     s.cat_id,
     s.store_id,
     s.state_id,
-    c.wm_yr_wk,
-    MIN(c.date)                                         AS week_start_date,
+    date_trunc('week', c.date)                          AS week_start_date,
     MAX(c.date)                                         AS week_end_date,
     COUNT(DISTINCT c.event_name_1)
         FILTER (WHERE c.event_name_1 IS NOT NULL)       AS n_events_1,
@@ -35,7 +34,7 @@ GROUP BY
     s.cat_id,
     s.store_id,
     s.state_id,
-    c.wm_yr_wk
+    date_trunc('week', c.date)
 ORDER BY
     s.id,
-    c.wm_yr_wk;
+    week_start_date;

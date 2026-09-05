@@ -1,6 +1,7 @@
 """Configuración de features para mlforecast."""
 import operator
 
+import pandas as pd
 from mlforecast.lag_transforms import (
     Combine, ExpandingMean, RollingMax, RollingMean, RollingMin, RollingStd, SeasonalRollingMean,
     core_tfms,
@@ -95,6 +96,39 @@ def valid_year_days(grain: str) -> int:
 def test_days(grain: str) -> int:
     return to_days(grain, TEST_PERIODS[grain])
 
+
+# Fechas fijas del split temporal estándar, a mano por grain (dataset M5, no cambia
+# entre corridas -- src.data.split.split_data las usa directo en vez de derivarlas de
+# df[date].max() en runtime). Las 5 son fechas REALES de alguna fila (ver calendario):
+# *_START el primer día de ese split, *_END el último.
+#
+# weekly usa semana ISO lunes-domingo (no la semana retail wm_yr_wk de M5, sábado-
+# viernes -- ver src.data.base_query.build_base_query), y cada fila queda fechada con
+# su lunes. El último día real de venta, 2016-05-22, es justo un domingo: cierra la
+# semana lunes 2016-05-16 a domingo 2016-05-22 con sus 7 días completos, así que
+# TEST_END["weekly"] ancla a ese lunes sin necesidad de descartar ninguna semana
+# parcial al final.
+TRAIN_END = {
+    "daily":  pd.Timestamp("2015-04-26"),
+    "weekly": pd.Timestamp("2015-04-20"),
+}
+VALID_START = {
+    "daily":  pd.Timestamp("2015-04-27"),
+    "weekly": pd.Timestamp("2015-04-27"),
+}
+VALID_END = {
+    "daily":  pd.Timestamp("2016-04-24"),
+    "weekly": pd.Timestamp("2016-04-18"),
+}
+TEST_START = {
+    "daily":  pd.Timestamp("2016-04-25"),
+    "weekly": pd.Timestamp("2016-04-25"),
+}
+TEST_END = {
+    "daily":  pd.Timestamp("2016-05-22"),
+    "weekly": pd.Timestamp("2016-05-16"),
+}
+
 # Horizontes acumulados a experimentar (días para daily, semanas para weekly)
 # Genera targets cum7, cum14, ... donde cumN predice la suma de los próximos N períodos
 # (incluyendo el período actual, ver build_cum_query).
@@ -158,8 +192,10 @@ MLFORECAST_LAG_TRANSFORMS = {
 # Features de calendario derivadas de ds por mlforecast
 MLFORECAST_DATE_FEATURES = ["dayofweek", "month", "week"]
 
-# Frecuencia pandas por granularidad
-MLFORECAST_FREQ = {"daily": "D", "weekly": "W-SAT"}
+# Frecuencia pandas por granularidad -- weekly usa semana ISO lunes-domingo (el "date"
+# de cada fila es el lunes, ver src.data.base_query.build_base_query), no la semana
+# retail wm_yr_wk de M5 (sábado-viernes).
+MLFORECAST_FREQ = {"daily": "D", "weekly": "W-MON"}
 
 # Columnas categóricas estáticas excluidas de static_features (son el índice de serie)
 EXCLUDE_AS_STATIC = {"series_id"}

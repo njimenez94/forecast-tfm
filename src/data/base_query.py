@@ -55,7 +55,10 @@ def build_base_query(dims, grain: str, filters=None) -> str:
         snap_sel = "0 AS snap"
 
     date_sel = "MIN(c.date) AS date" if weekly else "c.date"
-    time_group = "c.wm_yr_wk" if weekly else "c.date"
+    # Semana ISO lunes-domingo (DuckDB date_trunc('week', ...) trunca al lunes), no la
+    # semana retail wm_yr_wk de M5 (sábado-viernes) -- MIN(c.date) por grupo da ese
+    # lunes como "date" de la fila (ver config.MLFORECAST_FREQ, anclado igual a lunes).
+    time_group = "date_trunc('week', c.date)" if weekly else "c.date"
 
     select = [
         series_id,

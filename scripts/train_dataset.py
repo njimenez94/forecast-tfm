@@ -21,10 +21,13 @@ finales del TFM). Sin --profile se usa la constante `PROFILE` (justo abajo de
 tener que acordarse del flag.
 
 Editar `CFG`/`PROFILE` y correr:
-    make train-dataset ARGS="--levels 1,9,12"                              # perfil PROFILE (default), todos los targets
-    make train-dataset ARGS="--levels 12 --target cum28 --profile fast"    # un target, perfil fast
+    make train-dataset ARGS="--levels 1,9,12"                              # perfil PROFILE (default), targets de config.TRAIN_TARGETS_BY_LEVEL
+    make train-dataset ARGS="--levels 12 --target cum28 --profile fast"    # un target puntual, perfil fast
     # o
     uv run python -m scripts.train_dataset --levels 1,9,12 --target cum28 --profile optimized
+
+Qué targets se entrenan por nivel (sin --target) se controla en
+`config.TRAIN_TARGETS_BY_LEVEL` (config/model.py) -- dict nivel -> {grain: [targets]}.
 
 Niveles con `split_by` (10-12: un dataset por combinación dept/store, ver
 config/levels.py) entrenan un modelo por combinación, iterando sobre los
@@ -685,8 +688,9 @@ def main():
     ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
                     "Default: config.ACTIVE_LEVEL_IDS.")
     ap.add_argument("--target", default=None,
-                    help='Target: "sales" o "cumN" (ver config.CUM_EVAL_HORIZONS, p.ej. "cum28"). '
-                         'Default: todos -- "sales" + cada cumN en config.CUM_EVAL_HORIZONS.')
+                    help='Target: "sales" o "cumN" (p.ej. "cum28"). '
+                         'Default: los targets configurados para cada nivel en '
+                         'config.TRAIN_TARGETS_BY_LEVEL (config/model.py).')
     ap.add_argument("--profile", default=PROFILE,
                     choices=sorted(config.TRAINING_PROFILES),
                     help="Perfil de entrenamiento (ver config/training.py): fast (smoke-test, "
@@ -697,14 +701,28 @@ def main():
     args = ap.parse_args()
 
     level_ids = [int(x) for x in args.levels.split(",")] if args.levels else list(config.ACTIVE_LEVEL_IDS)
-    targets = [args.target] if args.target else ["sales", *(f"cum{n}" for n in config.CUM_EVAL_HORIZONS)]
     profile = config.TRAINING_PROFILES[args.profile]
     profile_overrides = {k: v for k, v in asdict(profile).items() if k != "name"}
     logger.info("Perfil de entrenamiento: {}", profile.name)
 
-    for target in targets:
-        for level_id in level_ids:
-            level = config.LEVELS_BY_ID[level_id]
+    for level_id in level_ids:
+        level = config.LEVELS_BY_ID[level_id]
+
+        if args.target:
+            targets = [args.target]
+        else:
+            # Default: los targets configurados para este nivel/grain en
+            # config.TRAIN_TARGETS_BY_LEVEL (config/model.py), no un producto uniforme
+            # nivel x CUM_EVAL_HORIZONS -- así cada nivel entrena solo lo que tiene
+            # configurado (y con los cumN correctos para su propia granularidad).
+            per_grain = config.TRAIN_TARGETS_BY_LEVEL.get(level_id, {})
+            targets = [t for grain in level.grains for t in per_grain.get(grain, [])]
+            if not targets:
+                logger.warning("Nivel {} ({}): sin targets en config.TRAIN_TARGETS_BY_LEVEL "
+                                "para grain(s) {} -- se saltea.", level_id, level.name, level.grains)
+                continue
+
+        for target in targets:
             cfg = replace(CFG, level_id=level_id, target=target, **profile_overrides)
 
             if not level.split_by:
