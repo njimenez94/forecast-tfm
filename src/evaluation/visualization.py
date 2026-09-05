@@ -13,10 +13,12 @@ def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
         until = date + pd.Timedelta(days=n)
         df_plot = df_plot[(df_plot["date"] >= since) & (df_plot["date"] <= until)]
 
+    pred_col = {"sales": "y_pred", "gross_sales": "gross_sales_pred"}.get(target_col)
+
     fig, ax = plt.subplots(figsize=(8, 4))
-    if target_col   ==  'sales':
+    if pred_col is not None:
         sns.lineplot(df_plot, x="date", y=target_col, label="Real", marker="o", ax=ax)
-        sns.lineplot(df_plot, x="date", y="y_pred", label="Predicción", marker="o", ax=ax)
+        sns.lineplot(df_plot, x="date", y=pred_col, label="Predicción", marker="o", ax=ax)
     else:
         sns.lineplot(df_plot, x="date", y=target_col, label=target_col, marker="o", ax=ax)
     if date:

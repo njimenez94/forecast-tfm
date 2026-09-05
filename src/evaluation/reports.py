@@ -60,7 +60,7 @@ def evaluate_predictions(train_df, valid_df, y_valid, y_pred_valid, name, fit_ti
 
 
 def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sales",
-                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales",), m=1):
+                              id_cols=(_SERIES_COL, "date"), extra_cols=("gross_sales", "gross_sales_pred"), m=1):
     """Clipa cierres, calcula WAPE/WRMSSE globales y arma el detalle de error por fila.
 
     Pensada para reusarse en cualquier etapa (modelo simple, post-Optuna, modelo
@@ -87,6 +87,8 @@ def build_predictions_report(train_df, eval_df, y_true, y_pred, target_col="sale
     df_pred["abs_error"] = df_pred["error"].abs()
     df_pred["wape"] = df_pred["abs_error"] / df_pred[target_col].abs()
     df_pred["bias"] = -df_pred["error"] / df_pred[target_col].abs()
+    
+    df_pred['gross_sales_pred'] = df_pred['y_pred'] * df_pred['avg_sell_price']
 
     cols = list(id_cols) + [target_col] + list(extra_cols) + ["y_pred", "error", "abs_error", "wape", "bias"]
     df_pred = df_pred[cols].sort_values(['series_id','date'])
