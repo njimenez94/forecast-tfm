@@ -1,7 +1,5 @@
 """Hiperparámetros de LightGBM y qué targets entrenar por nivel."""
 
-from config.features import CUM_EVAL_HORIZONS
-
 SEED = 42
 
 # Qué targets (objetivos) entrena `make train-dataset` por nivel y granularidad --
@@ -14,12 +12,17 @@ SEED = 42
 # Hoy todos los niveles (ver config/levels.py) son "daily", pero la forma queda
 # lista para cuando eso cambie.
 #
+# Por decisión explícita para esta entrega del TFM: solo "sales" por ahora, los
+# targets acumulados (cumN) quedan fuera de esta pasada para no complicar el
+# alcance -- línea futura pendiente, no una limitación técnica del pipeline
+# (que ya soporta cumN, ver config.CUM_EVAL_HORIZONS). Para reactivarlos en un
+# nivel puntual: {"daily": ["sales", *(f"cum{n}" for n in config.features.CUM_EVAL_HORIZONS)]}
+# "sales" corre en ambos grains (daily y weekly, ver config.levels.LEVELS) por igual.
+#
 # --levels/--target en la CLI de train_dataset.py siguen pisando esto para
 # corridas puntuales (p.ej. `make train-dataset ARGS="--levels 12 --target cum28"`).
-# Editar acá para activar/desactivar targets puntuales por nivel -- p.ej. sacar los
-# cumN más caros en los niveles item-level (10-12) sin tocar el resto.
 TRAIN_TARGETS_BY_LEVEL: dict[int, dict[str, list[str]]] = {
-    level_id: {"daily": ["sales", *(f"cum{n}" for n in CUM_EVAL_HORIZONS)]}
+    level_id: {"daily": ["sales"], "weekly": ["sales"]}
     for level_id in range(1, 13)
 }
 

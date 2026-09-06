@@ -67,6 +67,29 @@ MODERATE = TrainingProfile(
     final_n_estimators=5_000,
 )
 
+# eficiente: mismo flujo completo que "optimized" (baselines estadísticos, feature
+# selection, SHAP, ronda larga de Optuna -- todas las fases ON, así el informe tiene
+# tabla de features/hiperparámetros/SHAP para cada nivel/grain), pero con presupuesto
+# de Optuna y de CV recortado a propósito ("deuda de tiempo de optimización" asumida
+# conscientemente) para poder correr los 12 niveles x 2 grains (daily/weekly) en una
+# sola pasada sin que cada combinación tome lo mismo que "optimized". Los números
+# resultantes son reales (no un smoke-test) pero mejorables con más tiempo de ajuste
+# -- dejar esa salvedad explícita en el informe.
+EFFICIENT = TrainingProfile(
+    name="efficient",
+    run_baseline_stats=True,
+    run_feature_selection=True,
+    run_shap=True,
+    run_optuna=True,
+    optuna_bench_n_trials=30,
+    optuna_bench_timeout_s=60,
+    optuna_n_trials=100,
+    optuna_timeout_s=120,
+    optuna_n_estimators=800,
+    cv_folds=1,
+    final_n_estimators=1_500,
+)
+
 # optimizado: pipeline completo (todas las fases, presupuesto de Optuna
 # original) -- la corrida "de calidad" para las métricas finales del TFM.
 OPTIMIZED = TrainingProfile(
@@ -84,4 +107,4 @@ OPTIMIZED = TrainingProfile(
     final_n_estimators=5_000,
 )
 
-TRAINING_PROFILES = {p.name: p for p in (FAST, MODERATE, OPTIMIZED)}
+TRAINING_PROFILES = {p.name: p for p in (FAST, MODERATE, EFFICIENT, OPTIMIZED)}

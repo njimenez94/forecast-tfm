@@ -20,28 +20,32 @@ class Level:
     filters: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
 
+_BOTH_GRAINS = ("daily", "weekly")
+
 LEVELS = [
-    Level(1,  "total",      (),                                                             ("daily",)),
-    Level(2,  "state",      ("state_id",),                                                  ("daily",)),
-    Level(3,  "cat",        ("cat_id",),                                                    ("daily",)),
-    Level(4,  "dept",       ("dept_id", "cat_id"),                                          ("daily",)),
-    Level(5,  "state_cat",  ("cat_id", "state_id"),                                         ("daily",)),
-    Level(6,  "store",      ("store_id", "state_id"),                                       ("daily",)),
-    Level(7,  "state_dept", ("dept_id", "cat_id", "state_id"),                              ("daily",)),
-    Level(8,  "store_cat",  ("cat_id", "store_id", "state_id"),                             ("daily",)),
-    Level(9,  "store_dept", ("dept_id", "cat_id", "store_id", "state_id"),                  ("daily",)),
-    Level(10, "item",       ("dept_id", "cat_id", "item_id"),                               ("daily",), ("dept_id",),
+    Level(1,  "total",      (),                                                             _BOTH_GRAINS),
+    Level(2,  "state",      ("state_id",),                                                  _BOTH_GRAINS),
+    Level(3,  "cat",        ("cat_id",),                                                    _BOTH_GRAINS),
+    Level(4,  "dept",       ("dept_id", "cat_id"),                                          _BOTH_GRAINS),
+    Level(5,  "state_cat",  ("cat_id", "state_id"),                                         _BOTH_GRAINS),
+    Level(6,  "store",      ("store_id", "state_id"),                                       _BOTH_GRAINS),
+    Level(7,  "state_dept", ("dept_id", "cat_id", "state_id"),                              _BOTH_GRAINS),
+    Level(8,  "store_cat",  ("cat_id", "store_id", "state_id"),                             _BOTH_GRAINS),
+    Level(9,  "store_dept", ("dept_id", "cat_id", "store_id", "state_id"),                  _BOTH_GRAINS),
+    Level(10, "item",       ("dept_id", "cat_id", "item_id"),                               _BOTH_GRAINS, ("dept_id",),
           filters={"dept_id": ("FOODS_3",)}),
-    Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),                   ("daily",), ("state_id", "dept_id"),
+    Level(11, "item_state", ("dept_id", "cat_id", "item_id", "state_id"),                   _BOTH_GRAINS, ("state_id", "dept_id"),
           filters={"dept_id": ("FOODS_3",), "state_id": ("CA",)}),
-    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"),       ("daily",), ("store_id", "dept_id"),
+    Level(12, "item_store", ("dept_id", "cat_id", "item_id", "store_id", "state_id"),       _BOTH_GRAINS, ("store_id", "dept_id"),
           filters={"dept_id": ("FOODS_3",), "store_id": ("CA_3",)}),
 ]
 
 LEVELS_BY_ID = {lv.id: lv for lv in LEVELS}
 
 # Niveles activos por defecto (sin --levels) en process_data/build_datasets/train_dataset.
-# En experimentación: fuera los niveles densos (10-12, item-level). Para activarlos todos:
-# ACTIVE_LEVEL_IDS = tuple(LEVELS_BY_ID)
-ACTIVE_LEVEL_IDS: tuple[int, ...] = tuple(LEVELS_BY_ID) #(1, 4, 6, 9, 10, 12) # tuple(LEVELS_BY_ID)
+# Decisión (2026-09-04): correr los 12 niveles, en daily y weekly, target "sales"
+# únicamente, priorizando cobertura completa del flujo por sobre el presupuesto de
+# Optuna -- ver config.training.EFFICIENT. Los filtros de L10-12 (FOODS_3/CA/CA_3)
+# siguen acotando el volumen item-level; sin ellos sí sería inviable en este perfil.
+ACTIVE_LEVEL_IDS: tuple[int, ...] = tuple(LEVELS_BY_ID)
 ACTIVE_LEVELS = [lv for lv in LEVELS if lv.id in ACTIVE_LEVEL_IDS]
