@@ -82,8 +82,24 @@ def predict(level_id: int, body: PredictRequest, target: str = "sales") -> Predi
         })
 
     X = pd.DataFrame([body.features])[artifact["features"]]
+    trained_categories = artifact.get("categorical_categories", {})
     for col in artifact["categorical_features"]:
-        X[col] = X[col].astype("category")
+        # astype("category") sobre 1 fila con valor nulo (p.ej. event_name_2, casi
+        # siempre nulo) deja categories=[]: XGBoost lo rechaza ("must have at least one
+        # category"). Un placeholder inventado tampoco sirve -- XGBoost valida cada
+        # categoría declarada contra las vistas en training, la use o no la fila. Por
+        # eso hace falta el dominio real (guardado en el artifact desde que existe
+        # categorical_categories, ver scripts/train_dataset.py::export_artifact); el
+        # valor de la fila sigue siendo NaN (missing) pase lo que pase.
+        value = X[col].iloc[0]
+        if col in trained_categories:
+            categories = trained_categories[col]
+        else:
+            # Artifact viejo, sin categorical_categories: mismo comportamiento que antes
+            # (astype("category") desde una sola fila) -- puede fallar en XGBoost si esta
+            # fila trae un valor faltante en `col`, ver comentario arriba.
+            categories = [value] if pd.notna(value) else []
+        X[col] = pd.Categorical(X[col], categories=categories)
     numerical_cols = [c for c in artifact["features"] if c not in artifact["categorical_features"]]
     try:
         X[numerical_cols] = X[numerical_cols].apply(pd.to_numeric)

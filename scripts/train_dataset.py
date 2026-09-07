@@ -595,6 +595,16 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
         "model_params": state.model_params,
         "features": state.features,
         "categorical_features": state.categorical_features,
+        # Dominio de categorías vistas en training por columna -- api/main.py lo necesita
+        # para reconstruir el dtype category de un payload de 1 fila: sin esto, una
+        # columna con valor faltante en esa fila (p.ej. event_name_2, casi siempre nula)
+        # queda con categories=[] y XGBoost rechaza la predicción ("must have at least
+        # one category"); cualquier placeholder no visto en training también falla
+        # ("category not in the training set"). El valor de la fila sigue siendo NaN
+        # (missing) -- solo hace falta que la lista de categorías declarada sea real.
+        "categorical_categories": {
+            col: state.X_train[col].cat.categories.tolist() for col in state.categorical_features
+        },
         "numerical_features": state.numerical_features,
         "id_cols": state.id_cols,
         "leaky_cols": state.leaky_cols,
