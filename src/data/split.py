@@ -329,14 +329,19 @@ def prepare_level(file: Path, level, grain: str, horizon: int,
     )
 
 
-def load_data(level_id: int, target: str, dataset_path: Path | None = None) -> SimpleNamespace:
+def load_data(level_id: int, target: str, dataset_path: Path | None = None,
+               grain: str | None = None) -> SimpleNamespace:
     """Carga el dataset final (artifacts/datasets/) de un nivel/target y arma las
     listas de features (categóricas primero) que usan build_feature_matrices/
     scripts.train_dataset. `dataset_path`: override para niveles con split_by
     (10-12), donde no hay un único parquet por nivel -- ver
-    scripts/train_dataset.py main()/config.featured_level_combos()."""
+    scripts/train_dataset.py main()/config.featured_level_combos(). `grain`: cuál
+    de `level.grains` cargar (default: el primero) -- lo decide el caller
+    (Config.grain en train_dataset.py); antes se asumía siempre level.grains[0]
+    acá, lo que hacía que un `target` "weekly" terminara entrenando igual sobre
+    el dataset daily."""
     level = config.LEVELS_BY_ID[level_id]
-    grain = level.grains[0]
+    grain = grain or level.grains[0]
     path = dataset_path or config.featured_level_path(level, grain)
     level_str = path.stem.removeprefix("dataset_")
 
@@ -389,7 +394,21 @@ def split_data(state: SimpleNamespace, target: str, test_start: pd.Timestamp | N
     # semana parcial se colaría en test.
     state.df = state.df[state.df["date"] <= config.TEST_END[state.grain]]
     if test_start is None:
+        # Para cumN, config.TEST_START fijo cae DENTRO de la cola que tail_reserve
+        # descarta (las últimas `tail_reserve` filas de cada serie, con target NULL
+        # por ventana forward incompleta -- ver build_cum_query): sin correr
+        # test_start hacia atrás la misma cantidad, `date_split` recibiría un
+        # test_start posterior al último date que sobrevive al truncado y el test
+        # quedaría vacío. Correrlo el mismo tail_reserve dejas el test en la última
+        # ventana de test_days que SÍ tiene cumN completo -- igual para cum7...cum56
+        # (todos reservan el máximo, no el N propio, ver arriba), comparables entre sí
+        # aunque no contra la ventana de "sales" (imposible: no hay verdad futura para
+        # calcular cumN ahí). No aplica si el caller ya pasó un test_start explícito
+        # (reconstruct_test_data() reproduce un split ya resuelto -- guardado tal cual
+        # en el artifact, no hay que volver a correrlo).
         test_start = config.TEST_START[state.grain]
+        if tail_reserve:
+            test_start -= pd.Timedelta(days=tail_reserve)
     split = date_split(
         state.df,
         valid_days=config.valid_year_days(state.grain),
@@ -441,11 +460,15 @@ def reconstruct_test_data(artifact: dict) -> tuple[pd.DataFrame, pd.Series, pd.D
     `artifact["level"]` ya trae el sufijo de combinación para niveles split_by
     (10-12, p.ej. "level_12_daily_item_store__CA_1_FOODS_1" -- ver load_data()), así
     que alcanza para reconstruir el path exacto sin guardar split_values aparte."""
-    level = config.LEVELS_BY_ID[artifact["level_id"]]
-    grain = level.grains[0]
+    # Grain real del artifact, no level.grains[0]: un artifact weekly (level_str
+    # p.ej. "level_01_weekly_total") reconstruido con "daily" a secas buscaría el
+    # parquet en la carpeta equivocada (data/datasets/daily/) y cargaría, si por
+    # coincidencia existiera un archivo con ese nombre ahí, el dataset equivocado.
+    m_grain = re.search(r"level_\d+_(daily|weekly)", artifact["level"])
+    grain = m_grain.group(1) if m_grain else config.LEVELS_BY_ID[artifact["level_id"]].grains[0]
     dataset_path = config.DATASETS / grain / f"dataset_{artifact['level']}.parquet"
 
-    state = load_data(artifact["level_id"], artifact["target"], dataset_path)
+    state = load_data(artifact["level_id"], artifact["target"], dataset_path, grain=grain)
     state.features = artifact["features"]
     state.categorical_features = artifact["categorical_features"]
     state.numerical_features = artifact["numerical_features"]

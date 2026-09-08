@@ -86,6 +86,7 @@ from src.modeling import (
 class Config:
     # --- selección de dataset ---
     level_id: int = 1
+    grain: str = "daily"  # "daily" o "weekly" -- debe estar en level.grains (config/levels.py)
     target: str = "sales"  # "sales" o "cumN" (ver config.CUM_HORIZONS)
 
     # --- fases on/off ---
@@ -641,7 +642,7 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
 def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
     t_start = time.perf_counter()
 
-    state = load_data(cfg.level_id, cfg.target, dataset_path)
+    state = load_data(cfg.level_id, cfg.target, dataset_path, grain=cfg.grain)
     split_data(state, cfg.target)
     evaluate_model = make_evaluator(state, cfg)
 
@@ -697,9 +698,13 @@ def main():
     ap = argparse.ArgumentParser(description="Entrena modelos ML (bench Optuna + ganador) por nivel de agregación M5.")
     ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
                     "Default: config.ACTIVE_LEVEL_IDS.")
+    ap.add_argument("--grain", default=None, choices=["daily", "weekly"],
+                    help="Granularidad a entrenar. Default: todas las de level.grains "
+                         "(hoy daily y weekly en todos los niveles, ver config/levels.py) -- "
+                         "una corrida por grain, cada una con su propio dataset.")
     ap.add_argument("--target", default=None,
                     help='Target: "sales" o "cumN" (p.ej. "cum28"). '
-                         'Default: los targets configurados para cada nivel en '
+                         'Default: los targets configurados para cada nivel/grain en '
                          'config.TRAIN_TARGETS_BY_LEVEL (config/model.py).')
     ap.add_argument("--profile", default=PROFILE,
                     choices=sorted(config.TRAINING_PROFILES),
@@ -717,47 +722,57 @@ def main():
 
     for level_id in level_ids:
         level = config.LEVELS_BY_ID[level_id]
+        grains = [args.grain] if args.grain else list(level.grains)
 
-        if args.target:
-            targets = [args.target]
-        else:
-            # Default: los targets configurados para este nivel/grain en
-            # config.TRAIN_TARGETS_BY_LEVEL (config/model.py), no un producto uniforme
-            # nivel x CUM_EVAL_HORIZONS -- así cada nivel entrena solo lo que tiene
-            # configurado (y con los cumN correctos para su propia granularidad).
-            per_grain = config.TRAIN_TARGETS_BY_LEVEL.get(level_id, {})
-            targets = [t for grain in level.grains for t in per_grain.get(grain, [])]
-            if not targets:
-                logger.warning("Nivel {} ({}): sin targets en config.TRAIN_TARGETS_BY_LEVEL "
-                                "para grain(s) {} -- se saltea.", level_id, level.name, level.grains)
+        for grain in grains:
+            if grain not in level.grains:
+                logger.warning("Nivel {} ({}): no soporta grain {!r} (grains={}) -- se saltea.",
+                                level_id, level.name, grain, level.grains)
                 continue
 
-        for target in targets:
-            cfg = replace(CFG, level_id=level_id, target=target, **profile_overrides)
+            if args.target:
+                targets = [args.target]
+            else:
+                # Default: los targets configurados para este nivel/grain en
+                # config.TRAIN_TARGETS_BY_LEVEL (config/model.py), no un producto uniforme
+                # nivel x CUM_EVAL_HORIZONS -- así cada nivel entrena solo lo que tiene
+                # configurado (y con los cumN correctos para su propia granularidad).
+                per_grain = config.TRAIN_TARGETS_BY_LEVEL.get(level_id, {})
+                targets = per_grain.get(grain, [])
+                if not targets:
+                    logger.warning("Nivel {} ({}) grain {}: sin targets en "
+                                    "config.TRAIN_TARGETS_BY_LEVEL -- se saltea.",
+                                    level_id, level.name, grain)
+                    continue
 
-            if not level.split_by:
-                try:
-                    run_pipeline(cfg)
-                except Exception:
-                    logger.exception("Nivel {} target {} falló, sigue con el resto.", level_id, target)
-                gc.collect()
-                continue
+            for target in targets:
+                cfg = replace(CFG, level_id=level_id, grain=grain, target=target, **profile_overrides)
 
-            # split_by (10-12): un modelo por combinación (p.ej. dept_id x store_id en L12),
-            # un parquet por combinación ya generado por build-datasets.
-            combos = config.featured_level_combos(level, level.grains[0])
-            if not combos:
-                logger.warning("Nivel {} ({}): no hay parquets de combinación en data/datasets/{}/ "
-                                "-- correr build-datasets primero. Se saltea.",
-                                level_id, level.name, level.grains[0])
-                continue
-            logger.info("Nivel {} ({}): {} combinaciones", level_id, level.name, len(combos))
-            for path in combos:
-                try:
-                    run_pipeline(cfg, dataset_path=path)
-                except Exception:
-                    logger.exception("Nivel {} combo {} target {} falló, sigue con el resto.", level_id, path.stem, target)
-                gc.collect()
+                if not level.split_by:
+                    try:
+                        run_pipeline(cfg)
+                    except Exception:
+                        logger.exception("Nivel {} grain {} target {} falló, sigue con el resto.",
+                                          level_id, grain, target)
+                    gc.collect()
+                    continue
+
+                # split_by (10-12): un modelo por combinación (p.ej. dept_id x store_id en L12),
+                # un parquet por combinación ya generado por build-datasets.
+                combos = config.featured_level_combos(level, grain)
+                if not combos:
+                    logger.warning("Nivel {} ({}) grain {}: no hay parquets de combinación en "
+                                    "data/datasets/{}/ -- correr build-datasets primero. Se saltea.",
+                                    level_id, level.name, grain, grain)
+                    continue
+                logger.info("Nivel {} ({}) grain {}: {} combinaciones", level_id, level.name, grain, len(combos))
+                for path in combos:
+                    try:
+                        run_pipeline(cfg, dataset_path=path)
+                    except Exception:
+                        logger.exception("Nivel {} combo {} grain {} target {} falló, sigue con el resto.",
+                                          level_id, path.stem, grain, target)
+                    gc.collect()
 
 
 if __name__ == "__main__":
