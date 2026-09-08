@@ -388,15 +388,15 @@ def split_data(state: SimpleNamespace, target: str, test_start: pd.Timestamp | N
         config.to_days(state.grain, max(config.CUM_EVAL_HORIZONS))
         if config.cum_n(target) is not None else 0
     )
-    # Trunca a config.TEST_END en vez de dejar que date_split derive last_date de
-    # df["date"].max(): en weekly, la fila de la última semana calendario puede tener
-    # menos de 7 días de venta real (ver config.TEST_END) -- sin este corte, esa
-    # semana parcial se colaría en test.
-    state.df = state.df[state.df["date"] <= config.TEST_END[state.grain]]
+    # Trunca a config.SPLIT_DATES["test"]["end"] en vez de dejar que date_split derive
+    # last_date de df["date"].max(): en weekly, la fila de la última semana calendario
+    # puede tener menos de 7 días de venta real (ver config.SPLIT_DATES) -- sin este
+    # corte, esa semana parcial se colaría en test.
+    state.df = state.df[state.df["date"] <= config.SPLIT_DATES["test"][state.grain]["end"]]
     if test_start is None:
-        # Para cumN, config.TEST_START fijo cae DENTRO de la cola que tail_reserve
-        # descarta (las últimas `tail_reserve` filas de cada serie, con target NULL
-        # por ventana forward incompleta -- ver build_cum_query): sin correr
+        # Para cumN, config.SPLIT_DATES["test"]["start"] fijo cae DENTRO de la cola que
+        # tail_reserve descarta (las últimas `tail_reserve` filas de cada serie, con
+        # target NULL por ventana forward incompleta -- ver build_cum_query): sin correr
         # test_start hacia atrás la misma cantidad, `date_split` recibiría un
         # test_start posterior al último date que sobrevive al truncado y el test
         # quedaría vacío. Correrlo el mismo tail_reserve dejas el test en la última
@@ -406,7 +406,7 @@ def split_data(state: SimpleNamespace, target: str, test_start: pd.Timestamp | N
         # calcular cumN ahí). No aplica si el caller ya pasó un test_start explícito
         # (reconstruct_test_data() reproduce un split ya resuelto -- guardado tal cual
         # en el artifact, no hay que volver a correrlo).
-        test_start = config.TEST_START[state.grain]
+        test_start = config.SPLIT_DATES["test"][state.grain]["start"]
         if tail_reserve:
             test_start -= pd.Timedelta(days=tail_reserve)
     split = date_split(

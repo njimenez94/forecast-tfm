@@ -48,36 +48,16 @@ class _SeasonalMean(SeasonalRollingMean):
         )
         return self
 
-# Horizontes de validación por granularidad (días para daily, semanas para weekly)
 HORIZON = {
     "daily":  [7, 14, 21, 28, 35, 42, 364],
     "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
 }
 
-# Split temporal estandar: mismo valid/test para todos los notebooks/scripts que
-# entrenen contra un nivel/grain dado. Unidad = periodos de la granularidad (días
-# para daily, semanas para weekly); to_days() convierte a días de calendario, que
-# es en lo que trabaja date_split.
 SEASON_LENGTH = {"daily": 7, "weekly": 52}
-
-# Ventanas para los baselines "seasonal naive" / "moving average" (ver
-# scripts/train_dataset.py:run_baseline_naive).
 SN_WINDOWS = {"daily": [1, 7, 28, 364], "weekly": [1, 4, 52]}
 MA_WINDOWS = {"daily": [7, 14, 21, 28, 35], "weekly": [2, 3, 4, 6, 8]}
-# Igual a TEST_PERIODS a propósito: es el horizonte real de despliegue, y también el
-# tamaño de bloque que src.data.split.build_feature_matrices usa para revalidar
-# horizonte en X_valid/X_test (ver block_origins). Con valid_days == valid_days(grain)
-# (el default, un único bloque) esto da feature selection/tuning de Optuna sobre el
-# mismo problema que después se evalúa en test. Un valid_days más largo (p.ej.
-# valid_year_days) sigue revalidando por bloques de este tamaño en vez de un único
-# origen para todo el split, así no enmascara de más la señal reciente.
 VALID_PERIODS = {"daily": 28, "weekly": 4}
 TEST_PERIODS = {"daily": 28, "weekly": 4}
-
-# Cantidad de bloques de VALID_PERIODS que arma un valid "último año completo" (pasar
-# a date_split(valid_days=...) -- build_feature_matrices ya revalida por bloques de
-# VALID_PERIODS sin ningún parámetro extra, ver arriba): 13*28 = 364 días,
-# 13*4 = 52 semanas, ambos ~1 año y múltiplo exacto del bloque.
 VALID_YEAR_BLOCKS = 13
 
 
@@ -96,37 +76,19 @@ def valid_year_days(grain: str) -> int:
 def test_days(grain: str) -> int:
     return to_days(grain, TEST_PERIODS[grain])
 
-
-# Fechas fijas del split temporal estándar, a mano por grain (dataset M5, no cambia
-# entre corridas -- src.data.split.split_data las usa directo en vez de derivarlas de
-# df[date].max() en runtime). Las 5 son fechas REALES de alguna fila (ver calendario):
-# *_START el primer día de ese split, *_END el último.
-#
-# weekly usa semana ISO lunes-domingo (no la semana retail wm_yr_wk de M5, sábado-
-# viernes -- ver src.data.base_query.build_base_query), y cada fila queda fechada con
-# su lunes. El último día real de venta, 2016-05-22, es justo un domingo: cierra la
-# semana lunes 2016-05-16 a domingo 2016-05-22 con sus 7 días completos, así que
-# TEST_END["weekly"] ancla a ese lunes sin necesidad de descartar ninguna semana
-# parcial al final.
-TRAIN_END = {
-    "daily":  pd.Timestamp("2015-04-26"),
-    "weekly": pd.Timestamp("2015-04-20"),
-}
-VALID_START = {
-    "daily":  pd.Timestamp("2015-04-27"),
-    "weekly": pd.Timestamp("2015-04-27"),
-}
-VALID_END = {
-    "daily":  pd.Timestamp("2016-04-24"),
-    "weekly": pd.Timestamp("2016-04-18"),
-}
-TEST_START = {
-    "daily":  pd.Timestamp("2016-04-25"),
-    "weekly": pd.Timestamp("2016-04-25"),
-}
-TEST_END = {
-    "daily":  pd.Timestamp("2016-05-22"),
-    "weekly": pd.Timestamp("2016-05-16"),
+SPLIT_DATES = {
+    "train": {
+        "daily":  {"end": pd.Timestamp("2015-04-26")},
+        "weekly": {"end": pd.Timestamp("2015-04-20")},
+    },
+    "valid": {
+        "daily":  {"start": pd.Timestamp("2015-04-27"), "end": pd.Timestamp("2016-04-24")},
+        "weekly": {"start": pd.Timestamp("2015-04-27"), "end": pd.Timestamp("2016-04-18")},
+    },
+    "test": {
+        "daily":  {"start": pd.Timestamp("2016-04-25"), "end": pd.Timestamp("2016-05-22")},
+        "weekly": {"start": pd.Timestamp("2016-04-25"), "end": pd.Timestamp("2016-05-16")},
+    },
 }
 
 # Horizontes acumulados a experimentar (días para daily, semanas para weekly)
