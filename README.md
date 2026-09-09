@@ -79,6 +79,31 @@ Para agregar un parámetro nuevo al esquema de `Config` (no para bajar la calida
 
 Métricas: WAPE, Bias, WRMSSE (y por serie también MASE/SPEC) — ver [src/evaluation/](src/evaluation/).
 
+## Tests
+
+```bash
+make test       # suite rápida: schema/contrato de datos, features, API (~10s, sin datos de Kaggle)
+make test-all    # suite completa, incluye el harness de reproducibilidad (entrena 5 modelos reales sobre datos sintéticos)
+```
+
+Todo vive en `tests/`, sin fixtures ni mocks — cada test construye su propio DataFrame sintético chico y compara contra un valor esperado calculado a mano o con numpy (no contra el propio código bajo test). Un test por responsabilidad:
+
+| Archivo | Qué cubre |
+|---|---|
+| `test_temporal_split.py` | Anti-leakage del split temporal (bloques, enmascarado de horizonte, rolling CV) |
+| `test_calendar_features.py`, `test_price_features.py`, `test_event_features.py`, `test_encoding_features.py`, `test_intermittency_features.py`, `test_lag_features.py` | Cada función de `src/features/` por separado, con valores esperados calculados a mano |
+| `test_pipeline_contract.py` | `src.features.pipeline.build_dataset()` de punta a punta: `config.EXOG_COLS` sigue completo en la salida, no se pierden/duplican filas, y el resultado es determinista entre corridas (la paridad train/serving real de este proyecto — la API no recalcula features, consume el mismo `build_dataset()`, ver `api/main.py`) |
+| `test_api_contract.py` | `api/main.py::_build_feature_row` (columnas/categorías/tipos del payload de `/predict`) y `api/registry.py` (resolución de versiones) |
+| `test_reproducibility.py` (marcado `slow`) | Las 5 familias de `src/modeling/families.py` dan la misma predicción entrenando dos veces con el mismo `random_state` |
+| `test_model_regression.py` | Lógica de `scripts/check_regression.py` (gate de no-regresión, ver abajo) |
+
+**Antes de mergear un cambio en `src/features/` o `src/modeling/`:** además de `make test`, correr el nivel afectado y comparar contra la versión anterior:
+
+```bash
+make train-dataset ARGS="--levels 1 --profile fast"
+make check-regression ARGS="--level 1"   # falla si wrmsse_test/wape_test empeoraron >5% vs. la versión anterior en registry.json
+```
+
 ## Estructura
 
 ```

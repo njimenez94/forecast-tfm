@@ -1,5 +1,5 @@
 .PHONY: create-database process-data build-datasets train-dataset pipeline test-sets serve-api \
-	docker-build docker-api docker-stop docker-logs testing-api
+	docker-build docker-api docker-stop docker-logs testing-api test test-all check-regression
 
 PY := uv run python
 DOCKER_IMAGE := forecast-tfm-api
@@ -7,6 +7,23 @@ DOCKER_CONTAINER := forecast-tfm-api
 
 make clean:
 	rm -rf data/processed data/datasets artifacts/
+
+# Suite rápida (schema/contrato/features/API, sin datos de Kaggle): la que corre
+# antes de cada merge. "slow" (tests/test_reproducibility.py) entrena 5 modelos
+# reales sobre datos sintéticos -- se excluye acá, ver test-all.
+test:
+	uv run pytest -m "not slow" $(ARGS)
+
+# Suite completa, incluido el harness de reproducibilidad (Fase 5 del plan de
+# testing) -- unos segundos más que `test`, no necesita datos de Kaggle tampoco.
+test-all:
+	uv run pytest $(ARGS)
+
+# Gate de no-regresión contra la versión anterior en artifacts/models/registry.json
+# (necesita haber corrido train-dataset al menos dos veces para ese nivel/target).
+# ARGS="--level 1" (default target=sales, tolerance=0.05, ver scripts/check_regression.py).
+check-regression:
+	$(PY) -m scripts.check_regression $(ARGS)
 
 create-database:
 	$(PY) -m scripts.create_database

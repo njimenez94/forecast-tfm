@@ -28,6 +28,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "nbconvert>=7.17.1",
+    "pytest>=9.1.1",
     "scikit-learn>=1.8.0",
 ]
 # Entrenamiento/EDA/notebooks: pesado (catboost/prophet/statsforecast compilan
@@ -55,6 +56,12 @@ modeling = [
     "statsmodels>=0.14.6",
     "xgboost>=3.4.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# "slow": entrena modelos reales (aunque sobre datos sintéticos chicos) -- se excluye
+# del run rápido por defecto (`uv run pytest -m "not slow"`, ver README/Makefile).
+markers = ["slow: corre modelos de src/modeling reales, más lento que el resto de la suite"]
 
 [tool.uv]
 # `uv sync` a secas sigue instalando todo (dev + modeling), igual que antes de

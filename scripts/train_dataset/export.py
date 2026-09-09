@@ -1,4 +1,5 @@
 import json
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -92,6 +93,13 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
         "train_start": str(state.first_date.date()),
         "valid_start": str(state.valid_start.date()),
         "test_start": str(state.test_start.date()),
+        # Config completa de la corrida (perfil de fases, presupuesto de Optuna,
+        # params de feature selection, random_state, ...) -- antes solo quedaban sus
+        # *efectos* (features, model_params, métricas). Guardarla entera permite
+        # diffear dos versiones de registry.json para explicar un cambio de métrica
+        # sin adivinar qué perfil/flags corrieron cada una (ver plan de
+        # reproducibilidad, Fase 5).
+        "config": asdict(cfg),
     }
 
     out_dir = config.MODELS_DIR
