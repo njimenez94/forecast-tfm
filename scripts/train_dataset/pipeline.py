@@ -64,7 +64,8 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
 
     if not hasattr(state, "winner_family"):
         logger.warning("run_bench_ml=False: no hay modelo ganador, se saltea el resto del pipeline ML.")
-        save_model_comparison(state)
+        if cfg.save_artifact:
+            save_model_comparison(state)
         return
 
     if cfg.run_feature_selection:
@@ -84,9 +85,9 @@ def run_pipeline(cfg: Config, dataset_path: Path | None = None) -> None:
         logger.info("Fase Optuna final: {:.1f}s", time.perf_counter() - t0)
 
     fit_final_model(state, cfg, evaluate_model, best_params)
-    save_model_comparison(state)
 
     if cfg.save_artifact:
+        save_model_comparison(state)
         export_artifact(state, cfg)
 
     logger.info("Pipeline completo ({}/{}) en {:.1f}s", state.level_str, state.target,

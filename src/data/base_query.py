@@ -96,7 +96,14 @@ def build_exog_query(base_sql: str, grain: str) -> str:
 exog AS (
     SELECT *,
         LAG(avg_sell_price, {price_lag}) OVER (PARTITION BY series_id ORDER BY date) AS _plg,
-        AVG(avg_sell_price) OVER (PARTITION BY series_id) AS _pmean
+        -- Media expandiendo solo hasta *ayer* (ROWS ... 1 PRECEDING): un AVG sin
+        -- ORDER BY/frame promediaría toda la serie, incluyendo fechas de valid/test
+        -- que no existen todavía en el momento de predicción -- leakage de precio
+        -- futuro real (no un plan/pronóstico) hacia atrás en el tiempo.
+        AVG(avg_sell_price) OVER (
+            PARTITION BY series_id ORDER BY date
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ) AS _pmean
     FROM base
 )
 SELECT

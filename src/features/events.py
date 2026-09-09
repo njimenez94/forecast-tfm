@@ -22,13 +22,6 @@ _HIGH_IMPACT_EVENTS = ("Thanksgiving", "NewYear")
 # aditivo.
 _CLOSURE_EVENTS = {"Christmas"}
 
-# is_store_closed exige, además del evento, que la venta observada ya sea marginal
-# frente al nivel típico de esa serie (< 5% de su media). El evento por sí solo no
-# basta como prueba de cierre en grains agregados (state/total), donde Christmas cae
-# pero la suma de decenas de tiendas sigue siendo sustancial -- solo se fuerza a 0
-# cuando el propio dato ya corrobora el cierre.
-_CLOSURE_SALES_RATIO = 0.05
-
 # Ventana (días) alrededor de un cierre en la que days_to_closure lleva valor; fuera
 # de ella, NaN.
 _CLOSURE_WINDOW = 7
@@ -63,10 +56,15 @@ def add_event_features(df: pl.DataFrame) -> pl.DataFrame:
         pl.col("event_name_1").is_in(_CLOSURE_EVENTS).fill_null(False)
         | pl.col("event_name_2").is_in(_CLOSURE_EVENTS).fill_null(False)
     )
-    mean_sales = pl.col("sales").mean().over("series_id")
-    is_store_closed = (
-        is_closure_event & (pl.col("sales") < _CLOSURE_SALES_RATIO * mean_sales)
-    ).fill_null(False).cast(pl.Int8)
+    # Cierre determinado solo por el calendario (is_closure_event): _CLOSURE_EVENTS
+    # ya está restringido a fechas de cierre total verificadas empíricamente arriba
+    # (Christmas, avg(sales)=0.22 -- ~0 en la práctica). No se usa 'sales' de la fila
+    # ni una media de la serie para "confirmar" el cierre: eso miraría el propio
+    # target (incluyendo fechas de valid/test) para construir un feature que además
+    # pone ese mismo target a cero -- leakage tanto de información futura como del
+    # target actual. Un cierre real es conocido de antemano por el calendario, no
+    # inferido de la venta observada.
+    is_store_closed = is_closure_event.cast(pl.Int8)
 
     # Distancia firmada al cierre más cercano (positiva = faltan N días, negativa =
     # pasaron N días, 0 el propio día de cierre), acotada a +-_CLOSURE_WINDOW y NaN
@@ -102,9 +100,19 @@ def add_event_features(df: pl.DataFrame) -> pl.DataFrame:
         high_impact_exprs[f"days_since_{key}"] = days_since.alias(f"days_since_{key}")
         high_impact_exprs[f"days_to_{key}"] = days_to.alias(f"days_to_{key}")
 
+    # min().over("series_id") mira toda la serie (incluye fechas futuras), pero solo
+    # es leakage en las filas *previas* al release (avg_sell_price aún null): ahí el
+    # resultado sería "días que faltan para el release", una fecha futura que en
+    # producción no se conoce con esa precisión. Para filas ya releasadas la fecha
+    # es un hecho ya ocurrido (no depende de qué pase después), así que no hace falta
+    # tocarlas -- solo se anula el pre-release con el propio release_date.is_null().
+    days_since_release_signed = (pl.col("date") - release_date.min().over("series_id")).dt.total_days()
+    days_since_release = (
+        pl.when(days_since_release_signed >= 0).then(days_since_release_signed).otherwise(None)
+    ).cast(pl.Int32)
+
     return df.with_columns(
-        (pl.col("date") - release_date.min().over("series_id"))
-            .dt.total_days().cast(pl.Int32).alias("days_since_release"),
+        days_since_release.alias("days_since_release"),
         (pl.col("date") - event_date.forward_fill().over("series_id"))
             .dt.total_days().cast(pl.Int32).alias("days_since_event"),
         (event_date.backward_fill().over("series_id") - pl.col("date"))
