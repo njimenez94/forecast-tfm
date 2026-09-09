@@ -5,6 +5,9 @@ PY := uv run python
 DOCKER_IMAGE := forecast-tfm-api
 DOCKER_CONTAINER := forecast-tfm-api
 
+make clean:
+	rm -rf data/processed data/datasets artifacts/
+
 create-database:
 	$(PY) -m scripts.create_database
 
