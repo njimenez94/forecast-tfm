@@ -3,9 +3,7 @@
 Cada nivel produce un parquet en data/processed/ con el esquema:
     level_{id:02d}_{grain}_{name}.parquet
 
-con la columna "sales" (venta individual) y columnas "cumN" (suma acumulada forward
-de N períodos) para cada N en config.CUM_HORIZONS[grain] -- el target se elige en
-train time por nombre de columna, no por archivo. Historia completa, sin recorte por
+con la columna "sales" (venta individual). Historia completa, sin recorte por
 ventana de entrenamiento (eso se explora en tuning). Los lags y rolling windows los
 genera mlforecast internamente durante el entrenamiento.
 
@@ -65,7 +63,7 @@ def generate(levels, db_path, processed_dir) -> None:
                 "  {} series × {} {}", humanize.intcomma(n_series), humanize.intcomma(n_periods), grain,
             )
             logger.info("  {} filas (aprox.)", humanize.intcomma(n_rows))
-            sql = build_level_query(lvl.dims, grain, config.CUM_HORIZONS[grain], lvl.filters)
+            sql = build_level_query(lvl.dims, grain, lvl.filters)
             write_query_parquet(db_path, sql, out)
             logger.success("  listo  {}", humanize.naturalsize(out.stat().st_size, binary=True))
             gc.collect()

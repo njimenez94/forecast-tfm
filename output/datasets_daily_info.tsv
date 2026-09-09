@@ -1,7 +1,13 @@
 level	grainly	aggregation	filtro	n_rows	n_days	n_series	n_state_id	n_store_id	n_cat_id	n_dept_id	n_item_id	disk_mb	ram_mb
-01	daily	total		1941	1941	1	1	1	1	1	1	1.14	1.55
-04	daily	dept		13587	1941	7	1	1	3	7	1	6.71	11.07
-06	daily	store		19410	1941	10	3	10	1	1	1	8.48	15.46
-09	daily	store_dept		135870	1941	70	3	10	3	7	1	46.52	111.18
-10	daily	item	FOODS_3	1597443	1941	823	1	1	1	1	823	283.82	1317.93
-12	daily	item_store	CA_3_FOODS_3	1597443	1941	823	1	1	1	1	823	198.43	1324.07
+01	daily	total		1941	1941	1	1	1	1	1	1	1.08	1.5
+02	daily	state		5823	1941	3	3	1	1	1	1	2.86	4.46
+03	daily	cat		5823	1941	3	1	1	3	1	1	2.98	4.52
+04	daily	dept		13587	1941	7	1	1	3	7	1	6.3	10.7
+05	daily	state_cat		17469	1941	9	3	1	3	1	1	7.69	13.55
+06	daily	store		19410	1941	10	3	10	1	1	1	7.92	14.94
+07	daily	state_dept		40761	1941	21	3	1	3	7	1	15.89	32.11
+08	daily	store_cat		58230	1941	30	3	10	3	1	1	21.11	45.38
+09	daily	store_dept		135870	1941	70	3	10	3	7	1	44.1	107.55
+10	daily	item	FOODS_3	1597443	1941	823	1	1	1	1	823	270.46	1275.35
+11	daily	item_state	CA_FOODS_3	1597443	1941	823	1	1	1	1	823	231.98	1275.33
+12	daily	item_store	CA_3_FOODS_3	1597443	1941	823	1	1	1	1	823	189.03	1281.47

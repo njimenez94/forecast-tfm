@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class PredictRequest(BaseModel):
     # Vector de features ya procesado, con las mismas columnas que
     # artifact["features"] para el nivel/target pedidos (ver notebooks/03_predictions.ipynb
-    # y src.data.split.build_feature_matrices para cómo se arma ese vector en training/backtest).
+    # y src.data.temporal_split.build_feature_matrices para cómo se arma ese vector en training/backtest).
     features: dict[str, float | int | str | None]
     version: str | None = None
 

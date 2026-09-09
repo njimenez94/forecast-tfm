@@ -65,15 +65,9 @@ def list_levels(target: str = "sales") -> list[LevelInfo]:
     return out
 
 
-@app.post("/predict/{level_id}", response_model=PredictResponse)
-def predict(level_id: int, body: PredictRequest, target: str = "sales") -> PredictResponse:
-    try:
-        artifact = get_model(level_id, target, body.version)
-    except (FileNotFoundError, KeyError) as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
+def _build_feature_row(features: dict, artifact: dict) -> pd.DataFrame:
     expected = set(artifact["features"])
-    got = set(body.features)
+    got = set(features)
     if got != expected:
         raise HTTPException(status_code=400, detail={
             "error": "columnas de features no coinciden con las esperadas por el modelo",
@@ -81,7 +75,7 @@ def predict(level_id: int, body: PredictRequest, target: str = "sales") -> Predi
             "sobrantes": sorted(got - expected),
         })
 
-    X = pd.DataFrame([body.features])[artifact["features"]]
+    X = pd.DataFrame([features])[artifact["features"]]
     trained_categories = artifact.get("categorical_categories", {})
     for col in artifact["categorical_features"]:
         # astype("category") sobre 1 fila con valor nulo (p.ej. event_name_2, casi
@@ -89,8 +83,8 @@ def predict(level_id: int, body: PredictRequest, target: str = "sales") -> Predi
         # category"). Un placeholder inventado tampoco sirve -- XGBoost valida cada
         # categoría declarada contra las vistas en training, la use o no la fila. Por
         # eso hace falta el dominio real (guardado en el artifact desde que existe
-        # categorical_categories, ver scripts/train_dataset.py::export_artifact); el
-        # valor de la fila sigue siendo NaN (missing) pase lo que pase.
+        # categorical_categories, ver scripts/train_dataset/export.py::export_artifact);
+        # el valor de la fila sigue siendo NaN (missing) pase lo que pase.
         value = X[col].iloc[0]
         if col in trained_categories:
             categories = trained_categories[col]
@@ -105,7 +99,17 @@ def predict(level_id: int, body: PredictRequest, target: str = "sales") -> Predi
         X[numerical_cols] = X[numerical_cols].apply(pd.to_numeric)
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=f"columna numérica inválida: {exc}") from exc
+    return X
 
+
+@app.post("/predict/{level_id}", response_model=PredictResponse)
+def predict(level_id: int, body: PredictRequest, target: str = "sales") -> PredictResponse:
+    try:
+        artifact = get_model(level_id, target, body.version)
+    except (FileNotFoundError, KeyError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    X = _build_feature_row(body.features, artifact)
     prediction = float(artifact["model"].predict(X)[0])
     version = resolve_version(level_id, target, body.version)
     return PredictResponse(level_id=level_id, target=target, version=version, prediction=prediction)

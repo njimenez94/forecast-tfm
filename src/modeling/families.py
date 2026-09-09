@@ -15,8 +15,6 @@ import pandas as pd
 from loguru import logger
 from sklearn.base import BaseEstimator, RegressorMixin
 
-from src.modeling.gradient_boosting import catboost_features, histgb_features
-
 
 def _identity(X):
     return X
@@ -24,6 +22,27 @@ def _identity(X):
 
 def _select_columns(X, columns):
     return X[columns]
+
+
+def catboost_features(X, categorical_features):
+    """CatBoost no soporta el dtype category de pandas con nulos: convierte las
+    categóricas a string, con los NaN reemplazados por 'missing'. Aplicar por
+    igual a train (antes de fit) y a valid/test (antes de predict)."""
+    X_cb = X.copy()
+    for col in categorical_features:
+        X_cb[col] = X_cb[col].astype(str).fillna("missing")
+    return X_cb
+
+
+def histgb_features(X, high_cardinality_features):
+    """Convierte a códigos enteros las categóricas de alta cardinalidad que
+    HistGB no puede tratar como categóricas nativas (ver `_fit_histgb`), para
+    que no lleguen como strings a `check_array`. Aplicar por igual a train
+    (antes de fit) y a valid/test (antes de predict)."""
+    X_hgb = X.copy()
+    for col in high_cardinality_features:
+        X_hgb[col] = X_hgb[col].cat.codes
+    return X_hgb
 
 
 class FittedModel(RegressorMixin, BaseEstimator):

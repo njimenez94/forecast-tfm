@@ -9,7 +9,7 @@ RAW_ZIP = ROOT / "backup" / "m5-forecasting-accuracy.zip"
 DB_PATH = ROOT / "data" / "m5.db"
 CREATE_DATABASE_QUERY = ROOT / "queries" / "create_database.sql"
 
-# data/processed/: extracción SQL por nivel (sales, cumN, precio, calendario).
+# data/processed/: extracción SQL por nivel (sales, precio, calendario).
 # Generado por scripts/process_data.py (make process-data).
 PROCESSED_DIR = ROOT / "data" / "processed"
 

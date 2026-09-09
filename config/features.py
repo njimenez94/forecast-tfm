@@ -91,42 +91,22 @@ SPLIT_DATES = {
     },
 }
 
-# Horizontes acumulados a experimentar (días para daily, semanas para weekly)
-# Genera targets cum7, cum14, ... donde cumN predice la suma de los próximos N períodos
-# (incluyendo el período actual, ver build_cum_query).
-CUM_HORIZONS = {
-    "daily":  [7, 14, 21, 28, 35, 42, 49, 56, 364],
-    "weekly": [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
-}
-
-# Objetivos cumN a evaluar/entrenar en esta ronda (en períodos de la granularidad:
-# días para niveles daily, semanas para los weekly 10-12 -- mismos valores que
-# CUM_HORIZONS, un subset). El máximo (56) también fija cuánto se reserva al final de
-# cada serie en date_split (ver tail_reserve_days en scripts/train_dataset.py.split_data,
-# convertido a días de calendario vía to_days()): cumN es NULL en los últimos N
-# períodos de cada serie (ventana forward incompleta), y como el test/valid siempre
-# cae en el final de la serie, reservar el máximo -- no el N propio de cada target --
-# deja a cum7/14/21/28/35/42/49/56 evaluados sobre exactamente el mismo test/valid
-# window, así las métricas entre objetivos son comparables entre sí.
-CUM_EVAL_HORIZONS = [7, 14, 21, 28, 35, 42, 49, 56]
-
 # Lags que mlforecast genera automáticamente (en unidades de la frecuencia).
 # daily: denso 1-28 (cada día del bloque de horizonte VALID_PERIODS/TEST_PERIODS
-# tiene su propio lag puntual -- ver src.data.split.mask_horizon_leakage/block_origins,
+# tiene su propio lag puntual -- ver src.data.temporal_split.mask_horizon_leakage/block_origins,
 # que revalida cada fila por su propio h dentro del bloque de 28), después salta a
 # múltiplos gruesos (35, 42, 56, 91, 182, 364). 364 (no 365) para alinear
-# día-de-semana a un año. Filtro por leakage de targets cumN vía valid_lags.
+# día-de-semana a un año.
 MLFORECAST_LAGS = {
     "daily": [*range(1, 29), 35, 42, 56, 91, 182, 364],
     "weekly": [1, 2, 3, 4, 8, 13, 17, 22, 26, 39, 52],
 }
 
-# Transforms por lag base (shift → sin leakage si shift >= N del target cumN, ver
-# valid_lag_transforms). Cada anchor: mean/std/min/max en varias ventanas + momentum
-# (corta/larga) donde aplica. 364/52 son el único anchor seguro para cum364/cum52.
-# 2-6 rellenan el hueco entre el anchor=1 (denso) y el anchor=7 (rolling ya existía):
+# Transforms por lag base. Cada anchor: mean/std/min/max en varias ventanas + momentum
+# (corta/larga) donde aplica. 2-6 rellenan el hueco entre el anchor=1 (denso) y el
+# anchor=7 (rolling ya existía):
 # antes, una fila con h entre 2 y 6 se quedaba sin ningún rolling propio y usaba
-# directamente el de lag7 (ver src.data.split.mask_horizon_leakage).
+# directamente el de lag7 (ver src.data.temporal_split.mask_horizon_leakage).
 MLFORECAST_LAG_TRANSFORMS = {
     "daily": {
         1:   _stats(7, 14, 21, 35) + [_momentum(7, 35)],
@@ -194,36 +174,3 @@ EXOG_COLS = [
 ]
 
 
-def cum_n(target: str) -> int | None:
-    """Devuelve N para un target 'cumN', o None para 'sales'."""
-    if target == "sales":
-        return None
-    return int(target[3:])
-
-
-def valid_lags(grain: str, target: str) -> list[int]:
-    """Lags seguros para el target dado.
-
-    Para cumN: necesita lag k >= N para evitar leakage
-    (lag_k(cumN)[t] = cumN[t-k] involucra sales hasta t-k+N; safe si t-k+N <= t, i.e. k>=N).
-    Si ningún lag existente cumple, devuelve [N] como mínimo.
-
-    Para 'sales' devuelve el set completo sin filtrar: el recorte por horizonte de
-    despliegue (un lag k solo es seguro para las filas con h <= k) se aplica fila a
-    fila en src.data.split.mask_horizon_leakage, después del split -- acá no se
-    conoce todavía dónde cae valid_start/test_start.
-    """
-    n = cum_n(target)
-    all_lags = list(MLFORECAST_LAGS[grain])
-    if n is None:
-        return all_lags
-    safe = [k for k in all_lags if k >= n]
-    return safe if safe else [n]
-
-
-def valid_lag_transforms(grain: str, target: str) -> dict:
-    """Lag transforms seguros para el target dado (base_lag >= N para cumN)."""
-    n = cum_n(target)
-    if n is None:
-        return dict(MLFORECAST_LAG_TRANSFORMS[grain])
-    return {k: v for k, v in MLFORECAST_LAG_TRANSFORMS[grain].items() if k >= n}

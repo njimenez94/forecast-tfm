@@ -124,41 +124,12 @@ FROM exog
 ORDER BY series_id, date"""
 
 
-def build_cum_query(exog_sql: str, ns: list[int]) -> str:
-    """Añade columnas cumN = suma de N períodos empezando HOY, una por cada N en ns.
-
-    cumN[t] = sales[t] + ... + sales[t+N-1], vía ROWS BETWEEN CURRENT ROW AND N-1 FOLLOWING
-    (partición por series_id, orden por date) -- "los próximos N días incluyendo el actual"
-    (p.ej. cum7 un lunes = venta de esa semana lunes-domingo). DuckDB no devuelve NULL cuando
-    el frame tiene menos de N filas disponibles (suma parcial silenciosa) — el CASE/COUNT
-    fuerza NULL en las últimas N filas de cada serie (ventana incompleta), que se filtran en
-    train time según el target elegido, no aquí.
-    """
-    def _cum_col(n: int) -> str:
-        frame = f"PARTITION BY series_id ORDER BY date ROWS BETWEEN CURRENT ROW AND {n - 1} FOLLOWING"
-        return (
-            f"CASE WHEN COUNT(sales) OVER ({frame}) = {n} "
-            f"THEN CAST(SUM(sales) OVER ({frame}) AS FLOAT) ELSE NULL END AS cum{n}"
-        )
-
-    cum_cols = ",\n        ".join(_cum_col(n) for n in ns)
-    return f"""WITH _exog AS (
-{exog_sql}
-)
-SELECT
-    *,
-        {cum_cols}
-FROM _exog
-ORDER BY series_id, date"""
-
-
-def build_level_query(dims, grain: str, cum_horizons: list[int], filters=None) -> str:
-    """Compone base + exog + cumN en el SQL final de un nivel/grain (ver
-    build_base_query/build_exog_query/build_cum_query). `filters` (opcional) restringe
-    las filas de origen, p.ej. {"dept_id": ("FOODS_3",)} -- ver Level.filters."""
+def build_level_query(dims, grain: str, filters=None) -> str:
+    """Compone base + exog en el SQL final de un nivel/grain (ver
+    build_base_query/build_exog_query). `filters` (opcional) restringe las filas de
+    origen, p.ej. {"dept_id": ("FOODS_3",)} -- ver Level.filters."""
     base_sql = build_base_query(dims, grain, filters)
-    exog_sql = build_exog_query(base_sql, grain)
-    return build_cum_query(exog_sql, cum_horizons)
+    return build_exog_query(base_sql, grain)
 
 
 def count_series_query(dims, filters=None) -> str:

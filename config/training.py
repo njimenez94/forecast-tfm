@@ -16,10 +16,10 @@ class TrainingProfile:
     run_feature_selection: bool
     run_shap: bool
     run_optuna: bool
-    # --- Optuna: bench (todas las familias de ALL_FAMILIES, corto) ---
-    optuna_bench_n_trials: int
-    optuna_bench_timeout_s: int
-    # --- Optuna: final (largo, solo sobre la familia ganadora, post-feature-selection) ---
+    # --- Bench (todas las familias de ALL_FAMILIES, hiperparámetros default + early
+    # stopping, sin Optuna) ---
+    bench_n_estimators: int
+    # --- Optuna: única ronda del pipeline, solo sobre la familia ganadora, post-feature-selection ---
     optuna_n_trials: int
     optuna_timeout_s: int
     optuna_n_estimators: int
@@ -38,8 +38,7 @@ FAST = TrainingProfile(
     run_feature_selection=False,
     run_shap=False,
     run_optuna=False,
-    optuna_bench_n_trials=20,
-    optuna_bench_timeout_s=60,
+    bench_n_estimators=500,
     optuna_n_trials=100,
     optuna_timeout_s=180,
     optuna_n_estimators=500,
@@ -58,8 +57,7 @@ MODERATE = TrainingProfile(
     run_feature_selection=False,
     run_shap=False,
     run_optuna=True,
-    optuna_bench_n_trials=40,
-    optuna_bench_timeout_s=90,
+    bench_n_estimators=1_500,
     optuna_n_trials=200,
     optuna_timeout_s=5 * 60,
     optuna_n_estimators=1_500,
@@ -81,8 +79,7 @@ EFFICIENT = TrainingProfile(
     run_feature_selection=True,
     run_shap=True,
     run_optuna=True,
-    optuna_bench_n_trials=30,
-    optuna_bench_timeout_s=60,
+    bench_n_estimators=800,
     optuna_n_trials=100,
     optuna_timeout_s=120,
     optuna_n_estimators=800,
@@ -98,8 +95,7 @@ OPTIMIZED = TrainingProfile(
     run_feature_selection=True,
     run_shap=True,
     run_optuna=True,
-    optuna_bench_n_trials=200,
-    optuna_bench_timeout_s=5 * 60,
+    bench_n_estimators=1_500,
     optuna_n_trials=500,
     optuna_timeout_s=10 * 60,
     optuna_n_estimators=1_500,
