@@ -29,7 +29,7 @@ catboost_info/
 
 # Logs de la app (scripts/*.py y api/, ver src/logging_setup.py): un archivo por
 # ejecución, no se versionan.
-logs/
+#logs/
 
 # Artefactos generados: resultados, gráficos y estudio de Optuna no se versionan
 # (reproducibles con make create-database/process-data/build-datasets/train-datasets).
