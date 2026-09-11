@@ -26,8 +26,11 @@ def _update_registry(key: str, version: str, path: Path, artifact: dict) -> None
         "path": str(path.relative_to(config.ROOT)),
         "trained_at": version,
         "winner_family": artifact.get("winner_family"),
-        "wape_test": artifact["wape_test"],
-        "wrmsse_test": artifact["wrmsse_test"],
+        # Todas las métricas de test (wape_test, wrmsse_test, spec_test, ...), no una
+        # lista fija -- así check_regression.py puede gatear sobre cualquiera sin
+        # tener que tocar este dict cada vez que se agrega una métrica nueva en
+        # build_predictions_report.
+        **{k: v for k, v in artifact.items() if k.endswith("_test")},
     }
     entry["latest"] = version
     registry_path.write_text(json.dumps(registry, indent=2))
@@ -63,6 +66,10 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
     artifact = {
         "level": state.level_str,
         "level_id": state.level.id,
+        # Id + grain sin el sufijo de nombre de level_str (p.ej. "level_01_weekly",
+        # no "level_01_weekly_total") -- permite filtrar/agrupar por grain sin
+        # regexear `level` cada vez que se necesita saber si es daily o weekly.
+        "level_label": f"level_{state.level.id:02d}_{state.grain}",
         "winner_family": state.winner_family,
         "model": state.final_model,
         "explainer": explainer,
@@ -88,8 +95,7 @@ def export_artifact(state: SimpleNamespace, cfg: Config) -> None:
         "results_df": results_df,
         "wape_valid": state.model_results[-1]["wape"],
         "wrmsse_valid": state.model_results[-1]["wrmsse"],
-        "wape_test": state.metrics_test["wape"],
-        "wrmsse_test": state.metrics_test["wrmsse"],
+        **{f"{k}_test": v for k, v in state.metrics_test.items()},
         "train_start": str(state.first_date.date()),
         "valid_start": str(state.valid_start.date()),
         "test_start": str(state.test_start.date()),

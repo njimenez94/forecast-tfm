@@ -148,6 +148,16 @@ def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
     explainer = shap.TreeExplainer(fitted.estimator)
     X_shap_raw = state.X_test.sample(n=min(cfg.shap_sample_size, len(state.X_test)), random_state=cfg.random_state)
     X_shap = fitted.prepare(X_shap_raw)
+    # `prepare` de algunas familias (xgboost/lightgbm: identity, confían en su soporte
+    # nativo de categóricas; histgb: solo codifica las de alta cardinalidad) deja
+    # columnas en dtype category con valores string (p.ej. 'CA', 'HOBBIES_1') --
+    # shap.TreeExplainer.shap_values() fuerza `X.to_numpy(dtype=float)` y explota con
+    # "could not convert string to float" apenas encuentra una. Los códigos de
+    # categoría (`.cat.codes`) son la misma codificación entera que el booster ya usa
+    # internamente para las particiones, así que convertir acá no cambia qué mide SHAP.
+    cat_cols = [c for c in X_shap.columns if isinstance(X_shap[c].dtype, pd.CategoricalDtype)]
+    if cat_cols:
+        X_shap = X_shap.assign(**{c: X_shap[c].cat.codes for c in cat_cols})
     shap_values = explainer.shap_values(X_shap)
 
     plot_dir = config.ARTIFACTS_DIR / "plots"

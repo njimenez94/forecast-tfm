@@ -26,8 +26,15 @@ def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
 
     ax.set_title(series_id, loc="left")
     ax.set_xlabel("")
-    ax.xaxis.set_major_locator(mdates.DayLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%y"))
+    unique_dates = sorted(df_plot["date"].unique())
+    if len(unique_dates) <= 20:
+        # pocas fechas (p.ej. series semanales): un tick por punto real, nada inventado
+        ax.set_xticks(unique_dates)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%y"))
+    else:
+        locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
     plt.xticks(rotation=45, ha="right")
     ax.grid(axis="y", alpha=0.3)
     
