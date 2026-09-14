@@ -1,0 +1,188 @@
+2026-09-11 21:02:22.090 | INFO     | __main__:main:82 - Perfil de entrenamiento: efficient
+2026-09-11 21:02:22.216 | INFO     | src.data.dataset:load_data:58 - level_02_weekly_state | target=sales | 834 filas | 109 features (9 categóricas)
+2026-09-11 21:02:22.226 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-20 (1,549 days, 666 rows)
+2026-09-11 21:02:22.227 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-18 (364 days, 156 rows)
+2026-09-11 21:02:22.228 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-16 (22 days, 12 rows)
+2026-09-11 21:02:22.457 | INFO     | src.data.dataset:split_data:119 - Features: 109 (9 categóricas)
+2026-09-11 21:02:22.510 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1w) [Naive] | WAPE: 11.69% | WRMSSE: 0.7309  | fit: 0.01s
+2026-09-11 21:02:22.562 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (4w) [Naive] | WAPE: 9.39% | WRMSSE: 0.6107  | fit: 0.01s
+2026-09-11 21:02:22.610 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (52w) [Naive] | WAPE: 8.96% | WRMSSE: 0.5633  | fit: 0.01s
+2026-09-11 21:02:22.664 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 7.35% | WRMSSE: 0.4900  | fit: 0.02s
+2026-09-11 21:02:22.708 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 17.74% | WRMSSE: 1.0541  | fit: 0.01s
+2026-09-11 21:02:22.759 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (2w) [Naive] | WAPE: 10.71% | WRMSSE: 0.6785  | fit: 0.01s
+2026-09-11 21:02:22.816 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (3w) [Naive] | WAPE: 9.35% | WRMSSE: 0.6005  | fit: 0.01s
+2026-09-11 21:02:22.866 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (4w) [Naive] | WAPE: 8.72% | WRMSSE: 0.5651  | fit: 0.01s
+2026-09-11 21:02:22.908 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (6w) [Naive] | WAPE: 9.98% | WRMSSE: 0.6343  | fit: 0.01s
+2026-09-11 21:02:22.950 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (8w) [Naive] | WAPE: 9.27% | WRMSSE: 0.5964  | fit: 0.01s
+2026-09-11 21:02:22.950 | INFO     | scripts.train_dataset.pipeline:run_pipeline:51 - Fase naive: 0.5s
+2026-09-11 21:02:29.532 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 7.16% | WRMSSE: 0.4766  | fit: 6.54s
+2026-09-11 21:02:33.496 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 6.75% | WRMSSE: 0.4805  | fit: 3.92s
+2026-09-11 21:02:37.736 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 6.69% | WRMSSE: 0.4835  | fit: 4.19s
+2026-09-11 21:02:59.939 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 11.58% | WRMSSE: 0.8130  | fit: 19.75s
+2026-09-11 21:03:00.743 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 8.41% | WRMSSE: 0.5829  | fit: 0.76s
+2026-09-11 21:03:00.744 | INFO     | scripts.train_dataset.pipeline:run_pipeline:56 - Fase estadísticos clásicos: 35.4s
+2026-09-11 21:03:00.746 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 1/5 -- lightgbm
+2026-09-11 21:03:01.156 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     lightgbm (bench) [ML] | WAPE: 12.01% | WRMSSE: 0.7793  | fit: 0.36s
+2026-09-11 21:03:01.157 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 2/5 -- xgboost
+2026-09-11 21:03:01.812 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      xgboost (bench) [ML] | WAPE: 10.57% | WRMSSE: 0.7001  | fit: 0.58s
+2026-09-11 21:03:01.813 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 3/5 -- catboost
+2026-09-11 21:03:03.157 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     catboost (bench) [ML] | WAPE: 13.00% | WRMSSE: 0.8211  | fit: 1.28s
+2026-09-11 21:03:03.158 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 4/5 -- histgb
+2026-09-11 21:03:04.130 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       histgb (bench) [ML] | WAPE: 10.03% | WRMSSE: 0.6499  | fit: 0.92s
+2026-09-11 21:03:04.131 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 5/5 -- ridge
+2026-09-11 21:03:04.228 | INFO     | src.evaluation.reports:evaluate_predictions:58 -        ridge (bench) [ML] | WAPE: 7.59% | WRMSSE: 0.6477  | fit: 0.04s
+2026-09-11 21:03:04.230 | SUCCESS  | scripts.train_dataset.benchmarking:pick_winner:94 - Modelo ganador (bench, 4 familias tree-based comparadas): histgb | regression_l2=11925.5707
+2026-09-11 21:03:04.230 | INFO     | scripts.train_dataset.pipeline:run_pipeline:62 - Fase bench ML (5 familias, sin Optuna): 3.5s
+2026-09-11 21:03:07.171 | INFO     | scripts.train_dataset.refinement:select_features:95 - Top 10 permutation importance (histgb):
+event_name_1                       4184.923834
+lag4                               3394.197871
+te_snap_mean                       1547.629592
+expanding_mean_lag13               1500.103682
+lag52                              1450.886554
+rolling_min_lag52_window_size4      555.418461
+lag13                               463.441552
+days_since_newyear                  253.264824
+rolling_mean_lag52_window_size4     252.508322
+rolling_max_lag4_window_size4       235.706857
+dtype: float64
+2026-09-11 21:03:08.084 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (109 features): regression_l2=11925.5707 | WRMSSE=0.6499 (informativo)
+2026-09-11 21:03:09.958 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_max_lag1_window_size4', 'rolling_mean_lag1_window_size13', 'te_event_mean', 'price_lag_1', 'rolling_min_lag1_window_size13', 'price_vs_max', 'rolling_mean_lag1_window_size4', 'rolling_min_lag1_window_size4'] -> 101 features | regression_l2=10416.3037 | WRMSSE=0.5882
+2026-09-11 21:03:12.324 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['event_type_1_enc', 'month_sin', 'rolling_max_lag4_window_size13', 'rolling_std_lag4_window_size13', 'rolling_mean_lag4_window_size13', 'days_since_thanksgiving', 'te_item_mean', 'rolling_mean_lag4_window_size26'] -> 93 features | regression_l2=9487.7724 | WRMSSE=0.5387
+2026-09-11 21:03:15.365 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag4_window_size4' -> 92 features | regression_l2=9449.7981 | WRMSSE=0.5425
+2026-09-11 21:03:23.732 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'month' -> 91 features | regression_l2=9264.6038 | WRMSSE=0.5326
+2026-09-11 21:03:34.876 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['days_to_event', 'dow_cos', 'year', 'dayofweek', 'is_weekend', 'item_id', 'cat_id', 'dept_id'] -> 83 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:39.092 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_likely_stockout' -> 82 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:41.376 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'te_cat_std' -> 81 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:43.644 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'te_dept_std' -> 80 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:50.073 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'zero_streak' -> 79 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:52.471 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_store_closed' -> 78 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:54.880 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'te_dept_mean' -> 77 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:03:57.234 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['event_type_2_enc', 'days_since_price_change', 'days_to_closure', 'is_month_start', 'event_name_2', 'has_event_2', 'event_type_2', 'store_id'] -> 69 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:04:05.575 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'dow_sin' -> 68 features | regression_l2=9181.6610 | WRMSSE=0.5284
+2026-09-11 21:04:07.774 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'has_event' -> 67 features | regression_l2=9138.3237 | WRMSSE=0.5274
+2026-09-11 21:04:21.027 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag52_window_size13' -> 66 features | regression_l2=9012.3489 | WRMSSE=0.5243
+2026-09-11 21:04:47.573 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag52_window_size4' -> 65 features | regression_l2=8948.2179 | WRMSSE=0.5100
+2026-09-11 21:05:11.511 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['adi_expanding', 'lag22', 'event_type_1', 'lag39', 'day', 'rolling_mean_lag52_window_size13', 'lag1', 'lag3'] -> 57 features | regression_l2=8125.2151 | WRMSSE=0.4551
+2026-09-11 21:05:21.618 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_max_lag4_window_size4' -> 56 features | regression_l2=7951.1467 | WRMSSE=0.4544
+2026-09-11 21:05:49.091 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_month_end' -> 55 features | regression_l2=7950.8549 | WRMSSE=0.4547
+2026-09-11 21:05:56.567 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'pct_zero_28' -> 54 features | regression_l2=7950.8549 | WRMSSE=0.4547
+2026-09-11 21:08:55.184 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 54/109 features | regression_l2 final: 7950.8549 | WRMSSE final: 0.4547
+2026-09-11 21:08:55.188 | INFO     | scripts.train_dataset.refinement:select_features:114 - Features descartadas (55): ['adi_expanding', 'cat_id', 'day', 'dayofweek', 'days_since_price_change', 'days_since_thanksgiving', 'days_to_closure', 'days_to_event', 'dept_id', 'dow_cos', 'dow_sin', 'event_name_2', 'event_type_1', 'event_type_1_enc', 'event_type_2', 'event_type_2_enc', 'has_event', 'has_event_2', 'is_likely_stockout', 'is_month_end', 'is_month_start', 'is_store_closed', 'is_weekend', 'item_id', 'lag1', 'lag22', 'lag3', 'lag39', 'month', 'month_sin', 'pct_zero_28', 'price_lag_1', 'price_vs_max', 'rolling_max_lag1_window_size4', 'rolling_max_lag4_window_size13', 'rolling_max_lag4_window_size4', 'rolling_mean_lag1_window_size13', 'rolling_mean_lag1_window_size4', 'rolling_mean_lag4_window_size13', 'rolling_mean_lag4_window_size26', 'rolling_mean_lag52_window_size13', 'rolling_min_lag1_window_size13', 'rolling_min_lag1_window_size4', 'rolling_min_lag4_window_size4', 'rolling_std_lag4_window_size13', 'rolling_std_lag52_window_size13', 'rolling_std_lag52_window_size4', 'store_id', 'te_cat_std', 'te_dept_mean', 'te_dept_std', 'te_event_mean', 'te_item_mean', 'year', 'zero_streak']
+2026-09-11 21:08:55.209 | INFO     | scripts.train_dataset.refinement:select_features:127 - Features finales: 54 (2 categóricas) | regression_l2=7950.8549 | WRMSSE=0.4547 (informativo)
+2026-09-11 21:08:55.210 | INFO     | scripts.train_dataset.pipeline:run_pipeline:74 - Fase selección de features: 326.6s
+2026-09-11 21:08:59.416 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (bench, selected features) [ML] | WAPE: 7.08% | WRMSSE: 0.4574  | fit: 3.77s
+2026-09-11 21:09:01.942 | INFO     | scripts.train_dataset.refinement:run_shap:183 - SHAP (histgb): feature más importante = state_id | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-11 21:09:01.942 | INFO     | scripts.train_dataset.pipeline:run_pipeline:79 - Fase SHAP: 6.7s
+2026-09-11 21:09:03.544 | INFO     | scripts.train_dataset.refinement:tune_optuna_family:60 - [histgb] Optuna arrancando: hasta 100 trials (timeout 120s) -- study 'study_level_02_weekly_state_sales_final_histgb'
+2026-09-11 21:11:03.847 | INFO     | scripts.train_dataset.refinement:tune_optuna_family:70 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 7335.1154 | WRMSSE de ESE trial: 0.4161 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-11 21:11:03.849 | INFO     | scripts.train_dataset.refinement:tune_optuna_family:76 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.033434742307921705, 'max_leaf_nodes': 254, 'max_depth': 14, 'min_samples_leaf': 60, 'l2_regularization': 0.005615752259379125}
+2026-09-11 21:11:03.852 | INFO     | scripts.train_dataset.pipeline:run_pipeline:85 - Fase Optuna final: 112.0s
+2026-09-11 21:11:05.415 | INFO     | scripts.train_dataset.refinement:fit_final_model:232 - CV (1 folds) best_iteration: [756] -> n_estimators final = 756
+2026-09-11 21:11:05.479 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (final, Optuna) [ML] | WAPE: 6.17% | WRMSSE: 0.4163  | fit: 1.59s
+2026-09-11 21:11:07.601 | INFO     | scripts.train_dataset.refinement:fit_final_model:253 - Test WAPE: 4.41% | Test WRMSSE: 0.3133
+2026-09-11 21:11:09.270 | INFO     | scripts.train_dataset.benchmarking:save_model_comparison:115 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-11 21:11:24.360 | SUCCESS  | scripts.train_dataset.export:export_artifact:115 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_02_weekly_state_sales_artifact.pkl (modelo: histgb)
+2026-09-11 21:11:24.998 | SUCCESS  | scripts.train_dataset.export:export_artifact:125 - Versión 20260912T001124Z registrada en registry.json
+2026-09-11 21:11:25.001 | INFO     | scripts.train_dataset.pipeline:run_pipeline:93 - Pipeline completo (level_02_weekly_state/sales) en 506.2s
+2026-09-11 21:11:25.287 | INFO     | src.data.dataset:load_data:58 - level_04_weekly_dept | target=sales | 1,946 filas | 109 features (9 categóricas)
+2026-09-11 21:11:25.296 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-20 (1,549 days, 1,554 rows)
+2026-09-11 21:11:25.296 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-18 (364 days, 364 rows)
+2026-09-11 21:11:25.297 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-16 (22 days, 28 rows)
+2026-09-11 21:11:25.584 | INFO     | src.data.dataset:split_data:119 - Features: 109 (9 categóricas)
+2026-09-11 21:11:25.638 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1w) [Naive] | WAPE: 12.25% | WRMSSE: 0.7391  | fit: 0.01s
+2026-09-11 21:11:25.692 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (4w) [Naive] | WAPE: 10.01% | WRMSSE: 0.6381  | fit: 0.01s
+2026-09-11 21:11:25.745 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (52w) [Naive] | WAPE: 11.94% | WRMSSE: 0.8060  | fit: 0.01s
+2026-09-11 21:11:25.801 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 8.75% | WRMSSE: 0.5675  | fit: 0.01s
+2026-09-11 21:11:25.851 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 18.57% | WRMSSE: 1.2737  | fit: 0.00s
+2026-09-11 21:11:25.900 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (2w) [Naive] | WAPE: 11.06% | WRMSSE: 0.6964  | fit: 0.01s
+2026-09-11 21:11:25.950 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (3w) [Naive] | WAPE: 9.64% | WRMSSE: 0.6056  | fit: 0.01s
+2026-09-11 21:11:25.999 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (4w) [Naive] | WAPE: 9.06% | WRMSSE: 0.5809  | fit: 0.00s
+2026-09-11 21:11:26.050 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (6w) [Naive] | WAPE: 10.27% | WRMSSE: 0.6496  | fit: 0.00s
+2026-09-11 21:11:26.101 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (8w) [Naive] | WAPE: 9.68% | WRMSSE: 0.6149  | fit: 0.01s
+2026-09-11 21:11:26.101 | INFO     | scripts.train_dataset.pipeline:run_pipeline:51 - Fase naive: 0.5s
+2026-09-11 21:11:42.374 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 7.46% | WRMSSE: 0.4779  | fit: 13.75s
+2026-09-11 21:11:42.888 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 7.56% | WRMSSE: 0.4977  | fit: 0.47s
+2026-09-11 21:11:42.998 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 7.82% | WRMSSE: 0.5379  | fit: 0.07s
+2026-09-11 21:11:59.749 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 24.78% | WRMSSE: 1.5030  | fit: 16.69s
+2026-09-11 21:12:00.745 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 11.03% | WRMSSE: 0.7600  | fit: 0.95s
+2026-09-11 21:12:00.746 | INFO     | scripts.train_dataset.pipeline:run_pipeline:56 - Fase estadísticos clásicos: 32.2s
+2026-09-11 21:12:00.747 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 1/5 -- lightgbm
+2026-09-11 21:12:01.754 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     lightgbm (bench) [ML] | WAPE: 16.63% | WRMSSE: 1.0551  | fit: 0.93s
+2026-09-11 21:12:01.755 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 2/5 -- xgboost
+2026-09-11 21:12:03.115 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      xgboost (bench) [ML] | WAPE: 14.49% | WRMSSE: 1.1428  | fit: 1.28s
+2026-09-11 21:12:03.116 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 3/5 -- catboost
+2026-09-11 21:12:07.712 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     catboost (bench) [ML] | WAPE: 17.72% | WRMSSE: 0.9775  | fit: 1.99s
+2026-09-11 21:12:07.713 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 4/5 -- histgb
+2026-09-11 21:12:11.943 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       histgb (bench) [ML] | WAPE: 17.35% | WRMSSE: 1.2304  | fit: 4.15s
+2026-09-11 21:12:11.943 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 5/5 -- ridge
+2026-09-11 21:12:12.093 | INFO     | src.evaluation.reports:evaluate_predictions:58 -        ridge (bench) [ML] | WAPE: 17.17% | WRMSSE: 1.1740  | fit: 0.08s
+2026-09-11 21:12:12.095 | SUCCESS  | scripts.train_dataset.benchmarking:pick_winner:94 - Modelo ganador (bench, 4 familias tree-based comparadas): histgb | regression_l2=9192.1290
+2026-09-11 21:12:12.096 | INFO     | scripts.train_dataset.pipeline:run_pipeline:62 - Fase bench ML (5 familias, sin Optuna): 8.8s
+2026-09-11 21:12:22.485 | INFO     | scripts.train_dataset.refinement:select_features:95 - Top 10 permutation importance (histgb):
+dept_id                           9826.796915
+te_snap_mean                      4661.317705
+lag4                              4654.103704
+rolling_min_lag52_window_size4    2511.683515
+te_dept_mean                      2349.043586
+lag52                             2327.577366
+lag22                             1589.075207
+te_dept_std                       1425.645035
+rolling_max_lag4_window_size4     1425.264257
+event_name_1                       737.434512
+dtype: float64
+2026-09-11 21:12:26.203 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (109 features): regression_l2=9192.1290 | WRMSSE=1.2304 (informativo)
+2026-09-11 21:12:32.552 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'expanding_mean_lag13' -> 108 features | regression_l2=8791.9844 | WRMSSE=1.1289
+2026-09-11 21:12:46.431 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'avg_sell_price' -> 107 features | regression_l2=8716.5553 | WRMSSE=1.1567
+2026-09-11 21:18:16.897 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag1_window_size13' -> 106 features | regression_l2=8649.6728 | WRMSSE=1.1992
+2026-09-11 21:18:28.807 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_max_lag4_window_size26' -> 105 features | regression_l2=8313.3180 | WRMSSE=1.1563
+2026-09-11 21:18:32.104 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'event_type_1' -> 104 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:18:36.659 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'has_event' -> 103 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:18:39.858 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_weekend' -> 102 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:18:43.171 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['dow_sin', 'dow_cos', 'dayofweek', 'has_event_2', 'year', 'event_type_2', 'snap', 'event_name_2'] -> 94 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:18:54.589 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'event_type_2_enc' -> 93 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:18:59.282 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'zero_streak' -> 92 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:02.268 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'pct_zero_28' -> 91 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:04.998 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_month_start' -> 90 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:07.412 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'quarter' -> 89 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:09.743 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'state_id' -> 88 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:12.006 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_likely_stockout' -> 87 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:18.892 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'days_since_price_change' -> 86 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:21.285 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'item_id' -> 85 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:23.606 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'store_id' -> 84 features | regression_l2=8280.7694 | WRMSSE=1.1189
+2026-09-11 21:19:30.196 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'cat_id' -> 83 features | regression_l2=8221.2995 | WRMSSE=1.0898
+2026-09-11 21:19:40.168 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_month_end' -> 82 features | regression_l2=8170.5015 | WRMSSE=1.0960
+2026-09-11 21:22:12.575 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_store_closed' -> 81 features | regression_l2=8170.5015 | WRMSSE=1.0960
+2026-09-11 21:23:06.151 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'te_dept_mean' -> 80 features | regression_l2=7996.5858 | WRMSSE=1.0255
+2026-09-11 21:28:19.459 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag8', 'lag17', 'rolling_max_lag1_window_size4', 'rolling_max_lag4_window_size13', 'lag13', 'lag1', 'lag26', 'event_name_1'] -> 72 features | regression_l2=5352.0246 | WRMSSE=0.7227
+2026-09-11 21:28:41.192 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag52_window_size4' -> 71 features | regression_l2=5207.1221 | WRMSSE=0.7039
+2026-09-11 21:29:00.961 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_mean_lag1_window_size4' -> 70 features | regression_l2=5003.2770 | WRMSSE=0.7177
+2026-09-11 21:29:24.638 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag39' -> 69 features | regression_l2=4965.3792 | WRMSSE=0.6802
+2026-09-11 21:30:16.060 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_min_lag52_window_size13', 'days_since_release', 'rolling_min_lag13_window_size13', 'rolling_max_lag1_window_size13', 'days_since_event', 'days_to_event', 'month_sin', 'momentum_lag4_4_13'] -> 61 features | regression_l2=4491.8148 | WRMSSE=0.6109
+2026-09-11 21:30:36.565 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_max_lag13_window_size26' -> 60 features | regression_l2=4439.7213 | WRMSSE=0.6118
+2026-09-11 21:31:19.223 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'te_cat_mean' -> 59 features | regression_l2=4337.1676 | WRMSSE=0.5930
+2026-09-11 21:31:35.791 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag1_window_size4' -> 58 features | regression_l2=4164.9929 | WRMSSE=0.5404
+2026-09-11 21:32:07.447 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'doy_cos' -> 57 features | regression_l2=4158.9752 | WRMSSE=0.5539
+2026-09-11 21:32:44.797 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_std_lag4_window_size13', 'days_since_thanksgiving', 'rolling_mean_lag4_window_size4', 'lag2', 'te_event_mean', 'days_since_newyear', 'rolling_mean_lag13_window_size13', 'te_item_mean'] -> 49 features | regression_l2=4037.9472 | WRMSSE=0.5285
+2026-09-11 21:34:04.964 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'month' -> 48 features | regression_l2=4009.0667 | WRMSSE=0.5175
+2026-09-11 21:38:06.931 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['days_to_newyear', 'days_to_closure', 'rolling_max_lag52_window_size13', 'price_volatility', 'rolling_min_lag4_window_size4', 'rolling_std_lag1_window_size4', 'doy_sin', 'weekofyear'] -> 40 features | regression_l2=3869.1020 | WRMSSE=0.4876
+2026-09-11 21:38:53.566 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag4_window_size13' -> 39 features | regression_l2=3849.9345 | WRMSSE=0.4892
+2026-09-11 21:40:30.773 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag4_window_size26' -> 38 features | regression_l2=3816.7297 | WRMSSE=0.4898
+2026-09-11 21:40:39.157 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'event_type_1_enc' -> 37 features | regression_l2=3813.3843 | WRMSSE=0.5066
+2026-09-11 21:44:20.194 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 37/109 features | regression_l2 final: 3813.3843 | WRMSSE final: 0.5066
+2026-09-11 21:44:20.199 | INFO     | scripts.train_dataset.refinement:select_features:114 - Features descartadas (72): ['avg_sell_price', 'cat_id', 'dayofweek', 'days_since_event', 'days_since_newyear', 'days_since_price_change', 'days_since_release', 'days_since_thanksgiving', 'days_to_closure', 'days_to_event', 'days_to_newyear', 'dow_cos', 'dow_sin', 'doy_cos', 'doy_sin', 'event_name_1', 'event_name_2', 'event_type_1', 'event_type_1_enc', 'event_type_2', 'event_type_2_enc', 'expanding_mean_lag13', 'has_event', 'has_event_2', 'is_likely_stockout', 'is_month_end', 'is_month_start', 'is_store_closed', 'is_weekend', 'item_id', 'lag1', 'lag13', 'lag17', 'lag2', 'lag26', 'lag39', 'lag8', 'momentum_lag4_4_13', 'month', 'month_sin', 'pct_zero_28', 'price_volatility', 'quarter', 'rolling_max_lag13_window_size26', 'rolling_max_lag1_window_size13', 'rolling_max_lag1_window_size4', 'rolling_max_lag4_window_size13', 'rolling_max_lag4_window_size26', 'rolling_max_lag52_window_size13', 'rolling_mean_lag13_window_size13', 'rolling_mean_lag1_window_size4', 'rolling_mean_lag4_window_size4', 'rolling_min_lag13_window_size13', 'rolling_min_lag1_window_size4', 'rolling_min_lag4_window_size13', 'rolling_min_lag4_window_size26', 'rolling_min_lag4_window_size4', 'rolling_min_lag52_window_size13', 'rolling_min_lag52_window_size4', 'rolling_std_lag1_window_size13', 'rolling_std_lag1_window_size4', 'rolling_std_lag4_window_size13', 'snap', 'state_id', 'store_id', 'te_cat_mean', 'te_dept_mean', 'te_event_mean', 'te_item_mean', 'weekofyear', 'year', 'zero_streak']
+2026-09-11 21:44:20.240 | INFO     | scripts.train_dataset.refinement:select_features:127 - Features finales: 37 (1 categóricas) | regression_l2=3813.3843 | WRMSSE=0.5066 (informativo)
+2026-09-11 21:44:20.241 | INFO     | scripts.train_dataset.pipeline:run_pipeline:74 - Fase selección de features: 1576.4s
+2026-09-11 21:44:26.321 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (bench, selected features) [ML] | WAPE: 6.72% | WRMSSE: 0.5078  | fit: 6.00s
+2026-09-11 21:44:31.651 | INFO     | scripts.train_dataset.refinement:run_shap:183 - SHAP (histgb): feature más importante = te_snap_mean | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-11 21:44:31.659 | INFO     | scripts.train_dataset.pipeline:run_pipeline:79 - Fase SHAP: 9.2s
+2026-09-11 21:44:32.424 | INFO     | scripts.train_dataset.refinement:tune_optuna_family:60 - [histgb] Optuna arrancando: hasta 100 trials (timeout 120s) -- study 'study_level_04_weekly_dept_sales_final_histgb'
+2026-09-11 21:46:33.762 | INFO     | scripts.train_dataset.refinement:tune_optuna_family:70 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 3165.3836 | WRMSSE de ESE trial: 0.3917 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-11 21:46:33.765 | INFO     | scripts.train_dataset.refinement:tune_optuna_family:76 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.03614375394997794, 'max_leaf_nodes': 252, 'max_depth': 15, 'min_samples_leaf': 49, 'l2_regularization': 0.8898157636350587}
+2026-09-11 21:46:33.768 | INFO     | scripts.train_dataset.pipeline:run_pipeline:85 - Fase Optuna final: 116.1s
+2026-09-11 21:46:40.413 | INFO     | scripts.train_dataset.refinement:fit_final_model:232 - CV (1 folds) best_iteration: [1500] -> n_estimators final = 1500
+2026-09-11 21:46:40.515 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (final, Optuna) [ML] | WAPE: 5.48% | WRMSSE: 0.3899  | fit: 6.70s
+2026-09-11 21:46:51.330 | INFO     | scripts.train_dataset.refinement:fit_final_model:253 - Test WAPE: 6.73% | Test WRMSSE: 0.4441
+2026-09-11 21:46:53.639 | INFO     | scripts.train_dataset.benchmarking:save_model_comparison:115 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-11 21:47:15.239 | SUCCESS  | scripts.train_dataset.export:export_artifact:115 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_04_weekly_dept_sales_artifact.pkl (modelo: histgb)
+2026-09-11 21:47:16.652 | SUCCESS  | scripts.train_dataset.export:export_artifact:125 - Versión 20260912T004715Z registrada en registry.json
+2026-09-11 21:47:16.659 | INFO     | scripts.train_dataset.pipeline:run_pipeline:93 - Pipeline completo (level_04_weekly_dept/sales) en 1784.1s

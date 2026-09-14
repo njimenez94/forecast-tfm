@@ -247,6 +247,58 @@ Los dos mejores modelos (HistGradientBoosting y LightGBM) quedan prácticamente 
 
 <!-- 🔢 SUGERENCIA DATO: la tabla completa de 21 modelos (incluye también drift, historical mean y medias móviles de 7/14/21/28/35 días) está en artifacts/results/level_01_daily_total_sales_model_comparison.csv por si se prefiere anexarla completa. -->
 
+**Comparación jerárquica de niveles de agregación.** El dataset M5 define una jerarquía oficial de 12 niveles de agregación, desde el total de la cadena hasta el nivel producto-tienda individual. Este trabajo entrenó modelos LightGBM para los niveles 1 a 9 de esa jerarquía (total, estado, categoría, departamento, tienda, y las combinaciones estado×categoría, estado×departamento, tienda×categoría y tienda×departamento), evaluados tanto a granularidad diaria como semanal, dando un total de 17 modelos entrenados (las 9 combinaciones nivel/granularidad restantes, salvo el nivel departamento, que por ahora solo cuenta con versión diaria). Los niveles 10 a 12 (a nivel de producto individual, miles de series item-tienda) quedan fuera del alcance de esta fase y se dejan como línea futura.
+
+<!-- 🔢 SUGERENCIA DATO: tabla completa de las 17 combinaciones nivel/granularidad entrenadas, con WAPE y WRMSSE en test y en validación -- notebook 04_hierarchical_comparison.ipynb, sección "1. Carga de artifacts" / "2. Resumen de cada modelo en su propio nivel nativo". -->
+
+| Nivel | Granularidad | N.º series | WAPE test | WRMSSE test |
+|---|---|---|---|---|
+| Total | Semanal | 1 | 5,55% | 0,408 |
+| Estado | Diario | 3 | 6,74% | 0,618 |
+| Categoría | Diario | 3 | 6,86% | 0,564 |
+| Categoría | Semanal | 3 | 5,56% | 0,404 |
+| Departamento | Diario | 7 | 7,65% | 0,656 |
+| Estado × Categoría | Diario | 9 | 6,85% | 0,574 |
+| Estado × Categoría | Semanal | 9 | 5,34% | 0,368 |
+| Tienda | Diario | 10 | 7,66% | 0,643 |
+| Tienda | Semanal | 10 | 5,40% | 0,390 |
+| Estado × Departamento | Diario | 21 | 8,06% | 0,634 |
+| Estado × Departamento | Semanal | 21 | 6,43% | 0,403 |
+| Tienda × Categoría | Diario | 30 | 7,31% | 0,553 |
+| Tienda × Categoría | Semanal | 30 | 6,30% | 0,431 |
+| Tienda × Departamento | Diario | 70 | 9,91% | 0,678 |
+| Tienda × Departamento | Semanal | 70 | 7,56% | 0,492 |
+
+<!-- ⚠️ REVISAR ANTES DE ENTREGAR: esta tabla y las dos siguientes usan la última ejecución completa del notebook 04_hierarchical_comparison.ipynb, que todavía no incluye dos artifacts nuevos (level_01 diario y level_02 semanal) generados después de esa corrida. Level_02 semanal no cambia el resultado (el notebook ya prioriza la granularidad diaria de ese nivel para las comparaciones), pero level_01 diario sí puede desplazar la fila "Total" de esta tabla y la comparación bottom-up de más abajo (hoy tomada del artifact semanal, único disponible en ese momento). Re-ejecutar el notebook antes de dar estos números por definitivos. -->
+
+<!-- 📊 SUGERENCIA GRÁFICO: barras horizontales de WAPE y WRMSSE (test vs. validación) por nivel/granularidad -- ya generadas en el notebook 04_hierarchical_comparison.ipynb, sección "0. Comparativo" (función `plot_comparativa`); solo falta exportarlas a `artifacts/plots/` e insertarlas aquí. -->
+
+Un patrón consistente en la tabla anterior: en los 8 niveles con ambas granularidades entrenadas, la versión **semanal** tiene siempre menor error que la diaria (p. ej. tienda×departamento pasa de 9,91% a 7,56% de WAPE) — la agregación semanal amortigua el ruido de calendario día a día y acorta el horizonte relativo de predicción, a costa de una resolución temporal más gruesa para la reposición de inventario.
+
+Más allá del desempeño de cada nivel por separado, cabe preguntarse si conviene pronosticar una métrica agregada (p. ej. el total de la cadena) **directamente** con un modelo entrenado en ese nivel, o **sumar (bottom-up)** las predicciones de un modelo entrenado en un nivel más fino. Para responderlo, las predicciones de cada uno de los 9 niveles se reagregaron al total semanal y se compararon contra la misma venta real:
+
+<!-- 🔢 SUGERENCIA DATO / 📊 SUGERENCIA GRÁFICO: tabla y gráfico de barras (WAPE y WRMSSE) por enfoque -- notebook 04_hierarchical_comparison.ipynb, sección "3. Comparación al nivel TOTAL". -->
+
+| Enfoque (nivel origen) | WAPE | Bias | WRMSSE |
+|---|---|---|---|
+| Tienda × Categoría (bottom-up) | 3,93% | −3,93% | 0,279 |
+| Tienda × Departamento (bottom-up) | 4,72% | −4,72% | 0,348 |
+| Estado × Departamento (bottom-up) | 5,05% | −5,05% | 0,371 |
+| Estado × Categoría (bottom-up) | 5,34% | −5,34% | 0,377 |
+| **Total (directo)** | 5,55% | −5,55% | 0,408 |
+| Departamento (bottom-up) | 6,16% | −6,16% | 0,446 |
+| Tienda (bottom-up) | 6,18% | −6,18% | 0,423 |
+| Estado (bottom-up) | 6,19% | −6,19% | 0,421 |
+| Categoría (bottom-up) | 6,45% | −6,45% | 0,446 |
+
+El resultado más relevante: sumar las predicciones del modelo entrenado a nivel tienda×categoría (bottom-up) da un error de total **menor** que pronosticarlo directamente (3,93% vs. 5,55% de WAPE) — un hallazgo típico en previsión jerárquica, donde los errores idiosincráticos de series más finas tienden a cancelarse parcialmente al sumarlas. Un segundo patrón a destacar: el sesgo (bias) es negativo y de magnitud casi idéntica al WAPE en los nueve enfoques, es decir que **todos** subestiman sistemáticamente la demanda total en la ventana evaluada, no solo el enfoque directo.
+
+<!-- 📊 SUGERENCIA GRÁFICO: serie temporal real vs. directo (Total) vs. mejor bottom-up (Tienda × Categoría) sobre las semanas de test -- notebook 04_hierarchical_comparison.ipynb, sección "3", último gráfico de líneas. -->
+
+<!-- ⚠️ REVISAR ANTES DE ENTREGAR: la ventana de test de esta comparación al nivel total es de solo 4 semanas (el horizonte de test del nivel Total semanal), una muestra pequeña para sacar conclusiones robustas sobre qué enfoque de reconciliación es mejor -- mencionarlo como limitación, no solo como resultado. -->
+
+Como extensión natural de este análisis (fuera del alcance de esta entrega), la combinación de niveles podría formalizarse con métodos de reconciliación jerárquica óptima (p. ej. *top-down* por proporciones históricas o *MinT*), en lugar de la suma bottom-up simple usada aquí.
+
 ## 7. Optimización de los modelos seleccionados
 
 **Selección de variables (eliminación hacia atrás + importancia por permutación).** Sobre el conjunto de más de 190 variables candidatas (sección 5) se aplicó un proceso de eliminación hacia atrás: en cada paso se calcula la importancia por permutación de cada variable activa (sobre una muestra de validación de 15.000 filas y 5 repeticiones), se ordenan de menor a mayor importancia, y se evalúa eliminar la menos importante; la eliminación se acepta solo si el error de validación (RMSE o la métrica de Tweedie, según el nivel) no empeora, repitiendo el proceso hasta que una pasada completa no elimina ninguna variable. El resultado es un conjunto final de variables específico por nivel:
@@ -329,20 +381,21 @@ A nivel de mayor granularidad (tienda-departamento, L9) el orden cambia: dominan
 
 ## 9. Productivización vía API
 
-> **Nota:** esta sección describe una **propuesta de arquitectura**, no una implementación ya construida. A la fecha de este informe, el repositorio no contiene código de servicio (API, contenedores, etc.) — el resultado de este trabajo son los artefactos de modelo entrenados y los procesos que los generan y evalúan por línea de comandos. La productivización queda como línea de trabajo inmediato posterior a esta memoria.
+Los modelos ya entrenados y validados se ponen a disposición de herramientas internas de la empresa mediante una API REST construida con **FastAPI**, contenerizada con **Docker** para poder desplegarse en cualquier servidor sin depender del entorno de desarrollo.
 
-El diseño actual de los artefactos ya facilita este paso: cada modelo se exporta como un único objeto serializado que empaqueta el modelo LightGBM entrenado junto con sus metadatos (variables usadas, variables categóricas, columnas de identificación, fecha de corte de entrenamiento, métricas de validación/test), sin datos crudos — es decir, ya sigue un patrón de "artefacto liviano" razonable para servir en producción.
+**Diseño de la API.** El servicio expone tres rutas: `/health` para comprobación de disponibilidad, `/levels` para listar los niveles de agregación activos junto con sus métricas de validación/test (WAPE, WRMSSE), y `/predict/{level_id}` como endpoint principal de predicción. Los artefactos de modelo (LightGBM entrenado + metadatos: variables usadas, variables categóricas, columnas de identificación, métricas) se cargan en memoria y se cachean al primer uso, evitando releerlos en cada solicitud.
 
-**Arquitectura propuesta:**
+**Versionado y reentrenamiento.** Cada vez que se reentrena un nivel (`make train-dataset`) se exporta un nuevo artefacto versionado y registrado en `artifacts/models/registry.json`, que mantiene un puntero `latest` y el historial completo de versiones anteriores. Esto permite reentrenar periódicamente sin downtime: la API sigue sirviendo la versión vigente mientras se genera la nueva, el cambio de `latest` es instantáneo, y además se puede pedir explícitamente una versión anterior en la petición (parámetro `version`) — útil para comparar o hacer *rollback* si un reentrenamiento resulta peor que el anterior.
 
-- **Framework:** FastAPI, por su soporte nativo de validación de esquemas y documentación automática de la API.
-- **Endpoint principal:** una ruta de predicción que reciba el nivel de agregación, el identificador de serie (item, tienda, departamento, etc. según el nivel) y el horizonte de predicción solicitado; devolviendo la predicción puntual junto con metadatos de contexto (fecha de corte del modelo, métricas de validación del nivel usado).
-- **Carga de modelo:** al iniciar el servicio, cargar en memoria los artefactos de modelo relevantes (patrón ya usado hoy en los procesos de evaluación por línea de comandos), evitando releerlos en cada solicitud.
-- **Reconstrucción de features:** el mayor desafío de llevar esto a producción no es servir el modelo sino las variables de entrada — hoy la reconstrucción de variables asume que se dispone de todo el historial hasta la fecha objetivo. Para un forecast genuinamente hacia adelante (no *backtesting* sobre fechas ya conocidas) haría falta un paso adicional que "congele" las variables cuasi-estáticas (intermitencia, codificaciones históricas) en su último valor conocido, tal como ya se identificó durante el desarrollo del proyecto.
-- **Empaquetado y despliegue:** contenedorización con Docker (hoy inexistente en el repo) y, si se prevé reentrenamiento periódico, un registro de modelos/versionado. El propio documento de propuesta original del TFM contemplaba usar **MLflow** para *tracking* de experimentos, herramienta que finalmente no se llegó a integrar y que sería natural incorporar en este punto, tanto para *tracking* de entrenamiento como para registro/versionado de los modelos servidos por la API.
-- **Pruebas:** el repositorio no cuenta hoy con una suite de tests automatizados (solo una verificación manual puntual de la lógica de *split* temporal); antes de exponer un servicio de cara a sistemas productivos convendría cubrir al menos la carga de artefactos, el contrato de entrada/salida de la API y la reconstrucción de features con tests automatizados.
+**Contenerización.** La imagen Docker parte de una base `uv:python3.13-bookworm-slim`, instala la dependencia de sistema necesaria para LightGBM (`libgomp1`, que la imagen slim no trae por defecto) y separa en capas la instalación de dependencias del código de la aplicación para acelerar reconstrucciones. El `Makefile` expone el ciclo completo de despliegue local (`make docker-build`, `docker-api`, `docker-stop`, `docker-logs`), y al no depender de infraestructura específica, la misma imagen puede desplegarse en cualquier servidor con Docker disponible.
 
-<!-- 📊 SUGERENCIA GRÁFICO: un diagrama simple de arquitectura (cliente → API FastAPI → carga de artifact .pkl → reconstrucción de features → predicción) ayudaría mucho aquí a comunicar la propuesta visualmente. -->
+**Pruebas.** El contrato de la API (columnas, tipos y categorías esperadas por `/predict`, resolución de versiones del registry) está cubierto por una suite de tests automatizados (`tests/test_api_contract.py`), que forma parte del *gate* de no-regresión del proyecto.
+
+**Limitación vigente.** La API **no reconstruye variables desde datos crudos**: recibe un vector de features ya calculado, con las mismas ~190 columnas que el modelo vio en entrenamiento. La paridad entre ese vector y el usado en entrenamiento se garantiza porque ambos pasan por la misma función `build_dataset()` (verificado por `tests/test_pipeline_contract.py`), pero construir ese vector para una fecha realmente futura — no solo *backtesting* sobre fechas ya conocidas — sigue siendo un paso pendiente, ya señalado en la sección 5 respecto a las variables de intermitencia y codificación histórica.
+
+No se llegó a incorporar **MLflow** para *tracking*/registro de experimentos, como sí se contemplaba en la propuesta original (`docs/propuesta.md`); el versionado de modelos se resuelve hoy con el mecanismo casero de `registry.json` descrito arriba.
+
+<!-- 📊 SUGERENCIA GRÁFICO: un diagrama simple de arquitectura (cliente → API FastAPI → carga de artifact .pkl vía registry.json → predicción) ayudaría mucho aquí a comunicar la arquitectura visualmente. -->
 
 ## 10. Conclusiones y líneas futuras
 
@@ -358,9 +411,12 @@ Este trabajo construyó un pipeline completo de previsión de demanda sobre el d
 **Limitaciones y líneas futuras:**
 
 - **Niveles item-level (L10-L12).** Concentran el mayor volumen y la mayor intermitencia del dataset, y quedaron fuera del alcance de entrenamiento activo por costo computacional. El objetivo Tweedie ya está implementado para ellos; la línea futura natural es extender el pipeline (probablemente con procesamiento distribuido o entrenamiento por segmentos más agresivo) para cubrirlos.
-- **Productivización vía API.** Como se detalla en la sección 9, queda como diseño propuesto, no implementado — es la línea de trabajo inmediato más directa a partir de esta memoria.
-- **Seguimiento de experimentos.** La propuesta original de este TFM contemplaba usar MLflow; en la práctica el *tracking* se resolvió de forma más artesanal (SQLite de Optuna + artefactos CSV/JSON/pickle). Integrar MLflow (u otra herramienta equivalente) mejoraría la trazabilidad y reproducibilidad a medida que crezca el número de niveles/experimentos.
-- **Pruebas automatizadas.** No existe hoy una suite de tests (solo una verificación manual de la lógica de partición temporal); es una brecha a cerrar antes de cualquier despliegue productivo.
+- **Productivización vía API.** Como se detalla en la sección 9, la API y su contenerización con Docker ya están implementadas; la línea de trabajo pendiente es la reconstrucción de features para forecasting real hacia adelante (no solo *backtesting*) y la incorporación de MLflow para *tracking*/registro de experimentos, que hoy se resuelve de forma artesanal (SQLite de Optuna + `registry.json` casero).
+- **Robustecer el proceso de selección y ajuste en todos los niveles.** El ciclo completo aplicado en este trabajo (comparación de 21 configuraciones, eliminación *backward* de variables y optimización bayesiana de hiperparámetros con Optuna) consume varias horas de cómputo por nivel solo en la etapa de Optuna. Extenderlo sistemáticamente a los niveles más granulares (item, item-state, item-store) no es un simple múltiplo de ese costo: al estar el dataset particionado por `dept_id`/`store_id`/`state_id` (ver `config/levels.py`), cada uno de esos niveles se traduce en **cientos de combinaciones**, es decir, cientos de modelos a optimizar de forma independiente. Robustecer el sistema en este sentido implica primero resolver el problema de escala computacional, ya sea mediante presupuestos de Optuna más acotados por combinación, paralelización/procesamiento distribuido, o estrategias de *transfer*/*meta-learning* de hiperparámetros entre series similares.
+- **Redes neuronales.** No se incluyeron arquitecturas de *deep learning* (p. ej. N-BEATS, DeepAR, Temporal Fusion Transformer) en el comparativo de modelos. Su inclusión es una línea de trabajo natural, pero requiere resolver primero el mismo problema de escala del punto anterior: entrenar y ajustar una red neuronal por cada una de las cientos de series de los niveles granulares exige un presupuesto de cómputo (idealmente GPU) del que no se disponía para este trabajo.
+- **Monitoreo y reentrenamiento continuo (CI/CD).** El sistema actual no cuenta con una etapa de monitoreo de error de predicción ni de *drift* en los datos de entrada (cambios en la distribución de precios, aparición de nuevos productos/tiendas, cambios estructurales en la demanda). Una línea de trabajo importante de cara a un uso productivo sostenido es instrumentar ese monitoreo y conectarlo a un proceso de reentrenamiento automático (CI/CD): el mecanismo de versionado ya implementado en `registry.json` (sección 9) da la base para que un reentrenamiento disparado automáticamente pueda publicarse como nueva versión sin interrumpir el servicio, y hacer *rollback* si el modelo reentrenado resulta peor que el vigente.
+- **Seguimiento de experimentos.** La propuesta original de este TFM contemplaba usar MLflow; en la práctica el *tracking* se resolvió de forma más artesanal (SQLite de Optuna + artefactos CSV/JSON/pickle + `registry.json` para versionado de modelos servidos). Integrar MLflow (u otra herramienta equivalente) mejoraría la trazabilidad y reproducibilidad a medida que crezca el número de niveles/experimentos, y sería especialmente valioso si se implementa el punto anterior de reentrenamiento automático.
+- **Pruebas automatizadas.** Existe ya una suite de tests (contrato de datos/features, contrato de la API, *gate* de no-regresión); la línea pendiente es extender la cobertura a los componentes de reconstrucción de features para forecasting real y a los niveles granulares una vez se aborden.
 - **Backtesting vs. forecasting real.** La evaluación actual predice sobre fechas históricas ya conocidas (con todo su historial disponible). Un despliegue productivo real requiere el paso adicional de "congelar" variables cuasi-estáticas para fechas verdaderamente futuras, ya anotado como pendiente en el propio código.
 - **Modelos probabilísticos.** Todo el trabajo se centra en predicción puntual; para decisiones de *stock* de seguridad e inventario, una línea natural es extender a predicción por cuantiles o distribuciones completas de demanda.
 - **Nivel store_dept (L9).** Los resultados presentados en la sección 7 son preliminares (artefacto de una iteración anterior del pipeline); consolidarlo dentro de la suite estándar de entrenamiento/test es un paso pendiente de corto plazo.
