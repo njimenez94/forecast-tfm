@@ -74,6 +74,9 @@ def main():
                          "versión en producción, sin las fases caras de interpretabilidad) u "
                          f"optimized (pipeline completo, para las métricas finales del TFM). "
                          f"Default: {PROFILE!r} (ver PROFILE en config.py).")
+    ap.add_argument("--no-feature-selection", action="store_true",
+                    help="Apaga run_feature_selection sin importar el --profile elegido "
+                         "(deja el resto de fases del profile intacto, p.ej. SHAP/Optuna).")
     args = ap.parse_args()
 
     level_ids = [int(x) for x in args.levels.split(",")] if args.levels else list(config.ACTIVE_LEVEL_IDS)
@@ -92,6 +95,8 @@ def main():
                 continue
 
             cfg = replace(CFG, level_id=level_id, grain=grain, **profile_overrides)
+            if args.no_feature_selection:
+                cfg = replace(cfg, run_feature_selection=False)
 
             if not level.split_by:
                 try:
