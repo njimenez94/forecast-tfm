@@ -1,0 +1,26 @@
+2026-09-03 23:07:14.282 | INFO     | __main__:main:703 - Perfil de entrenamiento: optimized
+2026-09-03 23:07:14.341 | INFO     | src.data.split:load_data:359 - level_01_daily_total | target=sales | 1,941 filas | 191 features (9 categóricas)
+2026-09-03 23:07:14.349 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 1,885 rows)
+2026-09-03 23:07:14.350 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 28 rows)
+2026-09-03 23:07:14.350 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 28 rows)
+2026-09-03 23:07:14.593 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-03 23:07:14.626 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 17.64% | WRMSSE: 1.3842  | fit: 0.01s
+2026-09-03 23:07:14.658 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 7.64% | WRMSSE: 0.6676  | fit: 0.01s
+2026-09-03 23:07:14.689 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 5.76% | WRMSSE: 0.5207  | fit: 0.01s
+2026-09-03 23:07:14.722 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 13.11% | WRMSSE: 1.0562  | fit: 0.01s
+2026-09-03 23:07:14.760 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 17.72% | WRMSSE: 1.3922  | fit: 0.01s
+2026-09-03 23:07:14.784 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 19.42% | WRMSSE: 1.8141  | fit: 0.00s
+2026-09-03 23:07:14.808 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 13.74% | WRMSSE: 1.2164  | fit: 0.00s
+2026-09-03 23:07:14.832 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 13.74% | WRMSSE: 1.2165  | fit: 0.00s
+2026-09-03 23:07:14.856 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 13.92% | WRMSSE: 1.2046  | fit: 0.00s
+2026-09-03 23:07:14.881 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 14.10% | WRMSSE: 1.2000  | fit: 0.00s
+2026-09-03 23:07:14.905 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 13.89% | WRMSSE: 1.2062  | fit: 0.00s
+2026-09-03 23:07:14.905 | INFO     | __main__:run_pipeline:638 - Fase naive: 0.3s
+2026-09-03 23:07:20.235 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 5.69% | WRMSSE: 0.5011  | fit: 5.30s
+2026-09-03 23:07:23.885 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 5.75% | WRMSSE: 0.5069  | fit: 3.61s
+2026-09-03 23:07:27.278 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 5.88% | WRMSSE: 0.5438  | fit: 3.37s
+2026-09-03 23:07:48.402 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 6.03% | WRMSSE: 0.5429  | fit: 21.06s
+2026-09-03 23:07:49.988 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 6.18% | WRMSSE: 0.5677  | fit: 1.55s
+2026-09-03 23:07:49.988 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 35.1s
+2026-09-03 23:07:49.989 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-03 23:07:50.921 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_01_daily_total_sales_bench_lightgbm'

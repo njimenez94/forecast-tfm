@@ -1,0 +1,26 @@
+2026-09-03 21:47:07.470 | INFO     | __main__:generate:61 - [L1 total/daily] → level_01_daily_total.parquet
+2026-09-03 21:47:07.471 | INFO     | __main__:generate:64 -   1 series × 1,941 daily
+2026-09-03 21:47:07.471 | INFO     | __main__:generate:67 -   1,941 filas (aprox.)
+2026-09-03 21:47:14.678 | SUCCESS  | __main__:generate:70 -   listo  90.4 KiB
+2026-09-03 21:47:16.083 | INFO     | __main__:generate:61 - [L4 dept/daily] → level_04_daily_dept.parquet
+2026-09-03 21:47:16.084 | INFO     | __main__:generate:64 -   7 series × 1,941 daily
+2026-09-03 21:47:16.084 | INFO     | __main__:generate:67 -   13,587 filas (aprox.)
+2026-09-03 21:47:27.237 | SUCCESS  | __main__:generate:70 -   listo  575.0 KiB
+2026-09-03 21:47:28.104 | INFO     | __main__:generate:61 - [L6 store/daily] → level_06_daily_store.parquet
+2026-09-03 21:47:28.105 | INFO     | __main__:generate:64 -   10 series × 1,941 daily
+2026-09-03 21:47:28.105 | INFO     | __main__:generate:67 -   19,410 filas (aprox.)
+2026-09-03 21:47:38.767 | SUCCESS  | __main__:generate:70 -   listo  774.3 KiB
+2026-09-03 21:47:41.332 | INFO     | __main__:generate:61 - [L9 store_dept/daily] → level_09_daily_store_dept.parquet
+2026-09-03 21:47:41.333 | INFO     | __main__:generate:64 -   70 series × 1,941 daily
+2026-09-03 21:47:41.333 | INFO     | __main__:generate:67 -   135,870 filas (aprox.)
+2026-09-03 21:48:05.333 | SUCCESS  | __main__:generate:70 -   listo  4.6 MiB
+2026-09-03 21:48:06.532 | INFO     | __main__:generate:61 - [L10 item/daily] → level_10_daily_item.parquet
+2026-09-03 21:48:06.533 | INFO     | __main__:generate:63 -   filtro: {'dept_id': ('FOODS_3',)}
+2026-09-03 21:48:06.534 | INFO     | __main__:generate:64 -   823 series × 1,941 daily
+2026-09-03 21:48:06.534 | INFO     | __main__:generate:67 -   1,597,443 filas (aprox.)
+2026-09-03 21:48:35.227 | SUCCESS  | __main__:generate:70 -   listo  22.0 MiB
+2026-09-03 21:48:35.676 | INFO     | __main__:generate:61 - [L12 item_store/daily] → level_12_daily_item_store.parquet
+2026-09-03 21:48:35.679 | INFO     | __main__:generate:63 -   filtro: {'dept_id': ('FOODS_3',), 'store_id': ('CA_3',)}
+2026-09-03 21:48:35.680 | INFO     | __main__:generate:64 -   823 series × 1,941 daily
+2026-09-03 21:48:35.681 | INFO     | __main__:generate:67 -   1,597,443 filas (aprox.)
+2026-09-03 21:48:51.898 | SUCCESS  | __main__:generate:70 -   listo  12.2 MiB

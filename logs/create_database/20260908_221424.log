@@ -1,0 +1,17 @@
+2026-09-08 22:14:24.969 | INFO     | __main__:extract_files:27 - Comienza extraccion de datos...
+2026-09-08 22:14:24.970 | INFO     | __main__:download_dataset:18 - No se encontró /home/njimenez/workspace/magister/forecast-tfm/backup/m5-forecasting-accuracy.zip, descargando 'm5-forecasting-accuracy' desde Kaggle...
+2026-09-08 22:14:30.241 | INFO     | __main__:download_dataset:24 - Descarga completa: /home/njimenez/workspace/magister/forecast-tfm/backup/m5-forecasting-accuracy.zip
+2026-09-08 22:14:30.243 | INFO     | __main__:extract_files:33 - Descomprimiendo m5-forecasting-accuracy.zip en /home/njimenez/workspace/magister/forecast-tfm/data/raw...
+2026-09-08 22:14:30.245 | INFO     | __main__:extract_files:36 -   -> calendar.csv
+2026-09-08 22:14:30.246 | INFO     | __main__:extract_files:36 -   -> sales_train_evaluation.csv
+2026-09-08 22:14:30.246 | INFO     | __main__:extract_files:36 -   -> sales_train_validation.csv
+2026-09-08 22:14:30.247 | INFO     | __main__:extract_files:36 -   -> sample_submission.csv
+2026-09-08 22:14:30.247 | INFO     | __main__:extract_files:36 -   -> sell_prices.csv
+2026-09-08 22:14:32.829 | INFO     | __main__:load_files:40 - Comienza creación de base de datos...
+2026-09-08 22:14:32.831 | INFO     | __main__:load_files:45 - Ejecutando queries/create_database.sql (13 statements)...
+2026-09-08 22:21:29.978 | INFO     | __main__:load_files:50 - Base de datos lista en '/home/njimenez/workspace/magister/forecast-tfm/data/m5.db'
+2026-09-08 22:21:30.006 | INFO     | __main__:load_files:54 -   - calendar: 1,969 filas
+2026-09-08 22:21:30.081 | INFO     | __main__:load_files:54 -   - dataset_raw: 59,181,090 filas
+2026-09-08 22:21:30.143 | INFO     | __main__:load_files:54 -   - sales_train_evaluation: 59,181,090 filas
+2026-09-08 22:21:30.145 | INFO     | __main__:load_files:54 -   - sample_submission: 60,980 filas
+2026-09-08 22:21:30.156 | INFO     | __main__:load_files:54 -   - sell_prices: 6,841,121 filas

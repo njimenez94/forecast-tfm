@@ -1,0 +1,957 @@
+2026-09-03 23:16:33.499 | INFO     | __main__:main:703 - Perfil de entrenamiento: optimized
+2026-09-03 23:16:33.598 | INFO     | src.data.split:load_data:359 - level_01_daily_total | target=sales | 1,941 filas | 191 features (9 categóricas)
+2026-09-03 23:16:33.611 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 1,885 rows)
+2026-09-03 23:16:33.612 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 28 rows)
+2026-09-03 23:16:33.612 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 28 rows)
+2026-09-03 23:16:33.974 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-03 23:16:34.022 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 17.64% | WRMSSE: 1.3842  | fit: 0.01s
+2026-09-03 23:16:34.069 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 7.64% | WRMSSE: 0.6676  | fit: 0.01s
+2026-09-03 23:16:34.116 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 5.76% | WRMSSE: 0.5207  | fit: 0.01s
+2026-09-03 23:16:34.162 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 13.11% | WRMSSE: 1.0562  | fit: 0.01s
+2026-09-03 23:16:34.214 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 17.72% | WRMSSE: 1.3922  | fit: 0.01s
+2026-09-03 23:16:34.256 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 19.42% | WRMSSE: 1.8141  | fit: 0.00s
+2026-09-03 23:16:34.298 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 13.74% | WRMSSE: 1.2164  | fit: 0.00s
+2026-09-03 23:16:34.340 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 13.74% | WRMSSE: 1.2165  | fit: 0.00s
+2026-09-03 23:16:34.381 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 13.92% | WRMSSE: 1.2046  | fit: 0.00s
+2026-09-03 23:16:34.426 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 14.10% | WRMSSE: 1.2000  | fit: 0.00s
+2026-09-03 23:16:34.462 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 13.89% | WRMSSE: 1.2062  | fit: 0.00s
+2026-09-03 23:16:34.463 | INFO     | __main__:run_pipeline:638 - Fase naive: 0.5s
+2026-09-03 23:16:43.444 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 5.69% | WRMSSE: 0.5011  | fit: 8.91s
+2026-09-03 23:16:49.342 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 5.75% | WRMSSE: 0.5069  | fit: 5.80s
+2026-09-03 23:16:55.007 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 5.88% | WRMSSE: 0.5438  | fit: 5.61s
+2026-09-03 23:17:11.595 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 6.03% | WRMSSE: 0.5429  | fit: 16.55s
+2026-09-03 23:17:12.615 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 6.18% | WRMSSE: 0.5677  | fit: 1.00s
+2026-09-03 23:17:12.616 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 38.2s
+2026-09-03 23:17:12.616 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-03 23:17:13.824 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_01_daily_total_sales_bench_lightgbm'
+2026-09-03 23:22:32.072 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2698.3868 | WRMSSE de ESE trial: 0.4564 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-03 23:22:32.076 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.08934606998787355, 'num_leaves': 166, 'max_depth': 7, 'min_child_samples': 151, 'subsample': 0.8184933478872705, 'colsample_bytree': 0.9940991321290527, 'reg_alpha': 0.002801676626253264, 'reg_lambda': 2.216597061229316}
+2026-09-03 23:22:50.533 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 7.44% | WRMSSE: 0.6786  | fit: 337.85s
+2026-09-03 23:22:50.533 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-03 23:22:50.633 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_01_daily_total_sales_bench_xgboost'
+2026-09-03 23:27:58.326 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1870.1728 | WRMSSE de ESE trial: 0.3163 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-03 23:27:58.328 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.10625380423427773, 'max_depth': 8, 'min_child_weight': 2.376255377542198, 'subsample': 0.6697785732878745, 'colsample_bytree': 0.7136493427162601, 'reg_alpha': 0.04322384631704491, 'reg_lambda': 0.011973567850443873}
+2026-09-03 23:28:21.013 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 3.24% | WRMSSE: 0.3163  | fit: 330.39s
+2026-09-03 23:28:21.013 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-03 23:28:21.094 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_01_daily_total_sales_bench_catboost'
+2026-09-03 23:33:23.627 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 5349.0949 | WRMSSE de ESE trial: 0.9047 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-03 23:33:23.630 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.14478086761631703, 'depth': 4, 'l2_leaf_reg': 2.0444908868342817}
+2026-09-03 23:33:27.461 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 10.59% | WRMSSE: 0.9047  | fit: 306.37s
+2026-09-03 23:33:27.461 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-03 23:33:27.547 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_01_daily_total_sales_bench_histgb'
+2026-09-03 23:38:48.178 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2300.9837 | WRMSSE de ESE trial: 0.3892 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-03 23:38:48.182 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.07283418332127417, 'max_leaf_nodes': 201, 'max_depth': 15, 'min_samples_leaf': 26, 'l2_regularization': 0.5274553127914451}
+2026-09-03 23:39:18.294 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 3.92% | WRMSSE: 0.3892  | fit: 350.79s
+2026-09-03 23:39:18.295 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-03 23:39:18.359 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_01_daily_total_sales_bench_ridge'
+2026-09-03 23:40:22.953 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 4024.2338 | WRMSSE de ESE trial: 0.6806 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-03 23:40:22.955 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 8.125230296965974}
+2026-09-03 23:40:23.118 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 7.51% | WRMSSE: 0.6806  | fit: 64.78s
+2026-09-03 23:40:23.119 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=1870.1728
+2026-09-03 23:40:23.119 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1390.5s
+2026-09-03 23:40:23.123 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+lag28                              566119488.0
+te_weekend_mean                    249429696.0
+lag364                             177191888.0
+lag91                               66353604.0
+lag7                                56204292.0
+rolling_mean_lag1_window_size7      37249692.0
+rolling_mean_lag3_window_size14     35216412.0
+lag182                              31016058.0
+lag35                               27535098.0
+rolling_min_lag1_window_size7       27379252.0
+dtype: float64
+2026-09-03 23:40:54.434 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+lag364                        2245.066821
+te_weekend_mean               1350.081372
+day                            496.542212
+lag28                          440.873120
+lag182                         314.642896
+lag7                           173.806909
+seasonal_mean_lag364_364_2     108.694116
+dayofweek                       72.999292
+lag21                           70.722656
+lag14                           64.825195
+dtype: float64
+2026-09-03 23:41:02.883 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=1870.1728 | WRMSSE=0.3163 (informativo)
+2026-09-03 23:48:38.741 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['quarter', 'rolling_std_lag364_window_size91', 'rolling_min_lag364_window_size91', 'month', 'days_since_price_change', 'year', 'has_event_2', 'has_event'] -> 183 features | regression_l2=1832.4101 | WRMSSE=0.3099
+2026-09-03 23:49:43.604 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'days_since_release' -> 182 features | regression_l2=1697.4074 | WRMSSE=0.2871
+2026-09-04 00:16:59.719 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 182/191 features | regression_l2 final: 1697.4074 | WRMSSE final: 0.2871
+2026-09-04 00:16:59.721 | INFO     | __main__:select_features:422 - Features descartadas (9): ['days_since_price_change', 'days_since_release', 'has_event', 'has_event_2', 'month', 'quarter', 'rolling_min_lag364_window_size91', 'rolling_std_lag364_window_size91', 'year']
+2026-09-04 00:16:59.735 | INFO     | __main__:select_features:435 - Features finales: 182 (9 categóricas) | regression_l2=1697.4074 | WRMSSE=0.2871 (informativo)
+2026-09-04 00:16:59.736 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 2196.6s
+2026-09-04 00:17:06.435 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 2.86% | WRMSSE: 0.2871  | fit: 5.91s
+2026-09-04 00:17:08.438 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = lag28 | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-04 00:17:08.438 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 8.7s
+2026-09-04 00:17:08.529 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_01_daily_total_sales_final_xgboost'
+2026-09-04 00:27:11.402 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1813.8294 | WRMSSE de ESE trial: 0.3068 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 00:27:11.406 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.039075837549779946, 'max_depth': 6, 'min_child_weight': 8.457608590989523, 'subsample': 0.7854538173893787, 'colsample_bytree': 0.7936966254184882, 'reg_alpha': 0.07608897692373096, 'reg_lambda': 0.04109864374779275}
+2026-09-04 00:27:11.411 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 603.0s
+2026-09-04 00:27:32.186 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [326, 78, 484] -> n_estimators final = 296
+2026-09-04 00:27:32.232 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 3.17% | WRMSSE: 0.3068  | fit: 20.69s
+2026-09-04 00:27:38.757 | INFO     | __main__:fit_final_model:551 - Test WAPE: 5.95% | Test WRMSSE: 0.5794
+2026-09-04 00:27:39.745 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-04 00:27:40.187 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_01_daily_total_sales_artifact.pkl (modelo: xgboost)
+2026-09-04 00:27:40.355 | SUCCESS  | __main__:export_artifact:625 - Versión 20260904T042740Z registrada en registry.json
+2026-09-04 00:27:40.357 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_01_daily_total/sales) en 4266.9s
+2026-09-04 00:27:40.570 | INFO     | src.data.split:load_data:359 - level_02_daily_state | target=sales | 5,823 filas | 191 features (9 categóricas)
+2026-09-04 00:27:40.578 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 5,655 rows)
+2026-09-04 00:27:40.578 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 84 rows)
+2026-09-04 00:27:40.578 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 84 rows)
+2026-09-04 00:27:40.850 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-04 00:27:40.887 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 21.19% | WRMSSE: 1.6088  | fit: 0.01s
+2026-09-04 00:27:40.924 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 8.81% | WRMSSE: 0.7244  | fit: 0.01s
+2026-09-04 00:27:40.961 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 6.99% | WRMSSE: 0.6121  | fit: 0.01s
+2026-09-04 00:27:40.998 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 13.94% | WRMSSE: 1.0514  | fit: 0.01s
+2026-09-04 00:27:41.039 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 21.28% | WRMSSE: 1.6166  | fit: 0.01s
+2026-09-04 00:27:41.071 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 19.96% | WRMSSE: 1.6985  | fit: 0.00s
+2026-09-04 00:27:41.106 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 15.31% | WRMSSE: 1.1999  | fit: 0.00s
+2026-09-04 00:27:41.139 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 14.73% | WRMSSE: 1.1801  | fit: 0.00s
+2026-09-04 00:27:41.175 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 14.64% | WRMSSE: 1.1598  | fit: 0.00s
+2026-09-04 00:27:41.209 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 14.69% | WRMSSE: 1.1513  | fit: 0.00s
+2026-09-04 00:27:41.245 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 14.53% | WRMSSE: 1.1550  | fit: 0.00s
+2026-09-04 00:27:41.245 | INFO     | __main__:run_pipeline:638 - Fase naive: 0.4s
+2026-09-04 00:27:48.701 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 7.50% | WRMSSE: 0.6228  | fit: 7.42s
+2026-09-04 00:27:52.446 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 7.20% | WRMSSE: 0.6006  | fit: 3.71s
+2026-09-04 00:27:52.598 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 7.68% | WRMSSE: 0.6243  | fit: 0.12s
+2026-09-04 00:28:20.425 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 8.12% | WRMSSE: 0.6500  | fit: 27.78s
+2026-09-04 00:28:22.516 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 7.69% | WRMSSE: 0.6191  | fit: 2.01s
+2026-09-04 00:28:22.516 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 41.3s
+2026-09-04 00:28:22.517 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-04 00:28:22.684 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_02_daily_state_sales_bench_lightgbm'
+2026-09-04 00:33:27.851 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1443.4515 | WRMSSE de ESE trial: 0.6395 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 00:33:27.852 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.13407875359519203, 'num_leaves': 65, 'max_depth': 7, 'min_child_samples': 157, 'subsample': 0.6345229313049441, 'colsample_bytree': 0.7731542558612667, 'reg_alpha': 0.003248905579551546, 'reg_lambda': 0.02711571497397006}
+2026-09-04 00:33:29.201 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 11.03% | WRMSSE: 0.8370  | fit: 306.64s
+2026-09-04 00:33:29.202 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-04 00:33:29.271 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_02_daily_state_sales_bench_xgboost'
+2026-09-04 00:38:40.847 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1299.3015 | WRMSSE de ESE trial: 0.5899 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 00:38:40.849 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.07337972545268062, 'max_depth': 9, 'min_child_weight': 22.31429151072023, 'subsample': 0.7473697859674007, 'colsample_bytree': 0.7402481299593919, 'reg_alpha': 0.7639792108957237, 'reg_lambda': 1.5690111015937573}
+2026-09-04 00:38:56.048 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 6.75% | WRMSSE: 0.5899  | fit: 326.78s
+2026-09-04 00:38:56.049 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-04 00:38:56.126 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_02_daily_state_sales_bench_catboost'
+2026-09-04 00:43:57.659 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 3282.4934 | WRMSSE de ESE trial: 1.3565 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 00:43:57.661 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.13513657247321773, 'depth': 5, 'l2_leaf_reg': 1.1058682536292408}
+2026-09-04 00:44:01.907 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 17.96% | WRMSSE: 1.3565  | fit: 305.80s
+2026-09-04 00:44:01.908 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-04 00:44:01.961 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_02_daily_state_sales_bench_histgb'
+2026-09-04 00:51:23.126 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1703.7287 | WRMSSE de ESE trial: 0.7363 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 00:51:23.139 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.07297506121568255, 'max_leaf_nodes': 239, 'max_depth': 15, 'min_samples_leaf': 25, 'l2_regularization': 0.2577714521629187}
+2026-09-04 00:54:12.898 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 8.45% | WRMSSE: 0.7363  | fit: 610.88s
+2026-09-04 00:54:12.898 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-04 00:54:12.964 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_02_daily_state_sales_bench_ridge'
+2026-09-04 00:55:41.945 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2557.9755 | WRMSSE de ESE trial: 1.0357 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 00:55:41.948 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 99.95115919138186}
+2026-09-04 00:55:42.384 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 13.00% | WRMSSE: 1.0357  | fit: 89.38s
+2026-09-04 00:55:42.387 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=1299.3015
+2026-09-04 00:55:42.387 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1639.9s
+2026-09-04 00:55:42.394 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+te_weekend_mean                   265304192.0
+lag28                             208810560.0
+lag7                               68574768.0
+rolling_mean_lag3_window_size7     38191908.0
+lag35                              33064418.0
+snap                               18118194.0
+lag1                               16823480.0
+lag364                             15757095.0
+rolling_mean_lag2_window_size7     15494850.0
+lag91                              13973930.0
+dtype: float64
+2026-09-04 00:56:02.327 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+lag28                         827.421240
+te_weekend_mean               715.088721
+lag364                        435.175293
+lag35                         147.519751
+snap                          119.155273
+seasonal_mean_lag364_364_2    101.999292
+lag7                           96.086060
+lag14                          69.338330
+lag21                          63.402832
+dayofweek                      60.693262
+dtype: float64
+2026-09-04 00:56:17.118 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=1299.3015 | WRMSSE=0.5899 (informativo)
+2026-09-04 01:30:59.412 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag2' -> 190 features | regression_l2=1293.8386 | WRMSSE=0.5887
+2026-09-04 01:33:28.000 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag9' -> 189 features | regression_l2=1264.1211 | WRMSSE=0.5763
+2026-09-04 01:35:10.697 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag25' -> 188 features | regression_l2=1216.8522 | WRMSSE=0.5537
+2026-09-04 01:38:27.995 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag1' -> 187 features | regression_l2=1152.1507 | WRMSSE=0.5282
+2026-09-04 01:44:35.410 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag7' -> 186 features | regression_l2=953.9048 | WRMSSE=0.4365
+2026-09-04 02:14:24.169 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag4_window_size14' -> 185 features | regression_l2=948.7377 | WRMSSE=0.4372
+2026-09-04 02:15:09.128 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_mean_lag4_window_size7' -> 184 features | regression_l2=926.9485 | WRMSSE=0.4259
+2026-09-04 02:16:30.708 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag10' -> 183 features | regression_l2=915.5217 | WRMSSE=0.4223
+2026-09-04 03:21:45.643 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 183/191 features | regression_l2 final: 915.5217 | WRMSSE final: 0.4223
+2026-09-04 03:21:45.646 | INFO     | __main__:select_features:422 - Features descartadas (8): ['lag1', 'lag10', 'lag2', 'lag25', 'lag7', 'lag9', 'rolling_mean_lag4_window_size7', 'rolling_min_lag4_window_size14']
+2026-09-04 03:21:45.658 | INFO     | __main__:select_features:435 - Features finales: 183 (9 categóricas) | regression_l2=915.5217 | WRMSSE=0.4223 (informativo)
+2026-09-04 03:21:45.658 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 8763.3s
+2026-09-04 03:22:18.829 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 4.97% | WRMSSE: 0.4223  | fit: 33.05s
+2026-09-04 03:22:22.091 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = lag28 | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-04 03:22:22.094 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 36.4s
+2026-09-04 03:22:22.179 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_02_daily_state_sales_final_xgboost'
+2026-09-04 03:32:22.570 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 917.1391 | WRMSSE de ESE trial: 0.4193 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 03:32:22.573 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.06456640537545144, 'max_depth': 9, 'min_child_weight': 30.380811219331445, 'subsample': 0.9492205414766367, 'colsample_bytree': 0.6864491456081857, 'reg_alpha': 0.348091092598608, 'reg_lambda': 0.0024728859282517283}
+2026-09-04 03:32:22.576 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 600.5s
+2026-09-04 03:32:54.487 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [148, 63, 397] -> n_estimators final = 203
+2026-09-04 03:32:54.586 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 4.92% | WRMSSE: 0.4193  | fit: 31.85s
+2026-09-04 03:33:14.247 | INFO     | __main__:fit_final_model:551 - Test WAPE: 5.88% | Test WRMSSE: 0.5491
+2026-09-04 03:33:16.951 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-04 03:33:17.280 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_02_daily_state_sales_artifact.pkl (modelo: xgboost)
+2026-09-04 03:33:17.477 | SUCCESS  | __main__:export_artifact:625 - Versión 20260904T073317Z registrada en registry.json
+2026-09-04 03:33:17.478 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_02_daily_state/sales) en 11137.0s
+2026-09-04 03:33:17.932 | INFO     | src.data.split:load_data:359 - level_03_daily_cat | target=sales | 5,823 filas | 191 features (9 categóricas)
+2026-09-04 03:33:17.951 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 5,655 rows)
+2026-09-04 03:33:17.951 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 84 rows)
+2026-09-04 03:33:17.952 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 84 rows)
+2026-09-04 03:33:18.366 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-04 03:33:18.473 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 18.44% | WRMSSE: 1.4182  | fit: 0.01s
+2026-09-04 03:33:18.543 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 8.79% | WRMSSE: 0.7542  | fit: 0.01s
+2026-09-04 03:33:18.612 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 6.31% | WRMSSE: 0.5886  | fit: 0.01s
+2026-09-04 03:33:18.681 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 13.48% | WRMSSE: 1.0326  | fit: 0.01s
+2026-09-04 03:33:18.752 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 18.56% | WRMSSE: 1.4256  | fit: 0.02s
+2026-09-04 03:33:18.800 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 19.98% | WRMSSE: 1.8019  | fit: 0.00s
+2026-09-04 03:33:18.874 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 13.97% | WRMSSE: 1.2233  | fit: 0.00s
+2026-09-04 03:33:18.935 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 13.92% | WRMSSE: 1.2135  | fit: 0.01s
+2026-09-04 03:33:18.993 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 14.10% | WRMSSE: 1.2046  | fit: 0.01s
+2026-09-04 03:33:19.051 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 14.34% | WRMSSE: 1.1937  | fit: 0.01s
+2026-09-04 03:33:19.111 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 14.18% | WRMSSE: 1.1972  | fit: 0.01s
+2026-09-04 03:33:19.112 | INFO     | __main__:run_pipeline:638 - Fase naive: 0.7s
+2026-09-04 03:33:29.645 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 7.46% | WRMSSE: 0.6450  | fit: 10.46s
+2026-09-04 03:33:35.910 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 6.87% | WRMSSE: 0.6002  | fit: 6.21s
+2026-09-04 03:33:36.199 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 7.05% | WRMSSE: 0.6361  | fit: 0.23s
+2026-09-04 03:33:58.135 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 7.50% | WRMSSE: 0.6624  | fit: 21.88s
+2026-09-04 03:33:59.366 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 8.35% | WRMSSE: 0.6801  | fit: 1.18s
+2026-09-04 03:33:59.366 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 40.3s
+2026-09-04 03:33:59.367 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-04 03:33:59.479 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_03_daily_cat_sales_bench_lightgbm'
+2026-09-04 03:39:20.931 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2783.6636 | WRMSSE de ESE trial: 1.1951 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 03:39:20.935 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.1209165053364066, 'num_leaves': 52, 'max_depth': 8, 'min_child_samples': 20, 'subsample': 0.6437405005640229, 'colsample_bytree': 0.7639945342805182, 'reg_alpha': 0.003014772225170552, 'reg_lambda': 0.6440652089244702}
+2026-09-04 03:39:59.556 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 20.09% | WRMSSE: 1.5068  | fit: 360.15s
+2026-09-04 03:39:59.556 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-04 03:39:59.611 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_03_daily_cat_sales_bench_xgboost'
+2026-09-04 03:44:59.849 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1044.0122 | WRMSSE de ESE trial: 0.4448 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 03:44:59.855 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.07835947611987812, 'max_depth': 10, 'min_child_weight': 1.0504742744932498, 'subsample': 0.9640534116578019, 'colsample_bytree': 0.863725652480479, 'reg_alpha': 0.7828165844071346, 'reg_lambda': 0.007676541435737429}
+2026-09-04 03:45:38.587 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 5.14% | WRMSSE: 0.4448  | fit: 338.97s
+2026-09-04 03:45:38.587 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-04 03:45:38.669 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_03_daily_cat_sales_bench_catboost'
+2026-09-04 03:50:43.474 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 8132.1173 | WRMSSE de ESE trial: 2.4396 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 03:50:43.476 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.1138809507224581, 'depth': 4, 'l2_leaf_reg': 8.084716496554307}
+2026-09-04 03:50:46.060 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 35.19% | WRMSSE: 2.4396  | fit: 307.42s
+2026-09-04 03:50:46.060 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-04 03:50:46.179 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_03_daily_cat_sales_bench_histgb'
+2026-09-04 03:56:17.267 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 7276.7654 | WRMSSE de ESE trial: 2.3383 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 03:56:17.269 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.039733744020298056, 'max_leaf_nodes': 134, 'max_depth': 3, 'min_samples_leaf': 184, 'l2_regularization': 0.009061902594114376}
+2026-09-04 03:56:27.553 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 33.10% | WRMSSE: 2.3383  | fit: 341.40s
+2026-09-04 03:56:27.554 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-04 03:56:27.617 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_03_daily_cat_sales_bench_ridge'
+2026-09-04 03:58:23.315 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 4650.5671 | WRMSSE de ESE trial: 1.6600 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 03:58:23.318 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 0.02513825703176359}
+2026-09-04 03:58:23.509 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 19.13% | WRMSSE: 1.6600  | fit: 115.91s
+2026-09-04 03:58:23.510 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=1044.0122
+2026-09-04 03:58:23.510 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1464.1s
+2026-09-04 03:58:23.515 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+cat_id                             1.550706e+10
+te_cat_mean                        6.162131e+08
+te_weekend_mean                    2.676408e+08
+te_snap_mean                       1.587132e+08
+lag28                              1.373340e+08
+is_store_closed                    1.178962e+08
+lag14                              7.164175e+07
+rolling_max_lag2_window_size7      2.300425e+07
+rolling_mean_lag28_window_size7    1.591098e+07
+lag182                             1.411179e+07
+dtype: float64
+2026-09-04 03:58:44.150 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+cat_id                             7573.374805
+te_weekend_mean                    2342.470068
+lag28                              1367.997070
+te_cat_mean                         215.689893
+day                                 168.768018
+lag14                               167.816431
+rolling_mean_lag28_window_size7     155.070117
+lag364                              124.174365
+lag182                               54.278906
+lag7                                 51.801123
+dtype: float64
+2026-09-04 03:59:18.706 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=1044.0122 | WRMSSE=0.4448 (informativo)
+2026-09-04 03:59:53.218 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag42', 'lag21', 'lag3', 'rolling_std_lag28_window_size28', 'lag10', 'lag15', 'lag23', 'rolling_min_lag28_window_size7'] -> 183 features | regression_l2=1011.2538 | WRMSSE=0.4471
+2026-09-04 07:26:51.308 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 183/191 features | regression_l2 final: 1011.2538 | WRMSSE final: 0.4471
+2026-09-04 07:26:51.310 | INFO     | __main__:select_features:422 - Features descartadas (8): ['lag10', 'lag15', 'lag21', 'lag23', 'lag3', 'lag42', 'rolling_min_lag28_window_size7', 'rolling_std_lag28_window_size28']
+2026-09-04 07:26:51.321 | INFO     | __main__:select_features:435 - Features finales: 183 (9 categóricas) | regression_l2=1011.2538 | WRMSSE=0.4471 (informativo)
+2026-09-04 07:26:51.322 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 12507.8s
+2026-09-04 07:27:15.551 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 4.85% | WRMSSE: 0.4471  | fit: 24.17s
+2026-09-04 07:27:17.501 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = cat_id | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-04 07:27:17.502 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 26.2s
+2026-09-04 07:27:17.559 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_03_daily_cat_sales_final_xgboost'
+2026-09-04 07:37:26.339 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 885.8527 | WRMSSE de ESE trial: 0.3863 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 07:37:26.343 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.11202914600615087, 'max_depth': 10, 'min_child_weight': 2.2042421092983187, 'subsample': 0.933733622002059, 'colsample_bytree': 0.9728984059205478, 'reg_alpha': 1.94014573129907, 'reg_lambda': 0.0010576320755806294}
+2026-09-04 07:37:26.347 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 608.8s
+2026-09-04 07:38:38.948 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [397, 33, 81] -> n_estimators final = 170
+2026-09-04 07:38:39.006 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 4.39% | WRMSSE: 0.3863  | fit: 72.44s
+2026-09-04 07:39:05.683 | INFO     | __main__:fit_final_model:551 - Test WAPE: 5.67% | Test WRMSSE: 0.4940
+2026-09-04 07:39:08.706 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-04 07:39:09.100 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_03_daily_cat_sales_artifact.pkl (modelo: xgboost)
+2026-09-04 07:39:09.280 | SUCCESS  | __main__:export_artifact:625 - Versión 20260904T113909Z registrada en registry.json
+2026-09-04 07:39:09.281 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_03_daily_cat/sales) en 14751.5s
+2026-09-04 07:39:09.861 | INFO     | src.data.split:load_data:359 - level_04_daily_dept | target=sales | 13,587 filas | 191 features (9 categóricas)
+2026-09-04 07:39:09.875 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 13,195 rows)
+2026-09-04 07:39:09.876 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 196 rows)
+2026-09-04 07:39:09.876 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 196 rows)
+2026-09-04 07:39:10.350 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-04 07:39:10.437 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 21.34% | WRMSSE: 1.5938  | fit: 0.02s
+2026-09-04 07:39:10.515 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 10.95% | WRMSSE: 0.9738  | fit: 0.02s
+2026-09-04 07:39:10.590 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 7.32% | WRMSSE: 0.6689  | fit: 0.01s
+2026-09-04 07:39:10.675 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 14.31% | WRMSSE: 1.1372  | fit: 0.02s
+2026-09-04 07:39:10.778 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 21.47% | WRMSSE: 1.6000  | fit: 0.03s
+2026-09-04 07:39:10.858 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 20.62% | WRMSSE: 1.8695  | fit: 0.00s
+2026-09-04 07:39:10.953 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 16.00% | WRMSSE: 1.3752  | fit: 0.01s
+2026-09-04 07:39:11.056 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 14.91% | WRMSSE: 1.2802  | fit: 0.01s
+2026-09-04 07:39:11.146 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 14.77% | WRMSSE: 1.2458  | fit: 0.01s
+2026-09-04 07:39:11.232 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 14.94% | WRMSSE: 1.2303  | fit: 0.01s
+2026-09-04 07:39:11.324 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 14.86% | WRMSSE: 1.2361  | fit: 0.01s
+2026-09-04 07:39:11.324 | INFO     | __main__:run_pipeline:638 - Fase naive: 1.0s
+2026-09-04 07:39:27.977 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 11.73% | WRMSSE: 0.9982  | fit: 16.57s
+2026-09-04 07:39:30.374 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 11.15% | WRMSSE: 0.9641  | fit: 2.29s
+2026-09-04 07:39:30.855 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 10.88% | WRMSSE: 0.9484  | fit: 0.41s
+2026-09-04 07:40:04.756 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 12.09% | WRMSSE: 1.0077  | fit: 33.84s
+2026-09-04 07:40:07.532 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 9.70% | WRMSSE: 0.7959  | fit: 2.74s
+2026-09-04 07:40:07.532 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 56.2s
+2026-09-04 07:40:07.532 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-04 07:40:07.610 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_04_daily_dept_sales_bench_lightgbm'
+2026-09-04 07:46:07.814 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1876.0920 | WRMSSE de ESE trial: 1.4659 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 07:46:07.816 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.07008001393486525, 'num_leaves': 229, 'max_depth': 7, 'min_child_samples': 32, 'subsample': 0.9467306994761812, 'colsample_bytree': 0.6010671845109126, 'reg_alpha': 0.3119328079868805, 'reg_lambda': 0.001236803226105272}
+2026-09-04 07:46:10.535 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 22.37% | WRMSSE: 1.5286  | fit: 362.95s
+2026-09-04 07:46:10.535 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-04 07:46:10.592 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_04_daily_dept_sales_bench_xgboost'
+2026-09-04 07:51:34.937 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 922.1082 | WRMSSE de ESE trial: 0.9820 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 07:51:34.946 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.062058071237459135, 'max_depth': 9, 'min_child_weight': 1.8021474629084508, 'subsample': 0.8187496431034856, 'colsample_bytree': 0.8085153440492214, 'reg_alpha': 1.3568911475978342, 'reg_lambda': 0.0037440948673433208}
+2026-09-04 07:51:51.686 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 11.79% | WRMSSE: 0.9820  | fit: 341.08s
+2026-09-04 07:51:51.686 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-04 07:51:51.799 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_04_daily_dept_sales_bench_catboost'
+2026-09-04 07:56:56.637 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 4560.8577 | WRMSSE de ESE trial: 3.0120 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 07:56:56.639 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.09376542954502831, 'depth': 4, 'l2_leaf_reg': 9.330606024425668}
+2026-09-04 07:57:02.227 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 45.22% | WRMSSE: 3.0120  | fit: 310.48s
+2026-09-04 07:57:02.227 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-04 07:57:02.293 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_04_daily_dept_sales_bench_histgb'
+2026-09-04 08:02:13.739 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2638.6888 | WRMSSE de ESE trial: 2.0410 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 08:02:13.741 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.031456163175583855, 'max_leaf_nodes': 248, 'max_depth': 13, 'min_samples_leaf': 58, 'l2_regularization': 0.004705059281907645}
+2026-09-04 08:04:09.466 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 29.95% | WRMSSE: 2.0410  | fit: 427.11s
+2026-09-04 08:04:09.467 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-04 08:04:09.518 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_04_daily_dept_sales_bench_ridge'
+2026-09-04 08:06:17.111 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 3004.1702 | WRMSSE de ESE trial: 1.9391 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 08:06:17.113 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 0.0010001957329976523}
+2026-09-04 08:06:17.529 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 28.43% | WRMSSE: 1.9391  | fit: 128.01s
+2026-09-04 08:06:17.529 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=922.1082
+2026-09-04 08:06:17.530 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1570.0s
+2026-09-04 08:06:17.534 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+dept_id                           1.081900e+09
+te_weekend_mean                   9.685589e+08
+lag28                             2.947053e+08
+cat_id                            1.297130e+08
+is_store_closed                   6.937660e+07
+lag7                              5.848663e+07
+lag1                              3.946145e+07
+lag14                             2.227208e+07
+rolling_max_lag4_window_size7     1.206931e+07
+rolling_mean_lag1_window_size7    9.293759e+06
+dtype: float64
+2026-09-04 08:06:48.419 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+te_weekend_mean    3834.442725
+lag28              1465.773047
+dept_id            1019.405444
+lag91                69.100818
+lag7                 61.114026
+day                  34.988477
+lag364               28.186475
+lag56                26.590979
+lag1                 25.693884
+dayofweek            18.506934
+dtype: float64
+2026-09-04 08:07:17.271 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=922.1082 | WRMSSE=0.9820 (informativo)
+2026-09-04 08:19:49.091 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_min_lag364_window_size91', 'rolling_std_lag6_window_size7', 'lag9', 'rolling_max_lag7_window_size7', 'rolling_max_lag4_window_size14', 'lag17', 'rolling_mean_lag6_window_size7', 'rolling_max_lag1_window_size14'] -> 183 features | regression_l2=914.3850 | WRMSSE=0.9734
+2026-09-04 09:07:41.540 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['te_dept_std', 'lag27', 'seasonal_mean_lag364_364_2', 'lag14', 'lag182', 'dayofweek', 'lag1', 'lag56'] -> 175 features | regression_l2=866.0753 | WRMSSE=0.8758
+2026-09-04 09:08:34.955 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag364' -> 174 features | regression_l2=837.7936 | WRMSSE=0.8471
+2026-09-04 09:09:10.091 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag7' -> 173 features | regression_l2=726.1965 | WRMSSE=0.7600
+2026-09-04 09:47:45.279 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['doy_cos', 'rolling_mean_lag3_window_size14', 'rolling_std_lag3_window_size14', 'rolling_mean_lag7_window_size7', 'rolling_std_lag4_window_size14', 'rolling_mean_lag4_window_size7', 'rolling_std_lag7_window_size7', 'rolling_mean_lag7_window_size14'] -> 165 features | regression_l2=683.6164 | WRMSSE=0.7331
+2026-09-04 10:56:47.387 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 165/191 features | regression_l2 final: 683.6164 | WRMSSE final: 0.7331
+2026-09-04 10:56:47.393 | INFO     | __main__:select_features:422 - Features descartadas (26): ['dayofweek', 'doy_cos', 'lag1', 'lag14', 'lag17', 'lag182', 'lag27', 'lag364', 'lag56', 'lag7', 'lag9', 'rolling_max_lag1_window_size14', 'rolling_max_lag4_window_size14', 'rolling_max_lag7_window_size7', 'rolling_mean_lag3_window_size14', 'rolling_mean_lag4_window_size7', 'rolling_mean_lag6_window_size7', 'rolling_mean_lag7_window_size14', 'rolling_mean_lag7_window_size7', 'rolling_min_lag364_window_size91', 'rolling_std_lag3_window_size14', 'rolling_std_lag4_window_size14', 'rolling_std_lag6_window_size7', 'rolling_std_lag7_window_size7', 'seasonal_mean_lag364_364_2', 'te_dept_std']
+2026-09-04 10:56:47.416 | INFO     | __main__:select_features:435 - Features finales: 165 (9 categóricas) | regression_l2=683.6164 | WRMSSE=0.7331 (informativo)
+2026-09-04 10:56:47.417 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 10229.9s
+2026-09-04 10:57:17.960 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 7.71% | WRMSSE: 0.7331  | fit: 30.48s
+2026-09-04 10:57:20.087 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = te_weekend_mean | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-04 10:57:20.089 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 32.7s
+2026-09-04 10:57:20.147 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_04_daily_dept_sales_final_xgboost'
+2026-09-04 11:08:32.054 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 672.7077 | WRMSSE de ESE trial: 0.7300 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 11:08:32.058 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.14388702181839996, 'max_depth': 8, 'min_child_weight': 1.213022184424775, 'subsample': 0.887352152856701, 'colsample_bytree': 0.8394474835577637, 'reg_alpha': 0.041997865276686946, 'reg_lambda': 0.2589682401010065}
+2026-09-04 11:08:32.061 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 672.0s
+2026-09-04 11:08:56.255 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [71, 50, 37] -> n_estimators final = 53
+2026-09-04 11:08:56.321 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 8.02% | WRMSSE: 0.7300  | fit: 24.11s
+2026-09-04 11:09:01.308 | INFO     | __main__:fit_final_model:551 - Test WAPE: 6.52% | Test WRMSSE: 0.5963
+2026-09-04 11:09:03.593 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-04 11:09:03.676 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_04_daily_dept_sales_artifact.pkl (modelo: xgboost)
+2026-09-04 11:09:03.717 | SUCCESS  | __main__:export_artifact:625 - Versión 20260904T150903Z registrada en registry.json
+2026-09-04 11:09:03.718 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_04_daily_dept/sales) en 12594.0s
+2026-09-04 11:09:04.050 | INFO     | src.data.split:load_data:359 - level_05_daily_state_cat | target=sales | 17,469 filas | 191 features (9 categóricas)
+2026-09-04 11:09:04.061 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 16,965 rows)
+2026-09-04 11:09:04.062 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 252 rows)
+2026-09-04 11:09:04.062 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 252 rows)
+2026-09-04 11:09:04.367 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-04 11:09:04.420 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 22.65% | WRMSSE: 1.5718  | fit: 0.01s
+2026-09-04 11:09:04.470 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 10.98% | WRMSSE: 0.8347  | fit: 0.01s
+2026-09-04 11:09:04.532 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 8.46% | WRMSSE: 0.6895  | fit: 0.01s
+2026-09-04 11:09:04.585 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 14.92% | WRMSSE: 1.0537  | fit: 0.01s
+2026-09-04 11:09:04.638 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 22.76% | WRMSSE: 1.5785  | fit: 0.01s
+2026-09-04 11:09:04.682 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 20.69% | WRMSSE: 1.6885  | fit: 0.00s
+2026-09-04 11:09:04.728 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 15.84% | WRMSSE: 1.2037  | fit: 0.01s
+2026-09-04 11:09:04.776 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 15.12% | WRMSSE: 1.1711  | fit: 0.01s
+2026-09-04 11:09:04.823 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 15.14% | WRMSSE: 1.1575  | fit: 0.01s
+2026-09-04 11:09:04.872 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 15.20% | WRMSSE: 1.1457  | fit: 0.01s
+2026-09-04 11:09:04.919 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 15.12% | WRMSSE: 1.1493  | fit: 0.01s
+2026-09-04 11:09:04.919 | INFO     | __main__:run_pipeline:638 - Fase naive: 0.6s
+2026-09-04 11:09:15.067 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 9.94% | WRMSSE: 0.7496  | fit: 10.10s
+2026-09-04 11:09:17.279 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 9.22% | WRMSSE: 0.7111  | fit: 2.14s
+2026-09-04 11:09:17.627 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 9.40% | WRMSSE: 0.7337  | fit: 0.28s
+2026-09-04 11:09:47.532 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 10.42% | WRMSSE: 0.7851  | fit: 29.84s
+2026-09-04 11:09:53.333 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 9.39% | WRMSSE: 0.7146  | fit: 5.69s
+2026-09-04 11:09:53.334 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 48.4s
+2026-09-04 11:09:53.335 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-04 11:09:53.431 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_05_daily_state_cat_sales_bench_lightgbm'
+2026-09-04 11:15:01.250 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1628.4038 | WRMSSE de ESE trial: 1.7161 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 11:15:01.255 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.10935847891839337, 'num_leaves': 130, 'max_depth': 10, 'min_child_samples': 56, 'subsample': 0.7727431143998708, 'colsample_bytree': 0.7233399454672912, 'reg_alpha': 0.11199925015962432, 'reg_lambda': 0.7281083982817127}
+2026-09-04 11:15:06.066 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 26.38% | WRMSSE: 1.8366  | fit: 312.68s
+2026-09-04 11:15:06.067 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-04 11:15:06.123 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_05_daily_state_cat_sales_bench_xgboost'
+2026-09-04 11:20:20.637 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 735.1460 | WRMSSE de ESE trial: 0.8784 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 11:20:20.641 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.10544933352515529, 'max_depth': 9, 'min_child_weight': 2.4482046836825098, 'subsample': 0.9993286561212946, 'colsample_bytree': 0.8133439666817808, 'reg_alpha': 0.35941635892674934, 'reg_lambda': 0.03186063043854122}
+2026-09-04 11:20:39.359 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 11.38% | WRMSSE: 0.8784  | fit: 333.22s
+2026-09-04 11:20:39.359 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-04 11:20:39.415 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_05_daily_state_cat_sales_bench_catboost'
+2026-09-04 11:25:43.667 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2174.3904 | WRMSSE de ESE trial: 2.1419 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 11:25:43.670 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.07862589064613253, 'depth': 5, 'l2_leaf_reg': 1.4321698289111515}
+2026-09-04 11:25:57.255 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 30.90% | WRMSSE: 2.1419  | fit: 317.83s
+2026-09-04 11:25:57.256 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-04 11:25:57.335 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_05_daily_state_cat_sales_bench_histgb'
+2026-09-04 11:31:04.500 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 2210.9893 | WRMSSE de ESE trial: 2.4090 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 11:31:04.503 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.031456163175583855, 'max_leaf_nodes': 248, 'max_depth': 13, 'min_samples_leaf': 58, 'l2_regularization': 0.004705059281907645}
+2026-09-04 11:33:09.007 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 34.68% | WRMSSE: 2.4090  | fit: 431.59s
+2026-09-04 11:33:09.008 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-04 11:33:09.062 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_05_daily_state_cat_sales_bench_ridge'
+2026-09-04 11:35:54.747 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 3053.5727 | WRMSSE de ESE trial: 2.7188 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 11:35:54.751 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 0.027991209977337627}
+2026-09-04 11:35:55.672 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 42.09% | WRMSSE: 2.7188  | fit: 166.57s
+2026-09-04 11:35:55.673 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=735.1460
+2026-09-04 11:35:55.674 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1562.3s
+2026-09-04 11:35:55.682 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+te_weekend_mean                   1.061757e+09
+lag28                             3.098769e+08
+lag7                              1.120905e+08
+lag14                             5.496533e+07
+is_store_closed                   3.903264e+07
+rolling_mean_lag1_window_size7    2.316886e+07
+cat_id                            2.017719e+07
+lag1                              1.333251e+07
+snap                              8.954807e+06
+rolling_mean_lag2_window_size7    8.118256e+06
+dtype: float64
+2026-09-04 11:36:21.622 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+te_weekend_mean    2206.919580
+lag28               719.670898
+cat_id              413.701440
+lag14               172.446277
+lag7                167.128967
+snap                 47.607898
+dayofweek            43.025146
+te_snap_mean         30.553381
+te_dept_mean         23.317456
+lag1                 16.934167
+dtype: float64
+2026-09-04 11:36:33.933 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=735.1460 | WRMSSE=0.8784 (informativo)
+2026-09-04 11:36:44.596 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['price_vs_max', 'rolling_std_lag364_window_size28', 'price_change', 'rolling_std_lag7_window_size7', 'rolling_std_lag28_window_size28', 'te_cat_std', 'rolling_min_lag28_window_size7', 'lag22'] -> 183 features | regression_l2=695.3590 | WRMSSE=0.8625
+2026-09-04 11:37:07.682 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag3_window_size7' -> 182 features | regression_l2=655.5273 | WRMSSE=0.7848
+2026-09-04 13:39:18.951 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 182/191 features | regression_l2 final: 655.5273 | WRMSSE final: 0.7848
+2026-09-04 13:39:18.953 | INFO     | __main__:select_features:422 - Features descartadas (9): ['lag22', 'price_change', 'price_vs_max', 'rolling_min_lag28_window_size7', 'rolling_std_lag28_window_size28', 'rolling_std_lag364_window_size28', 'rolling_std_lag3_window_size7', 'rolling_std_lag7_window_size7', 'te_cat_std']
+2026-09-04 13:39:18.974 | INFO     | __main__:select_features:435 - Features finales: 182 (9 categóricas) | regression_l2=655.5273 | WRMSSE=0.7848 (informativo)
+2026-09-04 13:39:18.974 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 7403.3s
+2026-09-04 13:39:35.487 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 9.95% | WRMSSE: 0.7848  | fit: 16.45s
+2026-09-04 13:39:37.370 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = te_weekend_mean | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-04 13:39:37.372 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 18.4s
+2026-09-04 13:39:37.661 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_05_daily_state_cat_sales_final_xgboost'
+2026-09-04 13:49:54.713 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 672.9153 | WRMSSE de ESE trial: 0.7868 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 13:49:54.716 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.09802464246314858, 'max_depth': 10, 'min_child_weight': 3.1016066753462033, 'subsample': 0.9953322990004814, 'colsample_bytree': 0.8458441282629534, 'reg_alpha': 0.3778090752182734, 'reg_lambda': 0.027314286920106658}
+2026-09-04 13:49:54.719 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 617.3s
+2026-09-04 13:51:29.045 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [217, 79, 72] -> n_estimators final = 123
+2026-09-04 13:51:29.118 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 10.37% | WRMSSE: 0.7868  | fit: 94.18s
+2026-09-04 13:52:08.156 | INFO     | __main__:fit_final_model:551 - Test WAPE: 6.98% | Test WRMSSE: 0.5896
+2026-09-04 13:52:12.491 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-04 13:52:12.843 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_05_daily_state_cat_sales_artifact.pkl (modelo: xgboost)
+2026-09-04 13:52:12.991 | SUCCESS  | __main__:export_artifact:625 - Versión 20260904T175212Z registrada en registry.json
+2026-09-04 13:52:12.992 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_05_daily_state_cat/sales) en 9789.0s
+2026-09-04 13:52:13.451 | INFO     | src.data.split:load_data:359 - level_06_daily_store | target=sales | 19,410 filas | 191 features (9 categóricas)
+2026-09-04 13:52:13.471 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 18,850 rows)
+2026-09-04 13:52:13.471 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 280 rows)
+2026-09-04 13:52:13.472 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 280 rows)
+2026-09-04 13:52:13.956 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-04 13:52:14.049 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 23.23% | WRMSSE: 1.6322  | fit: 0.02s
+2026-09-04 13:52:14.140 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 10.75% | WRMSSE: 0.8251  | fit: 0.02s
+2026-09-04 13:52:14.233 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 8.48% | WRMSSE: 0.7304  | fit: 0.02s
+2026-09-04 13:52:14.324 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 15.96% | WRMSSE: 1.1354  | fit: 0.02s
+2026-09-04 13:52:14.409 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 23.34% | WRMSSE: 1.6383  | fit: 0.02s
+2026-09-04 13:52:14.489 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 21.87% | WRMSSE: 1.6719  | fit: 0.00s
+2026-09-04 13:52:14.575 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 16.28% | WRMSSE: 1.1810  | fit: 0.01s
+2026-09-04 13:52:14.660 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 15.63% | WRMSSE: 1.1543  | fit: 0.01s
+2026-09-04 13:52:14.746 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 15.46% | WRMSSE: 1.1277  | fit: 0.01s
+2026-09-04 13:52:14.829 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 15.47% | WRMSSE: 1.1188  | fit: 0.01s
+2026-09-04 13:52:14.912 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 15.40% | WRMSSE: 1.1238  | fit: 0.01s
+2026-09-04 13:52:14.913 | INFO     | __main__:run_pipeline:638 - Fase naive: 1.0s
+2026-09-04 13:52:31.677 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 8.65% | WRMSSE: 0.6793  | fit: 16.70s
+2026-09-04 13:52:34.758 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 8.49% | WRMSSE: 0.6714  | fit: 3.01s
+2026-09-04 13:52:35.454 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 8.94% | WRMSSE: 0.7117  | fit: 0.60s
+2026-09-04 13:53:00.866 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 9.36% | WRMSSE: 0.7371  | fit: 25.34s
+2026-09-04 13:53:04.276 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 8.73% | WRMSSE: 0.6748  | fit: 3.36s
+2026-09-04 13:53:04.276 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 49.4s
+2026-09-04 13:53:04.277 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-04 13:53:04.346 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_06_daily_store_sales_bench_lightgbm'
+2026-09-04 13:58:48.970 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 614.4415 | WRMSSE de ESE trial: 0.8199 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 13:58:48.972 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.13732302104356955, 'num_leaves': 32, 'max_depth': 7, 'min_child_samples': 23, 'subsample': 0.6058268031335812, 'colsample_bytree': 0.9630659181130071, 'reg_alpha': 3.7364993980800194, 'reg_lambda': 0.317723493064671}
+2026-09-04 13:58:51.579 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 14.36% | WRMSSE: 1.0642  | fit: 347.25s
+2026-09-04 13:58:51.579 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-04 13:58:51.635 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_06_daily_store_sales_bench_xgboost'
+2026-09-04 14:03:53.713 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 405.1660 | WRMSSE de ESE trial: 0.5743 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 14:03:53.719 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.07552886949841407, 'max_depth': 5, 'min_child_weight': 2.956461619341584, 'subsample': 0.6877543291696689, 'colsample_bytree': 0.8383320456232513, 'reg_alpha': 0.08128894440649138, 'reg_lambda': 0.17169765054952543}
+2026-09-04 14:04:04.732 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 7.28% | WRMSSE: 0.5743  | fit: 313.04s
+2026-09-04 14:04:04.732 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-04 14:04:04.820 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_06_daily_store_sales_bench_catboost'
+2026-09-04 14:09:07.153 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1262.5924 | WRMSSE de ESE trial: 1.6088 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 14:09:07.157 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.03612945945845316, 'depth': 4, 'l2_leaf_reg': 1.9448626124781463}
+2026-09-04 14:09:09.796 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 22.51% | WRMSSE: 1.6088  | fit: 305.00s
+2026-09-04 14:09:09.797 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-04 14:09:09.853 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_06_daily_store_sales_bench_histgb'
+2026-09-04 14:14:43.177 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 511.4873 | WRMSSE de ESE trial: 0.7504 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 14:14:43.180 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.07106591851092234, 'max_leaf_nodes': 244, 'max_depth': 12, 'min_samples_leaf': 128, 'l2_regularization': 0.003776663327107336}
+2026-09-04 14:16:19.964 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 9.95% | WRMSSE: 0.7504  | fit: 430.03s
+2026-09-04 14:16:19.965 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-04 14:16:20.039 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_06_daily_store_sales_bench_ridge'
+2026-09-04 14:19:47.146 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 977.9876 | WRMSSE de ESE trial: 1.2503 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 14:19:47.148 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 99.95115919138186}
+2026-09-04 14:19:47.697 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 16.81% | WRMSSE: 1.2503  | fit: 207.67s
+2026-09-04 14:19:47.698 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=405.1660
+2026-09-04 14:19:47.698 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1603.4s
+2026-09-04 14:19:47.704 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+lag28                              306864960.0
+lag91                              116856136.0
+lag7                                96479136.0
+te_weekend_mean                     45503020.0
+lag35                               44109040.0
+lag56                               22456538.0
+lag21                               20618394.0
+rolling_mean_lag1_window_size14     19620240.0
+rolling_mean_lag1_window_size7      18704048.0
+rolling_max_lag1_window_size7       18487956.0
+dtype: float64
+2026-09-04 14:20:07.124 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+lag28              524.127252
+lag91               68.822504
+lag7                52.730920
+lag364              51.375342
+te_weekend_mean     40.829779
+lag35               40.695819
+dayofweek           36.509991
+lag21               35.761414
+snap                26.773224
+store_id            14.843121
+dtype: float64
+2026-09-04 14:20:11.884 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=405.1660 | WRMSSE=0.5743 (informativo)
+2026-09-04 14:38:18.592 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 191/191 features | regression_l2 final: 405.1660 | WRMSSE final: 0.5743
+2026-09-04 14:38:18.594 | INFO     | __main__:select_features:422 - Features descartadas (0): []
+2026-09-04 14:38:18.602 | INFO     | __main__:select_features:435 - Features finales: 191 (9 categóricas) | regression_l2=405.1660 | WRMSSE=0.5743 (informativo)
+2026-09-04 14:38:18.603 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 1110.9s
+2026-09-04 14:38:25.776 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 7.28% | WRMSSE: 0.5743  | fit: 7.11s
+2026-09-04 14:38:27.293 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = lag28 | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-04 14:38:27.295 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 8.7s
+2026-09-04 14:38:27.390 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_06_daily_store_sales_final_xgboost'
+2026-09-04 14:48:28.866 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 405.1660 | WRMSSE de ESE trial: 0.5743 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 14:48:28.869 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.07552886949841407, 'max_depth': 5, 'min_child_weight': 2.956461619341584, 'subsample': 0.6877543291696689, 'colsample_bytree': 0.8383320456232513, 'reg_alpha': 0.08128894440649138, 'reg_lambda': 0.17169765054952543}
+2026-09-04 14:48:28.874 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 601.6s
+2026-09-04 14:49:05.659 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [94, 44, 75] -> n_estimators final = 71
+2026-09-04 14:49:05.788 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 7.28% | WRMSSE: 0.5743  | fit: 36.65s
+2026-09-04 14:49:14.221 | INFO     | __main__:fit_final_model:551 - Test WAPE: 7.31% | Test WRMSSE: 0.6135
+2026-09-04 14:49:17.319 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-04 14:49:17.391 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_06_daily_store_sales_artifact.pkl (modelo: xgboost)
+2026-09-04 14:49:17.438 | SUCCESS  | __main__:export_artifact:625 - Versión 20260904T184917Z registrada en registry.json
+2026-09-04 14:49:17.438 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_06_daily_store/sales) en 3424.1s
+2026-09-04 14:49:17.832 | INFO     | src.data.split:load_data:359 - level_07_daily_state_dept | target=sales | 40,761 filas | 191 features (9 categóricas)
+2026-09-04 14:49:17.854 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 39,585 rows)
+2026-09-04 14:49:17.854 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 588 rows)
+2026-09-04 14:49:17.855 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 588 rows)
+2026-09-04 14:49:18.188 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-04 14:49:18.272 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 24.49% | WRMSSE: 1.6358  | fit: 0.02s
+2026-09-04 14:49:18.350 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 12.86% | WRMSSE: 0.9844  | fit: 0.02s
+2026-09-04 14:49:18.424 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 9.69% | WRMSSE: 0.7572  | fit: 0.01s
+2026-09-04 14:49:18.497 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 16.32% | WRMSSE: 1.1482  | fit: 0.01s
+2026-09-04 14:49:18.575 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 24.60% | WRMSSE: 1.6422  | fit: 0.02s
+2026-09-04 14:49:18.640 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 21.54% | WRMSSE: 1.7167  | fit: 0.00s
+2026-09-04 14:49:18.706 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 17.51% | WRMSSE: 1.3013  | fit: 0.01s
+2026-09-04 14:49:18.773 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 16.01% | WRMSSE: 1.2150  | fit: 0.01s
+2026-09-04 14:49:18.841 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 15.82% | WRMSSE: 1.1840  | fit: 0.01s
+2026-09-04 14:49:18.908 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 15.85% | WRMSSE: 1.1689  | fit: 0.01s
+2026-09-04 14:49:18.986 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 15.72% | WRMSSE: 1.1736  | fit: 0.01s
+2026-09-04 14:49:18.986 | INFO     | __main__:run_pipeline:638 - Fase naive: 0.8s
+2026-09-04 14:49:31.492 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 13.23% | WRMSSE: 0.9648  | fit: 12.44s
+2026-09-04 14:49:35.872 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 12.66% | WRMSSE: 0.9314  | fit: 4.30s
+2026-09-04 14:49:36.637 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 12.43% | WRMSSE: 0.9276  | fit: 0.70s
+2026-09-04 14:50:03.247 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 13.77% | WRMSSE: 0.9959  | fit: 26.52s
+2026-09-04 14:50:10.539 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 10.73% | WRMSSE: 0.8018  | fit: 7.22s
+2026-09-04 14:50:10.539 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 51.6s
+2026-09-04 14:50:10.540 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-04 14:50:10.601 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_07_daily_state_dept_sales_bench_lightgbm'
+2026-09-04 14:55:24.177 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 943.7079 | WRMSSE de ESE trial: 1.9357 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 14:55:24.182 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.08833035213223196, 'num_leaves': 117, 'max_depth': 7, 'min_child_samples': 49, 'subsample': 0.689632536258613, 'colsample_bytree': 0.7346069525181845, 'reg_alpha': 0.5859960085505149, 'reg_lambda': 0.8696997914548711}
+2026-09-04 14:55:29.654 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 34.80% | WRMSSE: 2.0283  | fit: 319.04s
+2026-09-04 14:55:29.654 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-04 14:55:29.793 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_07_daily_state_dept_sales_bench_xgboost'
+2026-09-04 15:01:12.514 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 528.5014 | WRMSSE de ESE trial: 1.1522 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 15:01:12.516 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.031707193242141093, 'max_depth': 10, 'min_child_weight': 3.939675937754721, 'subsample': 0.8650089137415928, 'colsample_bytree': 0.7246844304357644, 'reg_alpha': 0.08389112347840598, 'reg_lambda': 0.105260377776104}
+2026-09-04 15:02:30.885 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 17.75% | WRMSSE: 1.1522  | fit: 421.04s
+2026-09-04 15:02:30.886 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-04 15:02:31.003 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_07_daily_state_dept_sales_bench_catboost'
+2026-09-04 15:07:40.765 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1280.0216 | WRMSSE de ESE trial: 2.1454 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 15:07:40.768 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.09376542954502831, 'depth': 4, 'l2_leaf_reg': 9.330606024425668}
+2026-09-04 15:07:57.787 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 34.42% | WRMSSE: 2.1454  | fit: 326.82s
+2026-09-04 15:07:57.787 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-04 15:07:57.841 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_07_daily_state_dept_sales_bench_histgb'
+2026-09-04 15:15:24.490 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 981.3980 | WRMSSE de ESE trial: 2.3827 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 15:15:24.496 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.031456163175583855, 'max_leaf_nodes': 248, 'max_depth': 13, 'min_samples_leaf': 58, 'l2_regularization': 0.004705059281907645}
+2026-09-04 15:19:14.397 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 38.50% | WRMSSE: 2.3827  | fit: 676.40s
+2026-09-04 15:19:14.397 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-04 15:19:14.461 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_07_daily_state_dept_sales_bench_ridge'
+2026-09-04 15:24:15.560 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 1687.8776 | WRMSSE de ESE trial: 2.8364 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-04 15:24:15.562 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 0.0010001957329976523}
+2026-09-04 15:24:16.949 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 47.80% | WRMSSE: 2.8364  | fit: 302.46s
+2026-09-04 15:24:16.949 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=528.5014
+2026-09-04 15:24:16.949 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 2046.4s
+2026-09-04 15:24:16.956 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+te_weekend_mean                   2.555232e+08
+rolling_mean_lag1_window_size7    7.030669e+07
+lag7                              6.284506e+07
+lag28                             3.651234e+07
+lag1                              1.504784e+07
+rolling_max_lag1_window_size7     4.060241e+06
+cat_id                            2.539398e+06
+snap                              1.566365e+06
+dept_id                           1.350628e+06
+lag35                             1.095617e+06
+dtype: float64
+2026-09-04 15:24:48.967 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+te_weekend_mean    1266.224084
+lag28               289.125049
+te_snap_mean         67.962634
+dept_id              58.732373
+lag7                 49.147070
+lag364               20.798547
+lag35                19.731311
+snap                 18.151660
+lag21                15.262146
+lag14                15.259375
+dtype: float64
+2026-09-04 15:26:22.466 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=528.5014 | WRMSSE=1.1522 (informativo)
+2026-09-04 16:37:45.569 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_mean_lag2_window_size7', 'pct_zero_28', 'pct_zero_90', 'adi_expanding', 'zero_streak', 'is_likely_stockout', 'item_id', 'days_to_thanksgiving'] -> 183 features | regression_l2=505.2123 | WRMSSE=1.1402
+2026-09-04 17:34:39.672 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_min_lag2_window_size14', 'rolling_std_lag4_window_size7', 'lag25', 'rolling_std_lag1_window_size7', 'rolling_std_lag2_window_size7', 'rolling_mean_lag1_window_size14', 'rolling_min_lag1_window_size7', 'rolling_mean_lag6_window_size7'] -> 175 features | regression_l2=491.7035 | WRMSSE=1.1228
+2026-09-04 17:44:49.512 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag2_window_size7' -> 174 features | regression_l2=486.7175 | WRMSSE=1.1280
+2026-09-04 19:11:36.878 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag182', 'lag91', 'lag1', 'lag56', 'seasonal_mean_lag364_364_2', 'lag14', 'lag21', 'snap'] -> 166 features | regression_l2=422.6191 | WRMSSE=0.9282
+2026-09-04 19:17:27.764 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag7' -> 165 features | regression_l2=381.4588 | WRMSSE=0.9128
+2026-09-04 19:23:12.858 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['price_vs_mean', 'avg_sell_price', 'rolling_mean_lag28_window_size91', 'rolling_mean_lag364_window_size91', 'lag17', 'lag16', 'rolling_max_lag364_window_size28', 'doy_sin'] -> 157 features | regression_l2=367.6876 | WRMSSE=0.9070
+2026-09-04 19:24:28.434 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_min_lag364_window_size91', 'rolling_std_lag364_window_size28', 'rolling_std_lag364_window_size91', 'rolling_std_lag7_window_size7', 'price_vs_max', 'price_change', 'rolling_mean_lag28_window_size28', 'rolling_min_lag91_window_size28'] -> 149 features | regression_l2=356.9570 | WRMSSE=0.8776
+2026-09-04 19:28:59.022 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'dow_cos' -> 148 features | regression_l2=341.4639 | WRMSSE=0.8250
+2026-09-04 21:51:21.236 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag27', 'rolling_mean_lag1_window_size7', 'lag6', 'lag20', 'rolling_min_lag28_window_size7', 'rolling_mean_lag28_window_size7', 'dayofweek', 'lag35'] -> 140 features | regression_l2=320.6014 | WRMSSE=0.7516
+2026-09-04 21:53:43.037 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag364' -> 139 features | regression_l2=306.7689 | WRMSSE=0.7378
+2026-09-04 22:13:58.080 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'doy_cos' -> 138 features | regression_l2=300.3921 | WRMSSE=0.7298
+2026-09-04 22:59:30.944 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['is_store_closed', 'rolling_mean_lag2_window_size14', 'expanding_mean_lag91', 'rolling_max_lag1_window_size35', 'rolling_max_lag7_window_size14', 'rolling_mean_lag3_window_size7', 'rolling_mean_lag1_window_size21', 'lag11'] -> 130 features | regression_l2=295.6551 | WRMSSE=0.7085
+2026-09-04 23:28:56.336 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag15', 'rolling_std_lag5_window_size14', 'rolling_mean_lag4_window_size7', 'rolling_min_lag3_window_size7', 'lag26', 'rolling_mean_lag5_window_size14', 'rolling_mean_lag4_window_size14', 'rolling_min_lag7_window_size14'] -> 122 features | regression_l2=291.6197 | WRMSSE=0.7138
+2026-09-05 01:16:01.370 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_mean_lag1_window_size35' -> 121 features | regression_l2=290.6002 | WRMSSE=0.7027
+2026-09-05 01:26:27.285 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag3' -> 120 features | regression_l2=290.3520 | WRMSSE=0.7119
+2026-09-05 02:28:47.462 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_mean_lag7_window_size14', 'rolling_std_lag7_window_size14', 'rolling_max_lag364_window_size91', 'lag18', 'rolling_min_lag28_window_size91', 'rolling_mean_lag364_window_size28', 'rolling_std_lag91_window_size28', 'rolling_std_lag6_window_size7'] -> 112 features | regression_l2=287.8619 | WRMSSE=0.7039
+2026-09-05 02:36:05.540 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['days_since_thanksgiving', 'rolling_std_lag1_window_size21', 'rolling_std_lag3_window_size7', 'rolling_std_lag6_window_size14', 'rolling_min_lag1_window_size21', 'rolling_mean_lag5_window_size7', 'rolling_min_lag6_window_size14', 'rolling_max_lag5_window_size14'] -> 104 features | regression_l2=286.1644 | WRMSSE=0.7013
+2026-09-05 03:19:18.513 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_min_lag7_window_size7', 'rolling_min_lag364_window_size28', 'rolling_max_lag5_window_size7', 'rolling_min_lag5_window_size14', 'price_lag_7', 'lag2', 'rolling_max_lag6_window_size7', 'lag8'] -> 96 features | regression_l2=285.1454 | WRMSSE=0.7047
+2026-09-05 03:26:09.846 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['te_event_mean', 'rolling_min_lag5_window_size7', 'state_id', 'rolling_std_lag5_window_size7', 'lag24', 'rolling_max_lag28_window_size91', 'seasonal_mean_lag364_7_8', 'momentum_lag28_7_28'] -> 88 features | regression_l2=281.4362 | WRMSSE=0.6809
+2026-09-05 04:15:25.546 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_mean_lag6_window_size14', 'rolling_max_lag7_window_size7', 'rolling_std_lag3_window_size14', 'rolling_std_lag4_window_size14', 'rolling_max_lag4_window_size7', 'rolling_max_lag2_window_size7', 'rolling_std_lag1_window_size14', 'lag10'] -> 80 features | regression_l2=281.3876 | WRMSSE=0.6832
+2026-09-05 04:18:37.812 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'price_volatility' -> 79 features | regression_l2=281.3416 | WRMSSE=0.6966
+2026-09-05 04:19:03.507 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_month_start' -> 78 features | regression_l2=281.0779 | WRMSSE=0.6871
+2026-09-05 05:31:18.270 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 78/191 features | regression_l2 final: 281.0779 | WRMSSE final: 0.6871
+2026-09-05 05:31:18.276 | INFO     | __main__:select_features:422 - Features descartadas (113): ['adi_expanding', 'avg_sell_price', 'dayofweek', 'days_since_thanksgiving', 'days_to_thanksgiving', 'dow_cos', 'doy_cos', 'doy_sin', 'expanding_mean_lag91', 'is_likely_stockout', 'is_month_start', 'is_store_closed', 'item_id', 'lag1', 'lag10', 'lag11', 'lag14', 'lag15', 'lag16', 'lag17', 'lag18', 'lag182', 'lag2', 'lag20', 'lag21', 'lag24', 'lag25', 'lag26', 'lag27', 'lag3', 'lag35', 'lag364', 'lag56', 'lag6', 'lag7', 'lag8', 'lag91', 'momentum_lag28_7_28', 'pct_zero_28', 'pct_zero_90', 'price_change', 'price_lag_7', 'price_volatility', 'price_vs_max', 'price_vs_mean', 'rolling_max_lag1_window_size35', 'rolling_max_lag28_window_size91', 'rolling_max_lag2_window_size7', 'rolling_max_lag364_window_size28', 'rolling_max_lag364_window_size91', 'rolling_max_lag4_window_size7', 'rolling_max_lag5_window_size14', 'rolling_max_lag5_window_size7', 'rolling_max_lag6_window_size7', 'rolling_max_lag7_window_size14', 'rolling_max_lag7_window_size7', 'rolling_mean_lag1_window_size14', 'rolling_mean_lag1_window_size21', 'rolling_mean_lag1_window_size35', 'rolling_mean_lag1_window_size7', 'rolling_mean_lag28_window_size28', 'rolling_mean_lag28_window_size7', 'rolling_mean_lag28_window_size91', 'rolling_mean_lag2_window_size14', 'rolling_mean_lag2_window_size7', 'rolling_mean_lag364_window_size28', 'rolling_mean_lag364_window_size91', 'rolling_mean_lag3_window_size7', 'rolling_mean_lag4_window_size14', 'rolling_mean_lag4_window_size7', 'rolling_mean_lag5_window_size14', 'rolling_mean_lag5_window_size7', 'rolling_mean_lag6_window_size14', 'rolling_mean_lag6_window_size7', 'rolling_mean_lag7_window_size14', 'rolling_min_lag1_window_size21', 'rolling_min_lag1_window_size7', 'rolling_min_lag28_window_size7', 'rolling_min_lag28_window_size91', 'rolling_min_lag2_window_size14', 'rolling_min_lag2_window_size7', 'rolling_min_lag364_window_size28', 'rolling_min_lag364_window_size91', 'rolling_min_lag3_window_size7', 'rolling_min_lag5_window_size14', 'rolling_min_lag5_window_size7', 'rolling_min_lag6_window_size14', 'rolling_min_lag7_window_size14', 'rolling_min_lag7_window_size7', 'rolling_min_lag91_window_size28', 'rolling_std_lag1_window_size14', 'rolling_std_lag1_window_size21', 'rolling_std_lag1_window_size7', 'rolling_std_lag2_window_size7', 'rolling_std_lag364_window_size28', 'rolling_std_lag364_window_size91', 'rolling_std_lag3_window_size14', 'rolling_std_lag3_window_size7', 'rolling_std_lag4_window_size14', 'rolling_std_lag4_window_size7', 'rolling_std_lag5_window_size14', 'rolling_std_lag5_window_size7', 'rolling_std_lag6_window_size14', 'rolling_std_lag6_window_size7', 'rolling_std_lag7_window_size14', 'rolling_std_lag7_window_size7', 'rolling_std_lag91_window_size28', 'seasonal_mean_lag364_364_2', 'seasonal_mean_lag364_7_8', 'snap', 'state_id', 'te_event_mean', 'zero_streak']
+2026-09-05 05:31:18.298 | INFO     | __main__:select_features:435 - Features finales: 78 (7 categóricas) | regression_l2=281.0779 | WRMSSE=0.6871 (informativo)
+2026-09-05 05:31:18.299 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 50821.3s
+2026-09-05 05:32:14.607 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 8.89% | WRMSSE: 0.6871  | fit: 56.22s
+2026-09-05 05:32:20.159 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = te_weekend_mean | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-05 05:32:20.162 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 61.9s
+2026-09-05 05:32:20.304 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_07_daily_state_dept_sales_final_xgboost'
+2026-09-05 05:42:33.735 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 280.8629 | WRMSSE de ESE trial: 0.6838 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 05:42:33.738 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.03015595120839818, 'max_depth': 10, 'min_child_weight': 1.630568927077885, 'subsample': 0.8859582165200403, 'colsample_bytree': 0.7882523689672938, 'reg_alpha': 0.018370621773188607, 'reg_lambda': 0.6714431222362527}
+2026-09-05 05:42:33.741 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 613.6s
+2026-09-05 05:45:34.077 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [686, 473, 460] -> n_estimators final = 540
+2026-09-05 05:45:34.351 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 9.03% | WRMSSE: 0.6838  | fit: 180.24s
+2026-09-05 05:46:31.049 | INFO     | __main__:fit_final_model:551 - Test WAPE: 7.68% | Test WRMSSE: 0.5982
+2026-09-05 05:46:38.556 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-05 05:46:40.517 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_07_daily_state_dept_sales_artifact.pkl (modelo: xgboost)
+2026-09-05 05:46:41.125 | SUCCESS  | __main__:export_artifact:625 - Versión 20260905T094640Z registrada en registry.json
+2026-09-05 05:46:41.130 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_07_daily_state_dept/sales) en 53843.5s
+2026-09-05 05:46:41.933 | INFO     | src.data.split:load_data:359 - level_08_daily_store_cat | target=sales | 58,230 filas | 191 features (9 categóricas)
+2026-09-05 05:46:42.004 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 56,550 rows)
+2026-09-05 05:46:42.005 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 840 rows)
+2026-09-05 05:46:42.005 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 840 rows)
+2026-09-05 05:46:42.707 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-05 05:46:42.864 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 25.62% | WRMSSE: 1.6297  | fit: 0.03s
+2026-09-05 05:46:43.037 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 13.24% | WRMSSE: 0.9205  | fit: 0.03s
+2026-09-05 05:46:43.206 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 10.59% | WRMSSE: 0.8066  | fit: 0.03s
+2026-09-05 05:46:43.368 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 17.83% | WRMSSE: 1.1681  | fit: 0.03s
+2026-09-05 05:46:43.543 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 25.74% | WRMSSE: 1.6357  | fit: 0.04s
+2026-09-05 05:46:43.686 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 23.20% | WRMSSE: 1.6397  | fit: 0.01s
+2026-09-05 05:46:43.833 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 17.30% | WRMSSE: 1.1741  | fit: 0.02s
+2026-09-05 05:46:43.966 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 16.46% | WRMSSE: 1.1403  | fit: 0.01s
+2026-09-05 05:46:44.117 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 16.37% | WRMSSE: 1.1210  | fit: 0.02s
+2026-09-05 05:46:44.270 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 16.44% | WRMSSE: 1.1110  | fit: 0.02s
+2026-09-05 05:46:44.422 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 16.38% | WRMSSE: 1.1164  | fit: 0.02s
+2026-09-05 05:46:44.425 | INFO     | __main__:run_pipeline:638 - Fase naive: 1.7s
+2026-09-05 05:47:07.125 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 10.82% | WRMSSE: 0.7540  | fit: 22.62s
+2026-09-05 05:47:13.215 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 10.33% | WRMSSE: 0.7355  | fit: 5.98s
+2026-09-05 05:47:14.369 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 10.82% | WRMSSE: 0.7761  | fit: 1.07s
+2026-09-05 05:47:41.632 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 11.73% | WRMSSE: 0.8167  | fit: 27.16s
+2026-09-05 05:47:52.980 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 11.01% | WRMSSE: 0.7694  | fit: 11.24s
+2026-09-05 05:47:52.980 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 68.6s
+2026-09-05 05:47:52.980 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-05 05:47:53.051 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_08_daily_store_cat_sales_bench_lightgbm'
+2026-09-05 05:53:16.130 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 657.3702 | WRMSSE de ESE trial: 1.7387 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 05:53:16.135 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.12073306796934916, 'num_leaves': 178, 'max_depth': 8, 'min_child_samples': 21, 'subsample': 0.9190019756000061, 'colsample_bytree': 0.8111115572120128, 'reg_alpha': 0.003368948712375907, 'reg_lambda': 0.25956622561311493}
+2026-09-05 05:53:25.048 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 26.71% | WRMSSE: 1.7108  | fit: 331.97s
+2026-09-05 05:53:25.049 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-05 05:53:25.107 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_08_daily_store_cat_sales_bench_xgboost'
+2026-09-05 05:58:29.960 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 687.3964 | WRMSSE de ESE trial: 1.8902 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 05:58:29.969 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.031707193242141093, 'max_depth': 10, 'min_child_weight': 3.939675937754721, 'subsample': 0.8650089137415928, 'colsample_bytree': 0.7246844304357644, 'reg_alpha': 0.08389112347840598, 'reg_lambda': 0.105260377776104}
+2026-09-05 06:00:54.312 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 30.19% | WRMSSE: 1.8902  | fit: 449.04s
+2026-09-05 06:00:54.312 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-05 06:00:54.572 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_08_daily_store_cat_sales_bench_catboost'
+2026-09-05 06:06:12.915 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 659.4656 | WRMSSE de ESE trial: 1.8000 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 06:06:12.923 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.07862589064613253, 'depth': 5, 'l2_leaf_reg': 1.4321698289111515}
+2026-09-05 06:06:46.549 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 28.22% | WRMSSE: 1.8000  | fit: 352.13s
+2026-09-05 06:06:46.550 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-05 06:06:46.707 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_08_daily_store_cat_sales_bench_histgb'
+2026-09-05 06:11:56.285 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 818.4105 | WRMSSE de ESE trial: 2.6217 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 06:11:56.291 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.04296509486733454, 'max_leaf_nodes': 28, 'max_depth': 14, 'min_samples_leaf': 128, 'l2_regularization': 0.4160439645256604}
+2026-09-05 06:13:49.853 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 42.23% | WRMSSE: 2.6217  | fit: 423.09s
+2026-09-05 06:13:49.853 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-05 06:13:49.914 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_08_daily_store_cat_sales_bench_ridge'
+2026-09-05 06:18:50.884 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 957.6605 | WRMSSE de ESE trial: 2.5520 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 06:18:50.887 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 0.001000668223186317}
+2026-09-05 06:18:54.439 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 43.16% | WRMSSE: 2.5520  | fit: 304.45s
+2026-09-05 06:18:54.440 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): lightgbm | regression_l2=633.1274
+2026-09-05 06:18:54.440 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 1861.5s
+2026-09-05 06:18:54.441 | INFO     | __main__:select_features:396 - Top 10 gain importance (lightgbm):
+rolling_mean_lag1_window_size7    8.646392e+10
+lag1                              6.731293e+10
+lag7                              5.943764e+10
+lag28                             3.067907e+10
+lag91                             6.683265e+09
+te_weekend_mean                   5.828315e+09
+lag14                             2.741708e+09
+snap                              1.425589e+09
+lag21                             9.481576e+08
+lag6                              8.405472e+08
+dtype: float64
+2026-09-05 06:19:15.736 | INFO     | __main__:select_features:403 - Top 10 permutation importance (lightgbm):
+te_weekend_mean    226.985925
+te_snap_mean        93.223792
+te_event_mean       70.778328
+lag7                62.635131
+cat_id              61.956724
+lag28               45.829336
+lag14               27.924566
+lag21               21.862379
+lag182               9.144370
+lag13                8.830469
+dtype: float64
+2026-09-05 06:19:25.033 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=633.1274 | WRMSSE=1.7108 (informativo)
+2026-09-05 06:19:35.489 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['price_vs_max', 'price_vs_mean', 'price_volatility', 'te_cat_std', 'rolling_max_lag91_window_size91', 'rolling_min_lag91_window_size28', 'expanding_mean_lag91', 'rolling_max_lag364_window_size91'] -> 183 features | regression_l2=620.7386 | WRMSSE=1.5631
+2026-09-05 06:21:34.915 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['cv2_90', 'rolling_mean_lag364_window_size28', 'lag9', 'rolling_std_lag28_window_size91', 'te_cat_mean', 'rolling_std_lag91_window_size91', 'rolling_mean_lag2_window_size14', 'rolling_max_lag364_window_size28'] -> 175 features | regression_l2=616.4948 | WRMSSE=1.6385
+2026-09-05 06:22:14.852 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag4' -> 174 features | regression_l2=589.9811 | WRMSSE=1.6456
+2026-09-05 06:23:25.360 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag2' -> 173 features | regression_l2=578.1874 | WRMSSE=1.5493
+2026-09-05 06:24:29.954 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag1_window_size7' -> 172 features | regression_l2=564.3758 | WRMSSE=1.4800
+2026-09-05 06:30:16.654 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_mean_lag2_window_size7' -> 171 features | regression_l2=564.0272 | WRMSSE=1.4231
+2026-09-05 06:33:10.428 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_max_lag3_window_size7', 'rolling_max_lag1_window_size35', 'rolling_std_lag4_window_size14', 'rolling_min_lag91_window_size91', 'rolling_min_lag3_window_size14', 'rolling_max_lag5_window_size14', 'rolling_mean_lag4_window_size14', 'item_id'] -> 163 features | regression_l2=538.7975 | WRMSSE=1.4492
+2026-09-05 06:35:37.185 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'is_likely_stockout' -> 162 features | regression_l2=538.7975 | WRMSSE=1.4492
+2026-09-05 06:39:23.668 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'dept_id' -> 161 features | regression_l2=538.7975 | WRMSSE=1.4492
+2026-09-05 06:49:14.979 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'days_since_event' -> 160 features | regression_l2=517.0111 | WRMSSE=1.4522
+2026-09-05 06:52:03.166 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_std_lag28_window_size28', 'rolling_max_lag28_window_size91', 'lag1', 'doy_sin', 'rolling_std_lag28_window_size7', 'lag25', 'lag19', 'rolling_mean_lag28_window_size91'] -> 152 features | regression_l2=481.7698 | WRMSSE=1.2150
+2026-09-05 06:53:54.673 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag364_window_size28' -> 151 features | regression_l2=446.5496 | WRMSSE=1.1869
+2026-09-05 06:54:24.183 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['is_weekend', 'te_dept_mean', 'rolling_std_lag364_window_size28', 'seasonal_mean_lag364_364_2', 'rolling_mean_lag1_window_size7', 'dow_sin', 'rolling_max_lag1_window_size7', 'rolling_std_lag364_window_size91'] -> 143 features | regression_l2=421.2643 | WRMSSE=1.0823
+2026-09-05 06:55:09.808 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag5' -> 142 features | regression_l2=397.3226 | WRMSSE=1.0690
+2026-09-05 06:55:19.813 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag364' -> 141 features | regression_l2=385.0488 | WRMSSE=1.0531
+2026-09-05 06:57:05.753 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'dayofweek' -> 140 features | regression_l2=373.1255 | WRMSSE=1.0157
+2026-09-05 06:57:23.820 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag20' -> 139 features | regression_l2=368.6868 | WRMSSE=1.0974
+2026-09-05 07:04:48.837 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['adi_expanding', 'rolling_min_lag1_window_size7', 'rolling_std_lag7_window_size14', 'rolling_min_lag28_window_size7', 'rolling_min_lag6_window_size14', 'rolling_min_lag5_window_size7', 'rolling_min_lag2_window_size14', 'rolling_std_lag7_window_size7'] -> 131 features | regression_l2=361.1863 | WRMSSE=0.9973
+2026-09-05 07:09:58.598 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag2_window_size7' -> 130 features | regression_l2=359.8231 | WRMSSE=0.9791
+2026-09-05 07:10:46.274 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_max_lag3_window_size14' -> 129 features | regression_l2=345.1791 | WRMSSE=0.9697
+2026-09-05 07:19:58.351 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_max_lag7_window_size7' -> 128 features | regression_l2=334.1497 | WRMSSE=0.9760
+2026-09-05 08:10:07.364 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 128/191 features | regression_l2 final: 334.1497 | WRMSSE final: 0.9760
+2026-09-05 08:10:07.367 | INFO     | __main__:select_features:422 - Features descartadas (63): ['adi_expanding', 'cv2_90', 'dayofweek', 'days_since_event', 'dept_id', 'dow_sin', 'doy_sin', 'expanding_mean_lag91', 'is_likely_stockout', 'is_weekend', 'item_id', 'lag1', 'lag19', 'lag2', 'lag20', 'lag25', 'lag364', 'lag4', 'lag5', 'lag9', 'price_volatility', 'price_vs_max', 'price_vs_mean', 'rolling_max_lag1_window_size35', 'rolling_max_lag1_window_size7', 'rolling_max_lag28_window_size91', 'rolling_max_lag364_window_size28', 'rolling_max_lag364_window_size91', 'rolling_max_lag3_window_size14', 'rolling_max_lag3_window_size7', 'rolling_max_lag5_window_size14', 'rolling_max_lag7_window_size7', 'rolling_max_lag91_window_size91', 'rolling_mean_lag1_window_size7', 'rolling_mean_lag28_window_size91', 'rolling_mean_lag2_window_size14', 'rolling_mean_lag2_window_size7', 'rolling_mean_lag364_window_size28', 'rolling_mean_lag4_window_size14', 'rolling_min_lag1_window_size7', 'rolling_min_lag28_window_size7', 'rolling_min_lag2_window_size14', 'rolling_min_lag364_window_size28', 'rolling_min_lag3_window_size14', 'rolling_min_lag5_window_size7', 'rolling_min_lag6_window_size14', 'rolling_min_lag91_window_size28', 'rolling_min_lag91_window_size91', 'rolling_std_lag1_window_size7', 'rolling_std_lag28_window_size28', 'rolling_std_lag28_window_size7', 'rolling_std_lag28_window_size91', 'rolling_std_lag2_window_size7', 'rolling_std_lag364_window_size28', 'rolling_std_lag364_window_size91', 'rolling_std_lag4_window_size14', 'rolling_std_lag7_window_size14', 'rolling_std_lag7_window_size7', 'rolling_std_lag91_window_size91', 'seasonal_mean_lag364_364_2', 'te_cat_mean', 'te_cat_std', 'te_dept_mean']
+2026-09-05 08:10:07.383 | INFO     | __main__:select_features:435 - Features finales: 128 (7 categóricas) | regression_l2=334.1497 | WRMSSE=0.9760 (informativo)
+2026-09-05 08:10:07.384 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 6672.9s
+2026-09-05 08:10:25.735 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench, selected features) [ML] | WAPE: 13.93% | WRMSSE: 0.9760  | fit: 18.25s
+2026-09-05 08:10:35.534 | INFO     | __main__:run_shap:481 - SHAP (lightgbm): feature más importante = te_weekend_mean | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-05 08:10:35.537 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 28.2s
+2026-09-05 08:10:35.887 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_08_daily_store_cat_sales_final_lightgbm'
+2026-09-05 08:20:38.672 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 346.1523 | WRMSSE de ESE trial: 0.9673 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 08:20:38.674 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.1489549230134547, 'num_leaves': 45, 'max_depth': 6, 'min_child_samples': 20, 'subsample': 0.8241884690955938, 'colsample_bytree': 0.9282289871668409, 'reg_alpha': 3.9290656414545673, 'reg_lambda': 0.08117124243878597}
+2026-09-05 08:20:38.676 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 603.1s
+2026-09-05 08:21:06.108 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [157, 424, 101] -> n_estimators final = 227
+2026-09-05 08:21:06.195 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (final, Optuna) [ML] | WAPE: 18.04% | WRMSSE: 1.2090  | fit: 27.35s
+2026-09-05 08:21:13.856 | INFO     | __main__:fit_final_model:551 - Test WAPE: 7.73% | Test WRMSSE: 0.5776
+2026-09-05 08:21:19.860 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-05 08:21:20.600 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_08_daily_store_cat_sales_artifact.pkl (modelo: lightgbm)
+2026-09-05 08:21:20.874 | SUCCESS  | __main__:export_artifact:625 - Versión 20260905T122120Z registrada en registry.json
+2026-09-05 08:21:20.876 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_08_daily_store_cat/sales) en 9279.5s
+2026-09-05 08:21:21.871 | INFO     | src.data.split:load_data:359 - level_09_daily_store_dept | target=sales | 135,870 filas | 191 features (9 categóricas)
+2026-09-05 08:21:22.060 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 131,950 rows)
+2026-09-05 08:21:22.061 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 1,960 rows)
+2026-09-05 08:21:22.062 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 1,960 rows)
+2026-09-05 08:21:22.961 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-05 08:21:23.275 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 28.40% | WRMSSE: 1.6807  | fit: 0.06s
+2026-09-05 08:21:23.575 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 15.77% | WRMSSE: 1.0289  | fit: 0.04s
+2026-09-05 08:21:23.881 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 12.59% | WRMSSE: 0.8743  | fit: 0.06s
+2026-09-05 08:21:24.188 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 19.79% | WRMSSE: 1.2389  | fit: 0.06s
+2026-09-05 08:21:24.495 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 28.54% | WRMSSE: 1.6873  | fit: 0.07s
+2026-09-05 08:21:24.759 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 24.04% | WRMSSE: 1.6250  | fit: 0.01s
+2026-09-05 08:21:25.018 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 19.20% | WRMSSE: 1.2235  | fit: 0.03s
+2026-09-05 08:21:25.305 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 17.76% | WRMSSE: 1.1580  | fit: 0.03s
+2026-09-05 08:21:25.582 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 17.47% | WRMSSE: 1.1254  | fit: 0.03s
+2026-09-05 08:21:25.867 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 17.48% | WRMSSE: 1.1130  | fit: 0.03s
+2026-09-05 08:21:26.148 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 17.41% | WRMSSE: 1.1192  | fit: 0.03s
+2026-09-05 08:21:26.148 | INFO     | __main__:run_pipeline:638 - Fase naive: 3.2s
+2026-09-05 08:22:09.300 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 14.49% | WRMSSE: 0.9165  | fit: 42.88s
+2026-09-05 08:22:32.329 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 13.93% | WRMSSE: 0.8934  | fit: 22.86s
+2026-09-05 08:22:34.801 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 14.06% | WRMSSE: 0.9167  | fit: 2.33s
+2026-09-05 08:23:07.448 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 15.26% | WRMSSE: 0.9708  | fit: 32.47s
+2026-09-05 08:23:30.628 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 12.98% | WRMSSE: 0.8429  | fit: 23.01s
+2026-09-05 08:23:30.629 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 124.5s
+2026-09-05 08:23:30.629 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-05 08:23:30.747 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_09_daily_store_dept_sales_bench_lightgbm'
+2026-09-05 08:28:31.157 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 387.6746 | WRMSSE de ESE trial: 1.8938 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 08:28:31.159 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.13960319870483492, 'num_leaves': 32, 'max_depth': 7, 'min_child_samples': 21, 'subsample': 0.7901892341369223, 'colsample_bytree': 0.7842531262805341, 'reg_alpha': 4.878520418407102, 'reg_lambda': 0.0014734284346473805}
+2026-09-05 08:28:41.123 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 35.90% | WRMSSE: 1.7978  | fit: 310.34s
+2026-09-05 08:28:41.124 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-05 08:28:41.188 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_09_daily_store_dept_sales_bench_xgboost'
+2026-09-05 08:34:02.269 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 329.3088 | WRMSSE de ESE trial: 1.6358 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 08:34:02.271 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.03755115322842063, 'max_depth': 5, 'min_child_weight': 6.966418981413737, 'subsample': 0.7824279936868144, 'colsample_bytree': 0.9140703845572055, 'reg_alpha': 0.005477562363971304, 'reg_lambda': 0.07982478599323917}
+2026-09-05 08:35:22.200 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 31.87% | WRMSSE: 1.6358  | fit: 400.73s
+2026-09-05 08:35:22.200 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-05 08:35:22.283 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_09_daily_store_dept_sales_bench_catboost'
+2026-09-05 08:44:30.026 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 561.3214 | WRMSSE de ESE trial: 2.7367 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 08:44:30.036 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.054816785328198704, 'depth': 10, 'l2_leaf_reg': 5.395030966670228}
+2026-09-05 08:53:45.475 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 50.29% | WRMSSE: 2.7367  | fit: 1103.10s
+2026-09-05 08:53:45.475 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-05 08:53:45.547 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_09_daily_store_dept_sales_bench_histgb'
+2026-09-05 08:59:09.178 | INFO     | __main__:tune_optuna_family:317 - [histgb] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 510.9876 | WRMSSE de ESE trial: 2.6701 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 08:59:09.182 | INFO     | __main__:tune_optuna_family:323 - [histgb] Mejores hiperparámetros: {'learning_rate': 0.07106591851092234, 'max_leaf_nodes': 244, 'max_depth': 12, 'min_samples_leaf': 128, 'l2_regularization': 0.003776663327107336}
+2026-09-05 09:04:32.280 | INFO     | src.evaluation.reports:evaluate_predictions:58 - histgb (Optuna bench) [ML] | WAPE: 54.16% | WRMSSE: 2.6701  | fit: 646.30s
+2026-09-05 09:04:32.281 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 5/5 -- ridge
+2026-09-05 09:04:32.346 | INFO     | __main__:tune_optuna_family:307 - [ridge] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_09_daily_store_dept_sales_bench_ridge'
+2026-09-05 09:09:35.215 | INFO     | __main__:tune_optuna_family:317 - [ridge] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 518.5977 | WRMSSE de ESE trial: 2.5401 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-05 09:09:35.224 | INFO     | __main__:tune_optuna_family:323 - [ridge] Mejores hiperparámetros: {'alpha': 0.001010922639311848}
+2026-09-05 09:09:43.716 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ridge (Optuna bench) [ML] | WAPE: 48.16% | WRMSSE: 2.5401  | fit: 311.10s
+2026-09-05 09:09:43.717 | SUCCESS  | __main__:pick_winner:365 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=329.3088
+2026-09-05 09:09:43.717 | INFO     | __main__:run_pipeline:649 - Fase bench ML (Optuna corto, 5 familias): 2773.1s
+2026-09-05 09:09:43.723 | INFO     | __main__:select_features:396 - Top 10 gain importance (xgboost):
+rolling_mean_lag1_window_size7    239034880.0
+te_weekend_mean                    98294568.0
+lag7                               34605288.0
+lag28                              34516060.0
+lag1                               26678626.0
+lag35                              17164986.0
+lag91                               7401588.5
+lag21                               6191747.0
+lag6                                4925461.5
+is_store_closed                     3842608.0
+dtype: float64
+2026-09-05 09:10:26.104 | INFO     | __main__:select_features:403 - Top 10 permutation importance (xgboost):
+te_weekend_mean    111.401404
+lag28               75.517377
+dept_id             43.652362
+te_snap_mean        25.182318
+lag91               21.859473
+lag35               17.015784
+lag21               16.241913
+lag7                13.224158
+lag364              12.752820
+te_event_mean       11.067444
+dtype: float64
+2026-09-05 09:11:59.081 | INFO     | src.modeling.feature_selection:backward_feature_selection:139 - Baseline (191 features): regression_l2=329.3088 | WRMSSE=1.6358 (informativo)
+2026-09-05 09:53:46.367 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_std_lag1_window_size14' -> 190 features | regression_l2=321.0075 | WRMSSE=1.5939
+2026-09-05 12:25:35.370 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag1', 'dayofweek', 'lag14', 'lag6', 'lag182', 'te_event_mean', 'lag364', 'lag7'] -> 182 features | regression_l2=241.0717 | WRMSSE=1.3000
+2026-09-05 12:29:23.190 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag35' -> 181 features | regression_l2=232.7524 | WRMSSE=1.2619
+2026-09-05 12:36:56.009 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['expanding_mean_lag91', 'price_vs_max', 'price_vs_mean', 'rolling_max_lag364_window_size91', 'rolling_max_lag364_window_size28', 'rolling_mean_lag91_window_size28', 'te_cat_std', 'lag23'] -> 173 features | regression_l2=226.2706 | WRMSSE=1.2519
+2026-09-05 12:52:05.320 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'lag17' -> 172 features | regression_l2=221.8423 | WRMSSE=1.2320
+2026-09-05 15:30:41.470 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['price_lag_7', 'rolling_mean_lag7_window_size14', 'avg_sell_price', 'cv2_90', 'days_to_event', 'dow_cos', 'rolling_min_lag2_window_size14', 'rolling_mean_lag2_window_size7'] -> 164 features | regression_l2=212.6519 | WRMSSE=1.1723
+2026-09-05 15:47:50.994 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'cat_id' -> 163 features | regression_l2=208.5784 | WRMSSE=1.1670
+2026-09-05 16:15:41.388 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_std_lag91_window_size28', 'lag4', 'day', 'lag42', 'te_dept_std', 'rolling_mean_lag28_window_size7', 'rolling_mean_lag28_window_size91', 'lag13'] -> 155 features | regression_l2=208.3839 | WRMSSE=1.1757
+2026-09-05 16:16:55.594 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag20', 'rolling_mean_lag1_window_size7', 'store_id', 'snap', 'lag56', 'lag27', 'seasonal_mean_lag364_364_2', 'lag21'] -> 147 features | regression_l2=184.9581 | WRMSSE=1.0808
+2026-09-05 16:20:25.053 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'dept_id' -> 146 features | regression_l2=179.2403 | WRMSSE=1.0818
+2026-09-05 16:25:16.201 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag28_window_size28' -> 145 features | regression_l2=174.5137 | WRMSSE=1.0428
+2026-09-05 16:27:22.450 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_min_lag364_window_size28' -> 144 features | regression_l2=172.3440 | WRMSSE=1.0522
+2026-09-05 16:38:42.426 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'adi_expanding' -> 143 features | regression_l2=170.6506 | WRMSSE=1.0420
+2026-09-05 16:53:21.240 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['lag15', 'lag26', 'rolling_min_lag4_window_size14', 'days_since_event', 'rolling_mean_lag28_window_size28', 'rolling_min_lag6_window_size14', 'rolling_mean_lag91_window_size91', 'rolling_min_lag1_window_size7'] -> 135 features | regression_l2=167.5949 | WRMSSE=1.0441
+2026-09-05 16:56:55.934 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'rolling_max_lag7_window_size7' -> 134 features | regression_l2=163.0852 | WRMSSE=1.0163
+2026-09-05 17:21:27.118 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 'days_to_newyear' -> 133 features | regression_l2=159.8236 | WRMSSE=1.0206
+2026-09-05 20:55:57.719 | WARNING  | src.modeling.feature_selection:try_remove:162 - ELIMINADA(S) 8 features ['rolling_std_lag2_window_size14', 'rolling_max_lag3_window_size14', 'rolling_max_lag28_window_size91', 'rolling_min_lag4_window_size7', 'is_month_start', 'rolling_max_lag4_window_size7', 'rolling_std_lag7_window_size7', 'rolling_min_lag5_window_size7'] -> 125 features | regression_l2=157.1457 | WRMSSE=1.0058
+2026-09-06 01:33:51.545 | INFO     | src.modeling.feature_selection:backward_feature_selection:189 - Seleccionadas 125/191 features | regression_l2 final: 157.1457 | WRMSSE final: 1.0058
+2026-09-06 01:33:51.553 | INFO     | __main__:select_features:422 - Features descartadas (66): ['adi_expanding', 'avg_sell_price', 'cat_id', 'cv2_90', 'day', 'dayofweek', 'days_since_event', 'days_to_event', 'days_to_newyear', 'dept_id', 'dow_cos', 'expanding_mean_lag91', 'is_month_start', 'lag1', 'lag13', 'lag14', 'lag15', 'lag17', 'lag182', 'lag20', 'lag21', 'lag23', 'lag26', 'lag27', 'lag35', 'lag364', 'lag4', 'lag42', 'lag56', 'lag6', 'lag7', 'price_lag_7', 'price_vs_max', 'price_vs_mean', 'rolling_max_lag28_window_size91', 'rolling_max_lag364_window_size28', 'rolling_max_lag364_window_size91', 'rolling_max_lag3_window_size14', 'rolling_max_lag4_window_size7', 'rolling_max_lag7_window_size7', 'rolling_mean_lag1_window_size7', 'rolling_mean_lag28_window_size28', 'rolling_mean_lag28_window_size7', 'rolling_mean_lag28_window_size91', 'rolling_mean_lag2_window_size7', 'rolling_mean_lag7_window_size14', 'rolling_mean_lag91_window_size28', 'rolling_mean_lag91_window_size91', 'rolling_min_lag1_window_size7', 'rolling_min_lag28_window_size28', 'rolling_min_lag2_window_size14', 'rolling_min_lag364_window_size28', 'rolling_min_lag4_window_size14', 'rolling_min_lag4_window_size7', 'rolling_min_lag5_window_size7', 'rolling_min_lag6_window_size14', 'rolling_std_lag1_window_size14', 'rolling_std_lag2_window_size14', 'rolling_std_lag7_window_size7', 'rolling_std_lag91_window_size28', 'seasonal_mean_lag364_364_2', 'snap', 'store_id', 'te_cat_std', 'te_dept_std', 'te_event_mean']
+2026-09-06 01:33:51.585 | INFO     | __main__:select_features:435 - Features finales: 125 (6 categóricas) | regression_l2=157.1457 | WRMSSE=1.0058 (informativo)
+2026-09-06 01:33:51.586 | INFO     | __main__:run_pipeline:660 - Fase selección de features: 55447.9s
+2026-09-06 01:35:07.183 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench, selected features) [ML] | WAPE: 16.79% | WRMSSE: 1.0058  | fit: 75.16s
+2026-09-06 01:35:14.678 | INFO     | __main__:run_shap:481 - SHAP (xgboost): feature más importante = te_weekend_mean | plots guardados en /home/njimenez/workspace/magister/forecast-tfm/artifacts/plots
+2026-09-06 01:35:14.685 | INFO     | __main__:run_pipeline:665 - Fase SHAP: 83.1s
+2026-09-06 01:35:14.825 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 500 trials (timeout 600s) -- study 'study_level_09_daily_store_dept_sales_final_xgboost'
+2026-09-06 01:46:00.572 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 157.1457 | WRMSSE de ESE trial: 1.0058 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-06 01:46:00.575 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.03755115322842063, 'max_depth': 5, 'min_child_weight': 6.966418981413737, 'subsample': 0.7824279936868144, 'colsample_bytree': 0.9140703845572055, 'reg_alpha': 0.005477562363971304, 'reg_lambda': 0.07982478599323917}
+2026-09-06 01:46:00.581 | INFO     | __main__:run_pipeline:671 - Fase Optuna final: 645.9s
+2026-09-06 01:49:31.159 | INFO     | __main__:fit_final_model:530 - CV (3 folds) best_iteration: [675, 931, 792] -> n_estimators final = 799
+2026-09-06 01:49:31.351 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (final, Optuna) [ML] | WAPE: 16.79% | WRMSSE: 1.0058  | fit: 210.31s
+2026-09-06 01:50:52.234 | INFO     | __main__:fit_final_model:551 - Test WAPE: 10.60% | Test WRMSSE: 0.7399
+2026-09-06 01:51:02.965 | INFO     | __main__:save_model_comparison:386 - Comparación de modelos guardada en /home/njimenez/workspace/magister/forecast-tfm/artifacts/results
+2026-09-06 01:51:03.591 | SUCCESS  | __main__:export_artifact:615 - Artifact guardado en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models/level_09_daily_store_dept_sales_artifact.pkl (modelo: xgboost)
+2026-09-06 01:51:04.009 | SUCCESS  | __main__:export_artifact:625 - Versión 20260906T045103Z registrada en registry.json
+2026-09-06 01:51:04.011 | INFO     | __main__:run_pipeline:679 - Pipeline completo (level_09_daily_store_dept/sales) en 59382.8s
+2026-09-06 01:51:04.233 | INFO     | __main__:main:726 - Nivel 10 (item): 1 combinaciones
+2026-09-06 01:51:11.121 | INFO     | src.data.split:load_data:359 - level_10_daily_item__FOODS_3 | target=sales | 1,597,443 filas | 191 features (9 categóricas)
+2026-09-06 01:51:12.909 | INFO     | src.data.split:log_summary:48 - Train : 2011-01-29 to 2016-03-27 (1,885 days, 1,551,355 rows)
+2026-09-06 01:51:12.910 | INFO     | src.data.split:log_summary:49 - Valid : 2016-03-28 to 2016-04-24 (28 days, 23,044 rows)
+2026-09-06 01:51:12.910 | INFO     | src.data.split:log_summary:50 - Test  : 2016-04-25 to 2016-05-22 (28 days, 23,044 rows)
+2026-09-06 01:51:16.989 | INFO     | src.data.split:split_data:421 - Features: 191 (9 categóricas)
+2026-09-06 01:51:19.038 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 46.62% | WRMSSE: 1.3481  | fit: 0.49s
+2026-09-06 01:51:21.063 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 34.04% | WRMSSE: 1.0102  | fit: 0.45s
+2026-09-06 01:51:23.216 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 35.57% | WRMSSE: 1.0783  | fit: 0.52s
+2026-09-06 01:51:25.255 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 48.34% | WRMSSE: 1.4892  | fit: 0.44s
+2026-09-06 01:51:27.569 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 46.83% | WRMSSE: 1.3550  | fit: 0.53s
+2026-09-06 01:51:30.242 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 46.13% | WRMSSE: 1.4083  | fit: 0.06s
+2026-09-06 01:51:33.327 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 31.82% | WRMSSE: 0.9526  | fit: 0.35s
+2026-09-06 01:51:36.310 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 31.31% | WRMSSE: 0.9349  | fit: 0.34s
+2026-09-06 01:51:39.273 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 31.91% | WRMSSE: 0.9476  | fit: 0.35s
+2026-09-06 01:51:42.311 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 32.37% | WRMSSE: 0.9547  | fit: 0.34s
+2026-09-06 01:51:45.346 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 32.61% | WRMSSE: 0.9639  | fit: 0.34s
+2026-09-06 01:51:45.346 | INFO     | __main__:run_pipeline:638 - Fase naive: 28.4s
+2026-09-06 01:57:52.644 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 32.89% | WRMSSE: 0.9135  | fit: 365.73s
+2026-09-06 02:01:44.810 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 32.37% | WRMSSE: 0.9055  | fit: 229.52s
+2026-09-06 02:02:10.969 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 32.66% | WRMSSE: 0.9192  | fit: 24.58s
+2026-09-06 02:05:21.416 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 35.46% | WRMSSE: 0.9883  | fit: 188.17s
+2026-09-06 02:11:11.934 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 35.71% | WRMSSE: 1.0197  | fit: 347.98s
+2026-09-06 02:11:11.934 | INFO     | __main__:run_pipeline:643 - Fase estadísticos clásicos: 1166.6s
+2026-09-06 02:11:11.935 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 1/5 -- lightgbm
+2026-09-06 02:11:12.090 | INFO     | __main__:tune_optuna_family:307 - [lightgbm] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_10_daily_item__FOODS_3_sales_bench_lightgbm'
+2026-09-06 02:17:44.165 | INFO     | __main__:tune_optuna_family:317 - [lightgbm] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 27.9053 | WRMSSE de ESE trial: 1.5910 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-06 02:17:44.168 | INFO     | __main__:tune_optuna_family:323 - [lightgbm] Mejores hiperparámetros: {'learning_rate': 0.054816785328198704, 'num_leaves': 244, 'max_depth': 9, 'min_child_samples': 128, 'subsample': 0.6624074561769746, 'colsample_bytree': 0.662397808134481, 'reg_alpha': 0.0016400214911202306, 'reg_lambda': 1.599409170128044}
+2026-09-06 02:25:44.641 | INFO     | src.evaluation.reports:evaluate_predictions:58 - lightgbm (Optuna bench) [ML] | WAPE: 53.24% | WRMSSE: 1.5920  | fit: 869.64s
+2026-09-06 02:25:44.641 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 2/5 -- xgboost
+2026-09-06 02:25:44.695 | INFO     | __main__:tune_optuna_family:307 - [xgboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_10_daily_item__FOODS_3_sales_bench_xgboost'
+2026-09-06 02:36:04.023 | INFO     | __main__:tune_optuna_family:317 - [xgboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 38.5530 | WRMSSE de ESE trial: 1.9406 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-06 02:36:04.032 | INFO     | __main__:tune_optuna_family:323 - [xgboost] Mejores hiperparámetros: {'learning_rate': 0.054816785328198704, 'max_depth': 10, 'min_child_weight': 48.343714531846395, 'subsample': 0.8394633936788146, 'colsample_bytree': 0.6624074561769746, 'reg_alpha': 0.003775887545682684, 'reg_lambda': 0.0016400214911202306}
+2026-09-06 02:46:28.231 | INFO     | src.evaluation.reports:evaluate_predictions:58 - xgboost (Optuna bench) [ML] | WAPE: 62.11% | WRMSSE: 1.9406  | fit: 1240.32s
+2026-09-06 02:46:28.232 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 3/5 -- catboost
+2026-09-06 02:46:28.325 | INFO     | __main__:tune_optuna_family:307 - [catboost] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_10_daily_item__FOODS_3_sales_bench_catboost'
+2026-09-06 03:30:05.086 | INFO     | __main__:tune_optuna_family:317 - [catboost] Optuna terminó -- elige hiperparámetros por regression_l2 (no por WRMSSE): mejor regression_l2 = 33.6960 | WRMSSE de ESE trial: 2.1214 (solo referencia, puede no ser el mínimo posible; el WRMSSE definitivo se reporta abajo, tras reentrenar con estos hiperparámetros)
+2026-09-06 03:30:05.091 | INFO     | __main__:tune_optuna_family:323 - [catboost] Mejores hiperparámetros: {'learning_rate': 0.054816785328198704, 'depth': 10, 'l2_leaf_reg': 5.395030966670228}
+2026-09-06 04:14:23.071 | INFO     | src.evaluation.reports:evaluate_predictions:58 - catboost (Optuna bench) [ML] | WAPE: 65.65% | WRMSSE: 2.1214  | fit: 5273.11s
+2026-09-06 04:14:23.071 | INFO     | __main__:run_bench_ml:338 - Bench ML: familia 4/5 -- histgb
+2026-09-06 04:14:23.123 | INFO     | __main__:tune_optuna_family:307 - [histgb] Optuna arrancando: hasta 200 trials (timeout 300s) -- study 'study_level_10_daily_item__FOODS_3_sales_bench_histgb'

@@ -1,0 +1,54 @@
+2026-09-07 22:08:34.713 | INFO     | __main__:main:101 - [L1 total/daily] level_01_daily_total.parquet → dataset_level_01_daily_total.parquet
+2026-09-07 22:08:35.342 | SUCCESS  | __main__:main:127 -   listo  1.2 MB  (204 cols, 1,941 filas)
+2026-09-07 22:08:35.342 | INFO     | __main__:main:101 - [L2 state/daily] level_02_daily_state.parquet → dataset_level_02_daily_state.parquet
+2026-09-07 22:08:35.650 | SUCCESS  | __main__:main:127 -   listo  3.1 MB  (204 cols, 5,823 filas)
+2026-09-07 22:08:35.651 | INFO     | __main__:main:101 - [L3 cat/daily] level_03_daily_cat.parquet → dataset_level_03_daily_cat.parquet
+2026-09-07 22:08:35.967 | SUCCESS  | __main__:main:127 -   listo  3.2 MB  (204 cols, 5,823 filas)
+2026-09-07 22:08:35.967 | INFO     | __main__:main:101 - [L4 dept/daily] level_04_daily_dept.parquet → dataset_level_04_daily_dept.parquet
+2026-09-07 22:08:36.515 | SUCCESS  | __main__:main:127 -   listo  6.8 MB  (204 cols, 13,587 filas)
+2026-09-07 22:08:36.516 | INFO     | __main__:main:101 - [L5 state_cat/daily] level_05_daily_state_cat.parquet → dataset_level_05_daily_state_cat.parquet
+2026-09-07 22:08:37.553 | SUCCESS  | __main__:main:127 -   listo  8.4 MB  (204 cols, 17,469 filas)
+2026-09-07 22:08:37.554 | INFO     | __main__:main:101 - [L6 store/daily] level_06_daily_store.parquet → dataset_level_06_daily_store.parquet
+2026-09-07 22:08:38.155 | SUCCESS  | __main__:main:127 -   listo  8.7 MB  (204 cols, 19,410 filas)
+2026-09-07 22:08:38.156 | INFO     | __main__:main:101 - [L7 state_dept/daily] level_07_daily_state_dept.parquet → dataset_level_07_daily_state_dept.parquet
+2026-09-07 22:08:39.477 | SUCCESS  | __main__:main:127 -   listo  17.3 MB  (204 cols, 40,761 filas)
+2026-09-07 22:08:39.477 | INFO     | __main__:main:101 - [L8 store_cat/daily] level_08_daily_store_cat.parquet → dataset_level_08_daily_store_cat.parquet
+2026-09-07 22:08:41.098 | SUCCESS  | __main__:main:127 -   listo  22.9 MB  (204 cols, 58,230 filas)
+2026-09-07 22:08:41.099 | INFO     | __main__:main:101 - [L9 store_dept/daily] level_09_daily_store_dept.parquet → dataset_level_09_daily_store_dept.parquet
+2026-09-07 22:08:44.267 | SUCCESS  | __main__:main:127 -   listo  47.3 MB  (204 cols, 135,870 filas)
+2026-09-07 22:08:44.267 | INFO     | __main__:main:96 - [L10 item/daily] level_10_daily_item.parquet
+2026-09-07 22:08:44.368 | INFO     | __main__:_process_split:53 -   separando por ['dept_id'] (1 datasets)
+2026-09-07 22:09:13.980 | SUCCESS  | __main__:_process_split:61 -   [1/1] [FOODS_3] 287.9 MB  (1,597,443 filas)
+2026-09-07 22:09:14.182 | INFO     | __main__:main:96 - [L11 item_state/daily] level_11_daily_item_state.parquet
+2026-09-07 22:09:14.310 | INFO     | __main__:_process_split:53 -   separando por ['state_id', 'dept_id'] (1 datasets)
+2026-09-07 22:09:57.131 | SUCCESS  | __main__:_process_split:61 -   [1/1] [CA/FOODS_3] 247.4 MB  (1,597,443 filas)
+2026-09-07 22:09:57.429 | INFO     | __main__:main:96 - [L12 item_store/daily] level_12_daily_item_store.parquet
+2026-09-07 22:09:57.615 | INFO     | __main__:_process_split:53 -   separando por ['store_id', 'dept_id'] (1 datasets)
+2026-09-07 22:10:28.941 | SUCCESS  | __main__:_process_split:61 -   [1/1] [CA_3/FOODS_3] 201.5 MB  (1,597,443 filas)
+2026-09-07 22:10:29.130 | INFO     | __main__:main:101 - [L1 total/weekly] level_01_weekly_total.parquet → dataset_level_01_weekly_total.parquet
+2026-09-07 22:10:29.256 | SUCCESS  | __main__:main:127 -   listo  0.2 MB  (126 cols, 278 filas)
+2026-09-07 22:10:29.256 | INFO     | __main__:main:101 - [L2 state/weekly] level_02_weekly_state.parquet → dataset_level_02_weekly_state.parquet
+2026-09-07 22:10:29.375 | SUCCESS  | __main__:main:127 -   listo  0.3 MB  (126 cols, 834 filas)
+2026-09-07 22:10:29.375 | INFO     | __main__:main:101 - [L3 cat/weekly] level_03_weekly_cat.parquet → dataset_level_03_weekly_cat.parquet
+2026-09-07 22:10:29.505 | SUCCESS  | __main__:main:127 -   listo  0.3 MB  (126 cols, 834 filas)
+2026-09-07 22:10:29.505 | INFO     | __main__:main:101 - [L4 dept/weekly] level_04_weekly_dept.parquet → dataset_level_04_weekly_dept.parquet
+2026-09-07 22:10:29.642 | SUCCESS  | __main__:main:127 -   listo  0.6 MB  (126 cols, 1,946 filas)
+2026-09-07 22:10:29.642 | INFO     | __main__:main:101 - [L5 state_cat/weekly] level_05_weekly_state_cat.parquet → dataset_level_05_weekly_state_cat.parquet
+2026-09-07 22:10:29.792 | SUCCESS  | __main__:main:127 -   listo  0.8 MB  (126 cols, 2,502 filas)
+2026-09-07 22:10:29.792 | INFO     | __main__:main:101 - [L6 store/weekly] level_06_weekly_store.parquet → dataset_level_06_weekly_store.parquet
+2026-09-07 22:10:29.955 | SUCCESS  | __main__:main:127 -   listo  0.8 MB  (126 cols, 2,780 filas)
+2026-09-07 22:10:29.956 | INFO     | __main__:main:101 - [L7 state_dept/weekly] level_07_weekly_state_dept.parquet → dataset_level_07_weekly_state_dept.parquet
+2026-09-07 22:10:30.175 | SUCCESS  | __main__:main:127 -   listo  1.7 MB  (126 cols, 5,838 filas)
+2026-09-07 22:10:30.176 | INFO     | __main__:main:101 - [L8 store_cat/weekly] level_08_weekly_store_cat.parquet → dataset_level_08_weekly_store_cat.parquet
+2026-09-07 22:10:30.445 | SUCCESS  | __main__:main:127 -   listo  2.3 MB  (126 cols, 8,340 filas)
+2026-09-07 22:10:30.445 | INFO     | __main__:main:101 - [L9 store_dept/weekly] level_09_weekly_store_dept.parquet → dataset_level_09_weekly_store_dept.parquet
+2026-09-07 22:10:30.953 | SUCCESS  | __main__:main:127 -   listo  4.9 MB  (126 cols, 19,460 filas)
+2026-09-07 22:10:30.954 | INFO     | __main__:main:96 - [L10 item/weekly] level_10_weekly_item.parquet
+2026-09-07 22:10:31.000 | INFO     | __main__:_process_split:53 -   separando por ['dept_id'] (1 datasets)
+2026-09-07 22:10:34.252 | SUCCESS  | __main__:_process_split:61 -   [1/1] [FOODS_3] 28.9 MB  (228,794 filas)
+2026-09-07 22:10:34.382 | INFO     | __main__:main:96 - [L11 item_state/weekly] level_11_weekly_item_state.parquet
+2026-09-07 22:10:34.408 | INFO     | __main__:_process_split:53 -   separando por ['state_id', 'dept_id'] (1 datasets)
+2026-09-07 22:10:37.522 | SUCCESS  | __main__:_process_split:61 -   [1/1] [CA/FOODS_3] 25.1 MB  (228,794 filas)
+2026-09-07 22:10:37.652 | INFO     | __main__:main:96 - [L12 item_store/weekly] level_12_weekly_item_store.parquet
+2026-09-07 22:10:37.677 | INFO     | __main__:_process_split:53 -   separando por ['store_id', 'dept_id'] (1 datasets)
+2026-09-07 22:10:41.186 | SUCCESS  | __main__:_process_split:61 -   [1/1] [CA_3/FOODS_3] 21.7 MB  (228,794 filas)

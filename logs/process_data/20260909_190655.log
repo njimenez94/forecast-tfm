@@ -1,0 +1,102 @@
+2026-09-09 19:06:56.921 | INFO     | __main__:generate:59 - [L1 total/daily] → level_01_daily_total.parquet
+2026-09-09 19:06:56.922 | INFO     | __main__:generate:62 -   1 series × 1,941 daily
+2026-09-09 19:06:56.922 | INFO     | __main__:generate:65 -   1,941 filas (aprox.)
+2026-09-09 19:07:08.700 | SUCCESS  | __main__:generate:68 -   listo  49.0 KiB
+2026-09-09 19:07:08.845 | INFO     | __main__:generate:59 - [L1 total/weekly] → level_01_weekly_total.parquet
+2026-09-09 19:07:08.845 | INFO     | __main__:generate:62 -   1 series × 278 weekly
+2026-09-09 19:07:08.846 | INFO     | __main__:generate:65 -   278 filas (aprox.)
+2026-09-09 19:07:21.403 | SUCCESS  | __main__:generate:68 -   listo  12.7 KiB
+2026-09-09 19:07:21.867 | INFO     | __main__:generate:59 - [L2 state/daily] → level_02_daily_state.parquet
+2026-09-09 19:07:21.867 | INFO     | __main__:generate:62 -   3 series × 1,941 daily
+2026-09-09 19:07:21.868 | INFO     | __main__:generate:65 -   5,823 filas (aprox.)
+2026-09-09 19:07:38.177 | SUCCESS  | __main__:generate:68 -   listo  124.6 KiB
+2026-09-09 19:07:38.268 | INFO     | __main__:generate:59 - [L2 state/weekly] → level_02_weekly_state.parquet
+2026-09-09 19:07:38.268 | INFO     | __main__:generate:62 -   3 series × 278 weekly
+2026-09-09 19:07:38.269 | INFO     | __main__:generate:65 -   834 filas (aprox.)
+2026-09-09 19:07:47.475 | SUCCESS  | __main__:generate:68 -   listo  24.3 KiB
+2026-09-09 19:07:47.794 | INFO     | __main__:generate:59 - [L3 cat/daily] → level_03_daily_cat.parquet
+2026-09-09 19:07:47.795 | INFO     | __main__:generate:62 -   3 series × 1,941 daily
+2026-09-09 19:07:47.796 | INFO     | __main__:generate:65 -   5,823 filas (aprox.)
+2026-09-09 19:07:56.586 | SUCCESS  | __main__:generate:68 -   listo  125.7 KiB
+2026-09-09 19:07:56.685 | INFO     | __main__:generate:59 - [L3 cat/weekly] → level_03_weekly_cat.parquet
+2026-09-09 19:07:56.686 | INFO     | __main__:generate:62 -   3 series × 278 weekly
+2026-09-09 19:07:56.686 | INFO     | __main__:generate:65 -   834 filas (aprox.)
+2026-09-09 19:08:04.472 | SUCCESS  | __main__:generate:68 -   listo  24.6 KiB
+2026-09-09 19:08:05.722 | INFO     | __main__:generate:59 - [L4 dept/daily] → level_04_daily_dept.parquet
+2026-09-09 19:08:05.722 | INFO     | __main__:generate:62 -   7 series × 1,941 daily
+2026-09-09 19:08:05.722 | INFO     | __main__:generate:65 -   13,587 filas (aprox.)
+2026-09-09 19:08:16.454 | SUCCESS  | __main__:generate:68 -   listo  297.2 KiB
+2026-09-09 19:08:16.554 | INFO     | __main__:generate:59 - [L4 dept/weekly] → level_04_weekly_dept.parquet
+2026-09-09 19:08:16.554 | INFO     | __main__:generate:62 -   7 series × 278 weekly
+2026-09-09 19:08:16.554 | INFO     | __main__:generate:65 -   1,946 filas (aprox.)
+2026-09-09 19:08:25.029 | SUCCESS  | __main__:generate:68 -   listo  49.0 KiB
+2026-09-09 19:08:26.109 | INFO     | __main__:generate:59 - [L5 state_cat/daily] → level_05_daily_state_cat.parquet
+2026-09-09 19:08:26.109 | INFO     | __main__:generate:62 -   9 series × 1,941 daily
+2026-09-09 19:08:26.109 | INFO     | __main__:generate:65 -   17,469 filas (aprox.)
+2026-09-09 19:08:36.838 | SUCCESS  | __main__:generate:68 -   listo  371.4 KiB
+2026-09-09 19:08:36.927 | INFO     | __main__:generate:59 - [L5 state_cat/weekly] → level_05_weekly_state_cat.parquet
+2026-09-09 19:08:36.928 | INFO     | __main__:generate:62 -   9 series × 278 weekly
+2026-09-09 19:08:36.928 | INFO     | __main__:generate:65 -   2,502 filas (aprox.)
+2026-09-09 19:08:52.612 | SUCCESS  | __main__:generate:68 -   listo  60.1 KiB
+2026-09-09 19:08:54.008 | INFO     | __main__:generate:59 - [L6 store/daily] → level_06_daily_store.parquet
+2026-09-09 19:08:54.011 | INFO     | __main__:generate:62 -   10 series × 1,941 daily
+2026-09-09 19:08:54.012 | INFO     | __main__:generate:65 -   19,410 filas (aprox.)
+2026-09-09 19:09:10.894 | SUCCESS  | __main__:generate:68 -   listo  401.6 KiB
+2026-09-09 19:09:11.025 | INFO     | __main__:generate:59 - [L6 store/weekly] → level_06_weekly_store.parquet
+2026-09-09 19:09:11.025 | INFO     | __main__:generate:62 -   10 series × 278 weekly
+2026-09-09 19:09:11.025 | INFO     | __main__:generate:65 -   2,780 filas (aprox.)
+2026-09-09 19:09:26.927 | SUCCESS  | __main__:generate:68 -   listo  64.3 KiB
+2026-09-09 19:09:29.500 | INFO     | __main__:generate:59 - [L7 state_dept/daily] → level_07_daily_state_dept.parquet
+2026-09-09 19:09:29.500 | INFO     | __main__:generate:62 -   21 series × 1,941 daily
+2026-09-09 19:09:29.500 | INFO     | __main__:generate:65 -   40,761 filas (aprox.)
+2026-09-09 19:09:50.227 | SUCCESS  | __main__:generate:68 -   listo  818.2 KiB
+2026-09-09 19:09:50.361 | INFO     | __main__:generate:59 - [L7 state_dept/weekly] → level_07_weekly_state_dept.parquet
+2026-09-09 19:09:50.362 | INFO     | __main__:generate:62 -   21 series × 278 weekly
+2026-09-09 19:09:50.362 | INFO     | __main__:generate:65 -   5,838 filas (aprox.)
+2026-09-09 19:10:08.695 | SUCCESS  | __main__:generate:68 -   listo  125.8 KiB
+2026-09-09 19:10:10.465 | INFO     | __main__:generate:59 - [L8 store_cat/daily] → level_08_daily_store_cat.parquet
+2026-09-09 19:10:10.465 | INFO     | __main__:generate:62 -   30 series × 1,941 daily
+2026-09-09 19:10:10.466 | INFO     | __main__:generate:65 -   58,230 filas (aprox.)
+2026-09-09 19:10:24.161 | SUCCESS  | __main__:generate:68 -   listo  1.1 MiB
+2026-09-09 19:10:24.249 | INFO     | __main__:generate:59 - [L8 store_cat/weekly] → level_08_weekly_store_cat.parquet
+2026-09-09 19:10:24.249 | INFO     | __main__:generate:62 -   30 series × 278 weekly
+2026-09-09 19:10:24.250 | INFO     | __main__:generate:65 -   8,340 filas (aprox.)
+2026-09-09 19:10:33.613 | SUCCESS  | __main__:generate:68 -   listo  173.2 KiB
+2026-09-09 19:10:35.454 | INFO     | __main__:generate:59 - [L9 store_dept/daily] → level_09_daily_store_dept.parquet
+2026-09-09 19:10:35.455 | INFO     | __main__:generate:62 -   70 series × 1,941 daily
+2026-09-09 19:10:35.455 | INFO     | __main__:generate:65 -   135,870 filas (aprox.)
+2026-09-09 19:10:48.611 | SUCCESS  | __main__:generate:68 -   listo  2.5 MiB
+2026-09-09 19:10:48.700 | INFO     | __main__:generate:59 - [L9 store_dept/weekly] → level_09_weekly_store_dept.parquet
+2026-09-09 19:10:48.701 | INFO     | __main__:generate:62 -   70 series × 278 weekly
+2026-09-09 19:10:48.701 | INFO     | __main__:generate:65 -   19,460 filas (aprox.)
+2026-09-09 19:11:00.307 | SUCCESS  | __main__:generate:68 -   listo  386.1 KiB
+2026-09-09 19:11:00.993 | INFO     | __main__:generate:59 - [L10 item/daily] → level_10_daily_item.parquet
+2026-09-09 19:11:00.993 | INFO     | __main__:generate:61 -   filtro: {'dept_id': ('FOODS_3',)}
+2026-09-09 19:11:00.993 | INFO     | __main__:generate:62 -   823 series × 1,941 daily
+2026-09-09 19:11:00.994 | INFO     | __main__:generate:65 -   1,597,443 filas (aprox.)
+2026-09-09 19:11:15.979 | SUCCESS  | __main__:generate:68 -   listo  9.6 MiB
+2026-09-09 19:11:16.098 | INFO     | __main__:generate:59 - [L10 item/weekly] → level_10_weekly_item.parquet
+2026-09-09 19:11:16.099 | INFO     | __main__:generate:61 -   filtro: {'dept_id': ('FOODS_3',)}
+2026-09-09 19:11:16.099 | INFO     | __main__:generate:62 -   823 series × 278 weekly
+2026-09-09 19:11:16.100 | INFO     | __main__:generate:65 -   228,794 filas (aprox.)
+2026-09-09 19:11:23.994 | SUCCESS  | __main__:generate:68 -   listo  1.9 MiB
+2026-09-09 19:11:24.777 | INFO     | __main__:generate:59 - [L11 item_state/daily] → level_11_daily_item_state.parquet
+2026-09-09 19:11:24.778 | INFO     | __main__:generate:61 -   filtro: {'dept_id': ('FOODS_3',), 'state_id': ('CA',)}
+2026-09-09 19:11:24.778 | INFO     | __main__:generate:62 -   823 series × 1,941 daily
+2026-09-09 19:11:24.779 | INFO     | __main__:generate:65 -   1,597,443 filas (aprox.)
+2026-09-09 19:11:37.869 | SUCCESS  | __main__:generate:68 -   listo  5.8 MiB
+2026-09-09 19:11:38.003 | INFO     | __main__:generate:59 - [L11 item_state/weekly] → level_11_weekly_item_state.parquet
+2026-09-09 19:11:38.003 | INFO     | __main__:generate:61 -   filtro: {'dept_id': ('FOODS_3',), 'state_id': ('CA',)}
+2026-09-09 19:11:38.003 | INFO     | __main__:generate:62 -   823 series × 278 weekly
+2026-09-09 19:11:38.004 | INFO     | __main__:generate:65 -   228,794 filas (aprox.)
+2026-09-09 19:11:43.107 | SUCCESS  | __main__:generate:68 -   listo  1.2 MiB
+2026-09-09 19:11:43.483 | INFO     | __main__:generate:59 - [L12 item_store/daily] → level_12_daily_item_store.parquet
+2026-09-09 19:11:43.483 | INFO     | __main__:generate:61 -   filtro: {'dept_id': ('FOODS_3',), 'store_id': ('CA_3',)}
+2026-09-09 19:11:43.484 | INFO     | __main__:generate:62 -   823 series × 1,941 daily
+2026-09-09 19:11:43.485 | INFO     | __main__:generate:65 -   1,597,443 filas (aprox.)
+2026-09-09 19:11:52.303 | SUCCESS  | __main__:generate:68 -   listo  4.6 MiB
+2026-09-09 19:11:52.444 | INFO     | __main__:generate:59 - [L12 item_store/weekly] → level_12_weekly_item_store.parquet
+2026-09-09 19:11:52.445 | INFO     | __main__:generate:61 -   filtro: {'dept_id': ('FOODS_3',), 'store_id': ('CA_3',)}
+2026-09-09 19:11:52.445 | INFO     | __main__:generate:62 -   823 series × 278 weekly
+2026-09-09 19:11:52.446 | INFO     | __main__:generate:65 -   228,794 filas (aprox.)
+2026-09-09 19:11:55.394 | SUCCESS  | __main__:generate:68 -   listo  1022.6 KiB
