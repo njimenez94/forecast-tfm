@@ -5,6 +5,7 @@ PRAGMA temp_directory='data/duckdb_tmp';
 DROP TABLE IF EXISTS calendar;
 DROP TABLE IF EXISTS sell_prices;
 DROP TABLE IF EXISTS sales_train_evaluation;
+DROP TABLE IF EXISTS sales_train_validation;
 DROP TABLE IF EXISTS sample_submission;
 DROP TABLE IF EXISTS dataset_raw;
 
@@ -18,6 +19,11 @@ CREATE TABLE sell_prices AS
 
 CREATE TABLE sales_train_evaluation AS
     UNPIVOT (SELECT * FROM read_csv_auto('data/raw/sales_train_evaluation.csv'))
+    ON COLUMNS(* EXCLUDE (id, item_id, dept_id, cat_id, store_id, state_id))
+    INTO NAME d VALUE sales;
+
+CREATE TABLE sales_train_validation AS
+    UNPIVOT (SELECT * FROM read_csv_auto('data/raw/sales_train_validation.csv'))
     ON COLUMNS(* EXCLUDE (id, item_id, dept_id, cat_id, store_id, state_id))
     INTO NAME d VALUE sales;
 

@@ -16,7 +16,9 @@ class Level:
     # Filtro opcional por dept_id/cat_id/state_id/store_id, p.ej. {"dept_id": ("FOODS_3",)}.
     # None/{} = sin filtrar (comportamiento normal). Útil en fase experimental para no
     # tener que materializar los ~70 datasets de un nivel denso (item/item_store) y
-    # construir solo los de un dept/store/state concreto (scripts/process_data.py).
+    # construir solo los de un dept/store/state concreto. Se aplica en
+    # scripts/build_datasets.py -- data/processed/ (scripts/process_data.py) siempre
+    # guarda el universo completo del nivel, sin este recorte.
     filters: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
 

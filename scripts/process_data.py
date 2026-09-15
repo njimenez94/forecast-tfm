@@ -4,8 +4,10 @@ Cada nivel produce un parquet en data/processed/ con el esquema:
     level_{id:02d}_{grain}_{name}.parquet
 
 con la columna "sales" (venta individual). Historia completa, sin recorte por
-ventana de entrenamiento (eso se explora en tuning). Los lags y rolling windows los
-genera mlforecast internamente durante el entrenamiento.
+ventana de entrenamiento (eso se explora en tuning) ni por Level.filters -- ese
+recorte (p.ej. dept_id=FOODS_3 en L10-12) se aplica recién en build_datasets.py,
+para que data/processed/ conserve siempre el universo completo del nivel. Los lags
+y rolling windows los genera mlforecast internamente durante el entrenamiento.
 
 Siguiente paso del pipeline: scripts/build_datasets.py añade features derivadas
 sobre este dataset y guarda el resultado en artifacts/datasets/.
@@ -34,7 +36,7 @@ def show_counts(levels, db_path) -> None:
         humanize.intcomma(periods["daily"]), humanize.intcomma(periods["weekly"]),
     )
     for lvl in levels:
-        n = int(read_query_str(db_path, count_series_query(lvl.dims, lvl.filters))["n"][0])
+        n = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
         for grain in lvl.grains:
             rows = n * periods[grain]
             logger.info(
@@ -51,19 +53,17 @@ def generate(levels, db_path, processed_dir) -> None:
     periods = count_periods(db_path)
 
     for lvl in levels:
-        n_series = int(read_query_str(db_path, count_series_query(lvl.dims, lvl.filters))["n"][0])
+        n_series = int(read_query_str(db_path, count_series_query(lvl.dims))["n"][0])
         for grain in lvl.grains:
             out = config.dataset_level_path(lvl, grain)
             n_periods = periods[grain]
             n_rows = n_series * n_periods
             logger.info("[L{} {}/{}] → {}", lvl.id, lvl.name, grain, out.name)
-            if lvl.filters:
-                logger.info("  filtro: {}", lvl.filters)
             logger.info(
                 "  {} series × {} {}", humanize.intcomma(n_series), humanize.intcomma(n_periods), grain,
             )
             logger.info("  {} filas (aprox.)", humanize.intcomma(n_rows))
-            sql = build_level_query(lvl.dims, grain, lvl.filters)
+            sql = build_level_query(lvl.dims, grain)
             write_query_parquet(db_path, sql, out)
             logger.success("  listo  {}", humanize.naturalsize(out.stat().st_size, binary=True))
             gc.collect()

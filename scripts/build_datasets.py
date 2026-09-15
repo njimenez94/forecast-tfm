@@ -33,6 +33,15 @@ warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 CHUNK_ROW_THRESHOLD = 10_000_000
 
 
+def _filters_expr(filters: dict[str, tuple[str, ...]]) -> pl.Expr | None:
+    """Traduce Level.filters (p.ej. {"dept_id": ("FOODS_3",)}) a un filtro polars.
+    data/processed/ ya viene sin recortar (ver scripts/process_data.py); el recorte
+    experimental de L10-12 se aplica acá, al construir el dataset final."""
+    if not filters:
+        return None
+    return pl.all_horizontal([pl.col(c).is_in(v) for c, v in filters.items()])
+
+
 def _partition_col(file) -> str | None:
     """store_id si tiene más de un valor (nivel item_store), si no state_id (nivel
     item_state), si no None (no hace falta particionar)."""
@@ -47,14 +56,22 @@ def _partition_col(file) -> str | None:
 def _process_split(file, level, grain: str, static_cols: list[str]) -> None:
     """Un parquet independiente por cada combinación de level.split_by (p.ej.
     store_id x dept_id en nivel 12): datasets y modelos entrenables por separado
-    en vez de un único dataset gigante para todo el nivel."""
+    en vez de un único dataset gigante para todo el nivel. Si el nivel define
+    Level.filters (recorte experimental de L10-12, p.ej. dept_id=FOODS_3), se
+    aplica primero para no generar combinaciones fuera de ese alcance."""
     cols = list(level.split_by)
-    combos = pl.scan_parquet(file).select(cols).unique().sort(cols).collect().rows()
+    base_filter = _filters_expr(level.filters)
+    lf = pl.scan_parquet(file)
+    if base_filter is not None:
+        lf = lf.filter(base_filter)
+    combos = lf.select(cols).unique().sort(cols).collect().rows()
     logger.info("  separando por {} ({} datasets)", cols, len(combos))
 
     for i, combo in enumerate(combos, 1):
         split_values = dict(zip(cols, combo))
         filter_expr = pl.all_horizontal([pl.col(c) == v for c, v in split_values.items()])
+        if base_filter is not None:
+            filter_expr = filter_expr & base_filter
         final = build_dataset(read_parquet_pl(file, filter_expr=filter_expr), grain, static_cols)
         out = config.featured_level_path(level, grain, split_values)
         final.to_parquet(out, compression="zstd", index=False)

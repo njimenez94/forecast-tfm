@@ -59,6 +59,22 @@ Este contiene cerca de 59 millones de registros (59.181.090 exactamente) que des
 | FOODS_1_001_CA_1 | CA | CA_1 | FOODS | FOODS_1 | FOODS_1_001 | 2011-03-09 | 2,00 | 2 | 4,00 | 1 | LentStart | Religious |
 | FOODS_1_001_CA_1 | CA | CA_1 | FOODS | FOODS_1 | FOODS_1_001 | 2011-03-16 | 2,00 | 1 | 2,00 | 0 | LentWeek2 | Religious |
 
+A continuación se describe cada columna del dataset combinado:
+
+- **series_id**: identificador único de la serie temporal, resultado de concatenar `item_id` y `store_id` (ej. `FOODS_1_001_CA_1`). Es la llave a nivel item-tienda usada como unidad mínima de análisis.
+- **state_id**: estado de EE. UU. donde se ubica la sucursal (`CA`, `TX` o `WI`).
+- **store_id**: identificador de la sucursal (10 tiendas en total, distribuidas entre los 3 estados).
+- **cat_id**: categoría de producto (`FOODS`, `HOBBIES` o `HOUSEHOLD`).
+- **dept_id**: departamento dentro de la categoría (ej. `FOODS_1`, `FOODS_2`).
+- **item_id**: identificador del producto (SKU), único dentro de cada `dept_id`.
+- **date**: fecha calendario de la observación, obtenida a partir del código `d` de `calendar.csv`.
+- **sell_price**: precio de venta del producto en esa tienda durante la semana correspondiente (`wm_yr_wk`), proveniente de `sell_prices.csv`. Puede venir nulo si el producto no estaba listado/a la venta esa semana.
+- **sales**: unidades vendidas ese día para la combinación item-tienda. Es la variable objetivo (*target*) del proyecto.
+- **mnt_gross_sales**: venta bruta en unidades monetarias, calculada como `sales * sell_price` (tratando `sales` nulo como 0).
+- **snap**: indicador binario (0/1) de si ese día estaban habilitados los beneficios SNAP (*Supplemental Nutrition Assistance Program*) en el estado de la sucursal.
+- **event_name**: nombre del evento o feriado del día, si existe (ej. `SuperBowl`, `Thanksgiving`), combinando `event_name_1` y `event_name_2` del calendario.
+- **event_type**: categoría del evento (`Sporting`, `Cultural`, `National`, `Religious`), asociada a `event_name`.
+
 ### 2.1 Descripción nivel geográfico
 
 El dataset incluye la venta de 10 sucursales en 3 estados distintos. Tomando como referencia la venta de 2015, la distribución por estado es:
