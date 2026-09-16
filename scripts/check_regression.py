@@ -10,6 +10,7 @@ src/features/ o src/modeling/ -- ver README, sección de testing.
 Uso:
     python -m scripts.check_regression --level 1
     python -m scripts.check_regression --level 1 --target sales --tolerance 0.10
+    python -m scripts.check_regression --level 9 --grain daily   # si el nivel tiene ambos grains
 """
 import argparse
 import json
@@ -18,12 +19,28 @@ import sys
 import config
 
 
-def _registry_key(registry: dict, level_id: int, target: str) -> str | None:
+def _registry_key(registry: dict, level_id: int, target: str, grain: str | None = None) -> str | None:
+    """Misma lógica (y misma ambigüedad) que api.registry._registry_key: la clave es
+    `level_{level_id:02d}_{grain}_{name}_{target}`, así que sin `grain` no se puede
+    distinguir si un level_id tiene ambos grains (daily/weekly) registrados -- en ese
+    caso se levanta ValueError en vez de comparar contra el grain equivocado."""
     prefix = f"level_{level_id:02d}_"
+    suffix = f"_{target}"
+    matches = []
     for key in registry:
-        if key.startswith(prefix) and key.endswith(f"_{target}"):
-            return key
-    return None
+        if not (key.startswith(prefix) and key.endswith(suffix)):
+            continue
+        key_grain = key[len(prefix):].split("_", 1)[0]
+        if grain is not None and key_grain != grain:
+            continue
+        matches.append(key)
+    if len(matches) > 1:
+        grains_found = sorted({k[len(prefix):].split("_", 1)[0] for k in matches})
+        raise ValueError(
+            f"Nivel {level_id} target {target!r} tiene {len(matches)} versiones registradas "
+            f"({grains_found}) -- pasá --grain daily|weekly para desambiguar.",
+        )
+    return matches[0] if matches else None
 
 
 def check_regression(entry: dict, tolerance: float,
@@ -55,6 +72,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--level", type=int, required=True, help="level_id (ver config/levels.py)")
     ap.add_argument("--target", default="sales")
+    ap.add_argument("--grain", choices=["daily", "weekly"], default=None,
+                    help="Obligatorio si el nivel tiene versiones registradas en ambos grains.")
     ap.add_argument("--tolerance", type=float, default=0.05,
                     help="Fracción de degradación tolerada antes de fallar (default 0.05 = 5%%).")
     args = ap.parse_args()
@@ -65,9 +84,13 @@ def main() -> int:
         return 0
 
     registry = json.loads(registry_path.read_text())
-    key = _registry_key(registry, args.level, args.target)
+    try:
+        key = _registry_key(registry, args.level, args.target, args.grain)
+    except ValueError as exc:
+        print(exc)
+        return 1
     if key is None:
-        print(f"Nivel {args.level} (target={args.target}) sin versiones registradas todavía.")
+        print(f"Nivel {args.level} (target={args.target}, grain={args.grain}) sin versiones registradas todavía.")
         return 0
 
     violations = check_regression(registry[key], args.tolerance)

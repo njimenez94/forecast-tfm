@@ -6,6 +6,12 @@ reconstruye features desde datos crudos -- ver docs/informe.md §9 sobre por qu�
 queda fuera de alcance por ahora (requiere recalcular en tiempo real ~140 columnas de
 lags/rolling/target-encoding, hoy solo se hace en backtest sobre el parquet histórico).
 
+Cada level_id tiene dos granularidades posibles (`grain`: "daily"/"weekly", ver
+config.Level.grains) y por defecto se entrenan ambas -- si existen artifacts de las
+dos para el mismo level_id+target, `grain` es obligatorio en /predict y /levels
+filtra por él (sin especificarlo, /predict responde 400 en vez de elegir una al
+azar, ver api/registry.py).
+
 Levantar con: make serve-api  (o `uv run uvicorn api.main:app --reload`)
 """
 from contextlib import asynccontextmanager
@@ -15,7 +21,7 @@ from fastapi import FastAPI, HTTPException
 from loguru import logger
 
 import config
-from api.registry import get_model, load_registry, resolve_version
+from api.registry import GRAINS, artifact_grain, get_model, load_registry, resolve_version
 from api.schemas import LevelInfo, PredictRequest, PredictResponse
 from src.logging_setup import configure_logging
 
@@ -36,21 +42,29 @@ def health() -> dict:
 
 
 @app.get("/levels", response_model=list[LevelInfo])
-def list_levels(target: str = "sales") -> list[LevelInfo]:
+def list_levels(target: str = "sales", grain: str | None = None) -> list[LevelInfo]:
+    if grain is not None and grain not in GRAINS:
+        raise HTTPException(status_code=400, detail=f"grain inválido: {grain!r} (debe ser uno de {GRAINS})")
+
     out = []
     for level_id in config.ACTIVE_LEVEL_IDS:
-        try:
-            artifact = get_model(level_id, target)
-        except (FileNotFoundError, KeyError):
-            continue
-        out.append(LevelInfo(
-            level_id=level_id,
-            level=artifact["level"],
-            target=target,
-            version=resolve_version(level_id, target),
-            wape_test=artifact.get("wape_test"),
-            wrmsse_test=artifact.get("wrmsse_test"),
-        ))
+        # Se prueba cada grain por separado (en vez de pedirle a get_model el default)
+        # para listar una fila por cada uno que tenga artifact, sin nunca dejar que
+        # get_model/resolve_version tengan que desambiguar entre daily y weekly.
+        for candidate_grain in ([grain] if grain else GRAINS):
+            try:
+                artifact = get_model(level_id, target, grain=candidate_grain)
+            except (FileNotFoundError, KeyError):
+                continue
+            out.append(LevelInfo(
+                level_id=level_id,
+                level=artifact["level"],
+                grain=candidate_grain,
+                target=target,
+                version=resolve_version(level_id, target, grain=candidate_grain),
+                wape_test=artifact.get("wape_test"),
+                wrmsse_test=artifact.get("wrmsse_test"),
+            ))
     return out
 
 
@@ -92,13 +106,18 @@ def _build_feature_row(features: dict, artifact: dict) -> pd.DataFrame:
 
 
 @app.post("/predict/{level_id}", response_model=PredictResponse)
-def predict(level_id: int, body: PredictRequest, target: str = "sales") -> PredictResponse:
+def predict(level_id: int, body: PredictRequest, target: str = "sales", grain: str | None = None) -> PredictResponse:
     try:
-        artifact = get_model(level_id, target, body.version)
+        artifact = get_model(level_id, target, body.version, grain)
     except (FileNotFoundError, KeyError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        # grain inválido, o ambiguo (existen ambos grains y no se especificó cuál) --
+        # ver api/registry.py::_registry_key.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     X = _build_feature_row(body.features, artifact)
     prediction = float(artifact["model"].predict(X)[0])
-    version = resolve_version(level_id, target, body.version)
-    return PredictResponse(level_id=level_id, target=target, version=version, prediction=prediction)
+    resolved_grain = artifact_grain(artifact)
+    version = resolve_version(level_id, target, body.version, resolved_grain)
+    return PredictResponse(level_id=level_id, grain=resolved_grain, target=target, version=version, prediction=prediction)

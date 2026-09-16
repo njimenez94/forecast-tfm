@@ -50,8 +50,20 @@ def main() -> None:
 
     all_metrics = []
     for level in config.LEVELS:
-        grain = level.grains[0]
-        artifact_paths = sorted(config.MODELS_DIR.glob(f"level_{level.id:02d}_*_sales_artifact.pkl"))
+        # Un solo grain por nivel ("el modelo final" es singular, ver docstring):
+        # se prueba cada uno de level.grains en orden (daily primero, config._BOTH_GRAINS)
+        # y se usa el primero que tenga artifact(s) en disco. Antes el glob no filtraba
+        # por grain (`level_{id:02d}_*_sales_artifact.pkl` matchea daily Y weekly a la
+        # vez si ambos están entrenados, como hoy en niveles 1-9) y el bloque de abajo
+        # concatenaba test sets de dos granularidades distintas (fechas/filas que no
+        # corresponden) en un solo parquet+métrica -- WAPE/WRMSSE quedaban calculados
+        # sobre una mezcla sin sentido. Ahora el glob sí filtra por `grain`.
+        grain, artifact_paths = None, []
+        for candidate_grain in level.grains:
+            matches = sorted(config.MODELS_DIR.glob(f"level_{level.id:02d}_{candidate_grain}_*_sales_artifact.pkl"))
+            if matches:
+                grain, artifact_paths = candidate_grain, matches
+                break
         if not artifact_paths:
             logger.warning("Nivel {}: sin artifacts en {}", level.id, config.MODELS_DIR)
             continue

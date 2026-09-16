@@ -12,6 +12,10 @@ class PredictRequest(BaseModel):
 
 class PredictResponse(BaseModel):
     level_id: int
+    grain: str  # "daily"|"weekly" -- el que realmente se sirvió (artifact["level_label"]),
+    # no necesariamente el que se pidió: si `grain` no viene en la request y solo hay
+    # un grain entrenado para ese level_id+target, se resuelve solo; si hay dos, la
+    # request es rechazada (400) y hay que pedir uno explícito, ver api/registry.py.
     target: str
     version: str
     prediction: float
@@ -21,10 +25,8 @@ class LevelInfo(BaseModel):
     level_id: int  # config.Level.id (1-12, ver config/levels.py), lo que recibe /predict/{level_id}
     level: str  # artifact["level"] = level_str completo: "level_{level_id:02d}_{grain}_{name}"
     # (p.ej. "level_09_daily_store_dept"), no confundir con Level.name ("store_dept",
-    # sin id/grain) ni con artifact["level_label"] ("level_09_daily", sin name) --
-    # ninguno de los dos se expone acá. Ojo: `grain` no es un parámetro de la API;
-    # va empotrado en este string y en la práctica solo se ve un grain por
-    # level_id+target (ver api/registry.py::_registry_key).
+    # sin id/grain) ni con artifact["level_label"] ("level_09_daily", sin name).
+    grain: str  # "daily"|"weekly" -- una fila por cada grain con artifact disponible
     target: str
     version: str | None
     wape_test: float | None

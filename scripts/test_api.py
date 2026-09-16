@@ -5,9 +5,14 @@ manda a POST /predict/{level_id} y compara la predicción devuelta contra
 model.predict(...) directo sobre esa fila -- mismo chequeo que se hizo a mano para
 validar api/main.py. (--level acá es en realidad el `level_id` de esa ruta.)
 
-    make testing-api ARGS="--level 9 --n 3"
+Casi todos los niveles activos tienen artifact en los dos grains (daily y weekly,
+ver config.Level.grains) -- si no se pasa --grain y hay ambos, resolve_artifact_path
+tira ValueError en vez de adivinar (ver api/registry.py); ahí hay que especificar
+--grain daily|weekly.
+
+    make testing-api ARGS="--level 9 --grain daily --n 3"
     # o
-    uv run python -m scripts.test_api --level 9 --n 3
+    uv run python -m scripts.test_api --level 9 --grain daily --n 3
 """
 import argparse
 import json
@@ -17,7 +22,7 @@ import urllib.request
 import joblib
 from loguru import logger
 
-from api.registry import resolve_artifact_path
+from api.registry import artifact_grain, resolve_artifact_path
 from src.data.dataset import reconstruct_test_data
 from src.logging_setup import configure_logging
 
@@ -26,11 +31,18 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--level", type=int, default=9)
     parser.add_argument("--target", default="sales")
+    parser.add_argument("--grain", choices=["daily", "weekly"], default=None,
+                         help="Obligatorio si el nivel tiene artifact en ambos grains.")
     parser.add_argument("--n", type=int, default=1, help="filas de test a probar")
     parser.add_argument("--url", default="http://localhost:8000")
     args = parser.parse_args()
 
-    artifact = joblib.load(resolve_artifact_path(args.level, args.target))
+    try:
+        artifact = joblib.load(resolve_artifact_path(args.level, args.target, grain=args.grain))
+    except ValueError as exc:
+        logger.error("{} (pasá --grain daily|weekly)", exc)
+        raise SystemExit(1)
+    grain = artifact_grain(artifact)
     X_test, *_ = reconstruct_test_data(artifact)
     n = min(args.n, len(X_test))
 
@@ -46,7 +58,7 @@ def main() -> None:
         payload = json.dumps({"features": features}).encode()
 
         req = urllib.request.Request(
-            f"{args.url}/predict/{args.level}?target={args.target}",
+            f"{args.url}/predict/{args.level}?target={args.target}&grain={grain}",
             data=payload, headers={"Content-Type": "application/json"}, method="POST",
         )
         try:

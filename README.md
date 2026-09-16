@@ -87,16 +87,16 @@ ese nivel/target) y solo corre `model.predict(...)` — ver [api/main.py](api/ma
 sobre por qué reconstruir features desde datos crudos queda fuera de alcance por ahora.
 
 ```bash
-make serve-api                              # uvicorn --reload en :8000
-make docker-api                             # build + contenedor en :8000
-make testing-api ARGS="--level 9 --n 3"     # prueba end-to-end contra la API ya corriendo
+make serve-api                                          # uvicorn --reload en :8000
+make docker-api                                         # build + contenedor en :8000
+make testing-api ARGS="--level 9 --grain daily --n 3"   # prueba end-to-end contra la API ya corriendo
 ```
 
 | Endpoint | Qué hace |
 |---|---|
 | `GET /health` | Liveness check. |
-| `GET /levels?target=sales` | Lista los niveles con artifact disponible: `level_id`, `level`, `version`, `wape_test`, `wrmsse_test`. |
-| `POST /predict/{level_id}?target=sales` | Predicción puntual. Body: `{"features": {...}, "version": null}` (`version` opcional, default la última en `registry.json`). |
+| `GET /levels?target=sales&grain=daily` | Lista los niveles con artifact disponible: `level_id`, `level`, `grain`, `version`, `wape_test`, `wrmsse_test`. Sin `grain`, devuelve una fila por cada grain que tenga artifact (hasta 2 por `level_id`). |
+| `POST /predict/{level_id}?target=sales&grain=daily` | Predicción puntual. Body: `{"features": {...}, "version": null}` (`version` opcional, default la última en `registry.json`). `grain` es opcional solo si ese `level_id`+`target` tiene un único grain entrenado; si tiene los dos, es obligatorio (400 si falta). |
 
 **Glosario de "nivel" (fuente frecuente de confusión, son 4 cosas parecidas pero no intercambiables):**
 
@@ -104,17 +104,19 @@ make testing-api ARGS="--level 9 --n 3"     # prueba end-to-end contra la API ya
 |---|---|---|---|
 | `level_id` | `9` | `config.Level.id` ([config/levels.py](config/levels.py)); param de `/predict/{level_id}` | Solo el id (1-12) |
 | `Level.name` | `"store_dept"` | `config.Level.name` | Solo el nombre corto, sin id ni grain — no se expone en la API |
+| `grain` | `"daily"` | `config.Level.grains`; query param `grain` en `/levels` y `/predict/{level_id}` | daily/weekly |
 | `level` (a.k.a. `level_str`) | `"level_09_daily_store_dept"` | `artifact["level"]`, campo `level` de `LevelInfo` en `/levels` | id + grain + name |
-| `level_label` | `"level_09_daily"` | `artifact["level_label"]` | id + grain, sin name — no se expone en la API |
+| `level_label` | `"level_09_daily"` | `artifact["level_label"]`, usado por `api.registry.artifact_grain()` para saber qué grain se sirvió | id + grain, sin name — no se expone en la API |
 
-`grain` (`daily`/`weekly`) va empotrado en `level`/`level_label`, **no es un parámetro de la
-API**: `/predict/{level_id}` y `/levels` no dejan elegirlo. Hoy no es un problema porque cada
-`level_id` activo solo tiene un grain entrenado en `artifacts/models/registry.json`, pero
-`config.Level.grains` entrena daily+weekly para todos los niveles activos por defecto — si
-algún día conviven ambos grains para el mismo `level_id`+`target`, `api/registry.py::_registry_key`
-devuelve el primero que encuentra en el registry (orden de inserción, no una elección real) y
-`/predict` serviría el grain equivocado sin avisar. Ver el docstring de `_registry_key` en
-[api/registry.py](api/registry.py) antes de tocar esa función.
+**Sobre `grain`:** cada `level_id` se entrena en dos granularidades (`config.Level.grains`,
+hoy daily+weekly para todos los niveles activos) y `train-dataset` sin `--grain` entrena las
+dos por defecto — en la práctica casi todos los niveles ya tienen artifact en ambos grains
+(`artifacts/models/*_artifact.pkl`), aunque `registry.json` todavía no trackee los dos para
+todos. Por eso `grain` es un parámetro explícito de la API: si para un `level_id`+`target`
+hay un solo grain, se resuelve solo; si hay dos, `/predict` sin `grain` devuelve 400 en vez de
+servir uno al azar (antes se resolvía por orden de inserción en el registry / orden alfabético
+en el fallback a archivo plano, sirviendo silenciosamente el grain equivocado — ver el
+docstring de `api/registry.py::_registry_key` para el detalle).
 
 ## Tests
 

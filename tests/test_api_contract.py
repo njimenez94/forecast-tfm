@@ -98,3 +98,43 @@ def test_registry_missing_file_behaves_as_empty_registry(tmp_path, monkeypatch):
     monkeypatch.setattr(registry, "REGISTRY_PATH", tmp_path / "does_not_exist.json")
     assert registry.load_registry() == {}
     assert registry.resolve_version(level_id=1, target="sales") == "unversioned"
+
+
+def _registry_with_both_grains(tmp_path, monkeypatch) -> None:
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(json.dumps({
+        "level_01_daily_total_sales": {
+            "latest": "20260101T000000Z",
+            "versions": {"20260101T000000Z": {"path": "artifacts/models/versions/daily.pkl"}},
+        },
+        "level_01_weekly_total_sales": {
+            "latest": "20260102T000000Z",
+            "versions": {"20260102T000000Z": {"path": "artifacts/models/versions/weekly.pkl"}},
+        },
+    }))
+    monkeypatch.setattr(registry, "REGISTRY_PATH", registry_path)
+
+
+def test_registry_key_raises_when_both_grains_registered_and_grain_not_given(tmp_path, monkeypatch):
+    # Regresión: antes, con dos grains para el mismo level_id+target, se devolvía el
+    # primero encontrado en el dict sin avisar -- /predict servía el grain equivocado
+    # en silencio. Ahora tiene que ser explícito.
+    _registry_with_both_grains(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="daily.*weekly|weekly.*daily"):
+        registry._registry_key(level_id=1, target="sales")
+
+
+def test_registry_key_resolves_when_grain_given_explicitly(tmp_path, monkeypatch):
+    _registry_with_both_grains(tmp_path, monkeypatch)
+    assert registry._registry_key(level_id=1, target="sales", grain="daily") == "level_01_daily_total_sales"
+    assert registry._registry_key(level_id=1, target="sales", grain="weekly") == "level_01_weekly_total_sales"
+
+
+def test_resolve_artifact_path_rejects_invalid_grain():
+    with pytest.raises(ValueError):
+        registry.resolve_artifact_path(level_id=1, target="sales", grain="monthly")
+
+
+def test_artifact_grain_reads_level_label():
+    assert registry.artifact_grain({"level_label": "level_09_daily"}) == "daily"
+    assert registry.artifact_grain({"level_label": "level_09_weekly"}) == "weekly"

@@ -1,0 +1,67 @@
+2026-09-15 22:06:56.545 | INFO     | src.data.dataset:load_data:58 - level_01_daily_total | target=sales | 1,941 filas | 191 features (9 categóricas)
+2026-09-15 22:06:56.560 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 1,549 rows)
+2026-09-15 22:06:56.567 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 364 rows)
+2026-09-15 22:06:56.568 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 28 rows)
+2026-09-15 22:06:56.893 | INFO     | src.data.dataset:split_data:119 - Features: 131 (1 categóricas)
+2026-09-15 22:06:56.962 | SUCCESS  | __main__:main:87 - Nivel 1: 28 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_01_daily_total_test.parquet
+2026-09-15 22:06:57.001 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      level_01_daily_total | WAPE: 6.07% | WRMSSE: 0.6005 
+2026-09-15 22:06:57.177 | INFO     | src.data.dataset:load_data:58 - level_02_daily_state | target=sales | 5,823 filas | 191 features (9 categóricas)
+2026-09-15 22:06:57.192 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 4,647 rows)
+2026-09-15 22:06:57.193 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 1,092 rows)
+2026-09-15 22:06:57.194 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 84 rows)
+2026-09-15 22:06:57.485 | INFO     | src.data.dataset:split_data:119 - Features: 155 (3 categóricas)
+2026-09-15 22:06:57.542 | SUCCESS  | __main__:main:87 - Nivel 2: 84 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_02_daily_state_test.parquet
+2026-09-15 22:06:57.586 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      level_02_daily_state | WAPE: 6.74% | WRMSSE: 0.6177 
+2026-09-15 22:06:57.830 | INFO     | src.data.dataset:load_data:58 - level_03_daily_cat | target=sales | 5,823 filas | 191 features (9 categóricas)
+2026-09-15 22:06:57.842 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 4,647 rows)
+2026-09-15 22:06:57.843 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 1,092 rows)
+2026-09-15 22:06:57.844 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 84 rows)
+2026-09-15 22:06:58.115 | INFO     | src.data.dataset:split_data:119 - Features: 154 (3 categóricas)
+2026-09-15 22:06:58.183 | SUCCESS  | __main__:main:87 - Nivel 3: 84 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_03_daily_cat_test.parquet
+2026-09-15 22:06:58.243 | INFO     | src.evaluation.reports:evaluate_predictions:58 -        level_03_daily_cat | WAPE: 6.86% | WRMSSE: 0.5635 
+2026-09-15 22:06:58.502 | INFO     | src.data.dataset:load_data:58 - level_04_daily_dept | target=sales | 13,587 filas | 191 features (9 categóricas)
+2026-09-15 22:06:58.518 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 10,843 rows)
+2026-09-15 22:06:58.518 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 2,548 rows)
+2026-09-15 22:06:58.519 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 196 rows)
+2026-09-15 22:06:58.817 | INFO     | src.data.dataset:split_data:119 - Features: 139 (2 categóricas)
+2026-09-15 22:06:58.867 | SUCCESS  | __main__:main:87 - Nivel 4: 196 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_04_daily_dept_test.parquet
+2026-09-15 22:06:58.919 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       level_04_daily_dept | WAPE: 7.65% | WRMSSE: 0.6558 
+2026-09-15 22:06:59.206 | INFO     | src.data.dataset:load_data:58 - level_05_daily_state_cat | target=sales | 17,469 filas | 191 features (9 categóricas)
+2026-09-15 22:06:59.221 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 13,941 rows)
+2026-09-15 22:06:59.222 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 3,276 rows)
+2026-09-15 22:06:59.222 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 252 rows)
+2026-09-15 22:06:59.553 | INFO     | src.data.dataset:split_data:119 - Features: 165 (5 categóricas)
+2026-09-15 22:06:59.607 | SUCCESS  | __main__:main:87 - Nivel 5: 252 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_05_daily_state_cat_test.parquet
+2026-09-15 22:06:59.671 | INFO     | src.evaluation.reports:evaluate_predictions:58 -  level_05_daily_state_cat | WAPE: 6.85% | WRMSSE: 0.5742 
+2026-09-15 22:06:59.791 | INFO     | src.data.dataset:load_data:58 - level_06_daily_store | target=sales | 19,410 filas | 191 features (9 categóricas)
+2026-09-15 22:06:59.822 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 15,490 rows)
+2026-09-15 22:06:59.823 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 3,640 rows)
+2026-09-15 22:06:59.823 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 280 rows)
+2026-09-15 22:07:00.092 | INFO     | src.data.dataset:split_data:119 - Features: 135 (3 categóricas)
+2026-09-15 22:07:00.140 | SUCCESS  | __main__:main:87 - Nivel 6: 280 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_06_daily_store_test.parquet
+2026-09-15 22:07:00.202 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      level_06_daily_store | WAPE: 7.66% | WRMSSE: 0.6433 
+2026-09-15 22:07:00.705 | INFO     | src.data.dataset:load_data:58 - level_07_daily_state_dept | target=sales | 40,761 filas | 191 features (9 categóricas)
+2026-09-15 22:07:00.776 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 32,529 rows)
+2026-09-15 22:07:00.777 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 7,644 rows)
+2026-09-15 22:07:00.777 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 588 rows)
+2026-09-15 22:07:01.151 | INFO     | src.data.dataset:split_data:119 - Features: 129 (4 categóricas)
+2026-09-15 22:07:01.215 | SUCCESS  | __main__:main:87 - Nivel 7: 588 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_07_daily_state_dept_test.parquet
+2026-09-15 22:07:01.277 | INFO     | src.evaluation.reports:evaluate_predictions:58 - level_07_daily_state_dept | WAPE: 8.06% | WRMSSE: 0.6341 
+2026-09-15 22:07:01.970 | INFO     | src.data.dataset:load_data:58 - level_08_daily_store_cat | target=sales | 58,230 filas | 191 features (9 categóricas)
+2026-09-15 22:07:02.004 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 46,470 rows)
+2026-09-15 22:07:02.005 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 10,920 rows)
+2026-09-15 22:07:02.005 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 840 rows)
+2026-09-15 22:07:02.436 | INFO     | src.data.dataset:split_data:119 - Features: 154 (3 categóricas)
+2026-09-15 22:07:02.527 | SUCCESS  | __main__:main:87 - Nivel 8: 840 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_08_daily_store_cat_test.parquet
+2026-09-15 22:07:02.611 | INFO     | src.evaluation.reports:evaluate_predictions:58 -  level_08_daily_store_cat | WAPE: 7.31% | WRMSSE: 0.5533 
+2026-09-15 22:07:03.207 | INFO     | src.data.dataset:load_data:58 - level_09_daily_store_dept | target=sales | 135,870 filas | 191 features (9 categóricas)
+2026-09-15 22:07:03.452 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 108,430 rows)
+2026-09-15 22:07:03.453 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 25,480 rows)
+2026-09-15 22:07:03.454 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 1,960 rows)
+2026-09-15 22:07:04.285 | INFO     | src.data.dataset:split_data:119 - Features: 154 (4 categóricas)
+2026-09-15 22:07:04.372 | SUCCESS  | __main__:main:87 - Nivel 9: 1,960 filas (1 artifact(s)) -> /home/njimenez/workspace/magister/forecast-tfm/artifacts/test_sets/level_09_daily_store_dept_test.parquet
+2026-09-15 22:07:04.524 | INFO     | src.evaluation.reports:evaluate_predictions:58 - level_09_daily_store_dept | WAPE: 9.91% | WRMSSE: 0.6785 
+2026-09-15 22:07:04.527 | WARNING  | __main__:main:68 - Nivel 10: sin artifacts en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models
+2026-09-15 22:07:04.528 | WARNING  | __main__:main:68 - Nivel 11: sin artifacts en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models
+2026-09-15 22:07:04.530 | WARNING  | __main__:main:68 - Nivel 12: sin artifacts en /home/njimenez/workspace/magister/forecast-tfm/artifacts/models
+2026-09-15 22:07:04.532 | SUCCESS  | __main__:main:98 - Métricas de 9 niveles -> /home/njimenez/workspace/magister/forecast-tfm/output/test_metrics.json
