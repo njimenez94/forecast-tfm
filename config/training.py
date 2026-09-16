@@ -79,6 +79,15 @@ MODERATE = TrainingProfile(
 # refinement.fit_final_model, que ya no promueve el tuneado si no mejora al
 # default, pero con 120s casi nunca llegaba a mejorarlo. 900s le da margen real
 # para tunear sin disparar el tiempo total de la corrida completa.
+# optuna_n_trials subido de 100 a 300 y timeout de 900s a 1200s (2026-09-16): en
+# level_01 daily los 100 trials terminaban en 118s, muy lejos del timeout -- el
+# límite real era la cantidad de trials, no el tiempo, y con ese presupuesto
+# Optuna no llegaba a superar el default del bench (ver logs/train_dataset/
+# 20260915_223756.log). Más trials le dan más chance real de ganarle al default
+# dentro del mismo techo de árboles (optuna_n_estimators == bench_n_estimators,
+# para que la comparación en fit_final_model sea sobre hiperparámetros, no sobre
+# quién tiene más árboles); el timeout sube modesto como red de seguridad para
+# niveles grandes donde cada trial es más caro.
 EFFICIENT = TrainingProfile(
     name="efficient",
     run_baseline_stats=True,
@@ -86,8 +95,8 @@ EFFICIENT = TrainingProfile(
     run_shap=True,
     run_optuna=True,
     bench_n_estimators=800,
-    optuna_n_trials=100,
-    optuna_timeout_s=900,
+    optuna_n_trials=500,
+    optuna_timeout_s=1200,
     optuna_n_estimators=800,
     cv_folds=1,
     final_n_estimators=1_500,

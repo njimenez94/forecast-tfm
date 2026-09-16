@@ -42,11 +42,17 @@ class Config:
     # pasaba con el algoritmo original uno-a-uno, no es nuevo del batching, pero
     # con tolerance>0 el ORDEN de las pruebas importa mucho más: batch vs.
     # uno-a-uno pueden terminar seleccionando conjuntos de features bien
-    # distintos (probado: 6 vs. 21 features en un caso sintético). Por eso
-    # se mantiene en 0.0 -- estricto, pero determinista y comparable entre
-    # ambos modos. Subirlo es una decisión de selección de features, no de
-    # performance, y hay que revisar el impacto real en cada nivel.
-    backward_tolerance: float = 0.0
+    # distintos (probado: 6 vs. 21 features en un caso sintético).
+    # Subido de 0.0 a 0.005 (2026-09-16): con 0.0, cualquier ruido numérico entre
+    # reentrenamientos rechaza el bloque de 8 y cae al fallback uno-a-uno (ver
+    # "Batching" abajo) -- en la práctica casi ningún bloque prosperaba, así que el
+    # batching no aportaba nada y "selección de features" terminaba siendo ~85%
+    # del tiempo total del pipeline (ver logs/train_dataset/20260915_223756.log).
+    # 0.005 (0.5% relativo) alcanza para que un bloque de features genuinamente
+    # poco importantes pase de una, sin abrir la puerta a degradar la métrica de
+    # forma notoria -- deliberadamente menos fino que 0.0, es lo que se pidió
+    # (podar lo obvio rápido, no exhaustivo).
+    backward_tolerance: float = 0.005
     # Cuántas features candidatas se prueba remover juntas en cada reentrenamiento
     # de backward_feature_selection (ver docstring ahí, sección "Batching"). 1 =
     # una por una (algoritmo original, más lento con muchas features); >1 = por
@@ -56,7 +62,9 @@ class Config:
     # es un cambio de criterio de aceptación, es que un bloque completo es una
     # prueba más exigente que sus features por separado). Para reproducir bit a
     # bit una corrida sin batching, usar 1.
-    feature_selection_batch_size: int = 8
+    # Subido de 8 a 16 (2026-09-16): junto con backward_tolerance=0.005, bloques
+    # más grandes podan más features por reentrenamiento, menos iteraciones totales.
+    feature_selection_batch_size: int = 16
 
     # --- SHAP ---
     shap_sample_size: int = 300_000
