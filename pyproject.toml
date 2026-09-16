@@ -3,7 +3,7 @@ name = "forecast-tfm"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 # Base: lo mínimo para correr api/ (servir un modelo ya entrenado) sin arrastrar el
 # stack de modelado/notebooks -- ver [dependency-groups].modeling para el resto.
 # mlforecast está acá (no en modeling) porque config/features.py lo importa a nivel
@@ -15,6 +15,7 @@ requires-python = ">=3.13"
 # problema de necesitar g++ en la imagen.
 dependencies = [
     "fastapi>=0.141.1",
+    "humanize>=4.16.0",
     "joblib>=1.5.2",
     "lightgbm>=4.6.0",
     "loguru>=0.7.3",
@@ -52,7 +53,7 @@ modeling = [
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
     "shap>=0.52.0",
-    "statsforecast>=0.7.1",
+    "statsforecast>=2.0.3",
     "statsmodels>=0.14.6",
     "xgboost>=3.4.1",
 ]
@@ -68,6 +69,7 @@ markers = ["slow: corre modelos de src/modeling reales, más lento que el resto 
 # separar los grupos -- el flujo de notebooks/scripts no cambia. Solo el Dockerfile
 # de la API pasa `--no-default-groups` explícitamente para quedarse con la base.
 default-groups = ["dev", "modeling"]
+environments = ["sys_platform == 'linux'"]
 
 [build-system]
 requires = ["hatchling"]
