@@ -1,6 +1,12 @@
+import sys
+
 import matplotlib
 import numpy as np
-matplotlib.use("Agg")  # ponytail: entrenamiento es headless y paralelo (Optuna); TkAgg crashea (SIGILL) si el GC destruye figuras desde un hilo no-main
+if "ipykernel" not in sys.modules:
+    # ponytail: entrenamiento es headless y paralelo (Optuna); TkAgg crashea (SIGILL) si el GC
+    # destruye figuras desde un hilo no-main. En notebook (ipykernel) dejamos el backend que
+    # ponga `%matplotlib inline`, si no plt.show() no muestra nada.
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
