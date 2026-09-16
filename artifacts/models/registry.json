@@ -1,0 +1,407 @@
+{
+  "level_01_daily_total_sales": {
+    "latest": "20260916T145346Z",
+    "versions": {
+      "20260912T000207Z": {
+        "path": "artifacts/models/versions/level_01_daily_total_sales_artifact_20260912T000207Z.pkl",
+        "trained_at": "20260912T000207Z",
+        "winner_family": "histgb",
+        "wape_test": 0.0606888615846491,
+        "wrmsse_test": 0.6005213469200934,
+        "mae_test": 2669.798389319775,
+        "rmse_test": 3435.8524795633152,
+        "smape_test": 0.059301548562060234,
+        "bias_test": -0.05951491348557549,
+        "rmsle_test": 0.07215384312156181,
+        "tracking_signal_test": 27.458375953745435,
+        "spec_test": 26280.95293749185,
+        "mase_test": 0.6472598361770973
+      },
+      "20260916T145346Z": {
+        "path": "artifacts/models/versions/level_01_daily_total_sales_artifact_20260916T145346Z.pkl",
+        "trained_at": "20260916T145346Z",
+        "winner_family": "histgb",
+        "wape_test": 0.05677691473785682,
+        "wrmsse_test": 0.5466208317807435,
+        "mae_test": 2497.705700184338,
+        "rmse_test": 3127.463411395989,
+        "smape_test": 0.05625173509581884,
+        "bias_test": -0.05600121618431452,
+        "rmsle_test": 0.06809976403118809,
+        "tracking_signal_test": 27.617457912261255,
+        "spec_test": 24276.251303373807,
+        "mase_test": 0.6055380768777147
+      }
+    }
+  },
+  "level_02_weekly_state_sales": {
+    "latest": "20260916T145346Z",
+    "versions": {
+      "20260912T001124Z": {
+        "path": "artifacts/models/versions/level_02_weekly_state_sales_artifact_20260912T001124Z.pkl",
+        "trained_at": "20260912T001124Z",
+        "winner_family": "histgb",
+        "wape_test": 0.044085307887727014,
+        "wrmsse_test": 0.31329499707114294,
+        "mae_test": 4525.224598751515,
+        "rmse_test": 5274.932578967287,
+        "smape_test": 0.043904467408400066,
+        "bias_test": -0.03953477195226287,
+        "rmsle_test": 0.04962826932419655,
+        "tracking_signal_test": 10.761346266093067,
+        "spec_test": 6588.82051241698,
+        "mase_test": 0.5820073745764132
+      },
+      "20260916T145346Z": {
+        "path": "artifacts/models/versions/level_02_weekly_state_sales_artifact_20260916T145346Z.pkl",
+        "trained_at": "20260916T145346Z",
+        "winner_family": "histgb",
+        "wape_test": 0.05719530661223811,
+        "wrmsse_test": 0.3848077522097918,
+        "mae_test": 5870.926637826405,
+        "rmse_test": 6349.294238837908,
+        "smape_test": 0.06284962357644701,
+        "bias_test": -0.04068435977977067,
+        "rmsle_test": 0.07075208631272825,
+        "tracking_signal_test": 8.53588076146068,
+        "spec_test": 8591.968246325629,
+        "mase_test": 0.761827499114895
+      }
+    }
+  },
+  "level_04_weekly_dept_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260912T004715Z": {
+        "path": "artifacts/models/versions/level_04_weekly_dept_sales_artifact_20260912T004715Z.pkl",
+        "trained_at": "20260912T004715Z",
+        "winner_family": "histgb",
+        "wape_test": 0.06727958063270541,
+        "wrmsse_test": 0.44407176253705144,
+        "mae_test": 2959.734477087991,
+        "rmse_test": 4532.060039599288,
+        "smape_test": 0.07681677375561967,
+        "bias_test": -0.049640709264636484,
+        "rmsle_test": 0.0977168073261496,
+        "tracking_signal_test": 20.65916354321262,
+        "spec_test": 6022.260168602756,
+        "mase_test": 0.7706179804375034
+      },
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_04_weekly_dept_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "histgb",
+        "wape_test": 0.09011912183719605,
+        "wrmsse_test": 0.5719625086210117,
+        "mae_test": 3964.481785381141,
+        "rmse_test": 5492.48884096695,
+        "smape_test": 0.13735010176946977,
+        "bias_test": -0.06327327539368749,
+        "rmsle_test": 0.17269560430883948,
+        "tracking_signal_test": 19.658998832942604,
+        "spec_test": 7371.76929829618,
+        "mase_test": 1.034941125630133
+      }
+    }
+  },
+  "level_01_weekly_total_sales": {
+    "latest": "20260916T145346Z",
+    "versions": {
+      "20260916T145346Z": {
+        "path": "artifacts/models/versions/level_01_weekly_total_sales_artifact_20260916T145346Z.pkl",
+        "trained_at": "20260916T145346Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.06383845139978113,
+        "wrmsse_test": 0.45123009305656453,
+        "mae_test": 19658.4765625,
+        "rmse_test": 21633.37156635278,
+        "smape_test": 0.06510348745563833,
+        "bias_test": -0.06383845139978113,
+        "rmsle_test": 0.07101817650413834,
+        "tracking_signal_test": 4.0,
+        "spec_test": 33292.271484375,
+        "mase_test": 0.866786930234551
+      }
+    }
+  },
+  "level_02_daily_state_sales": {
+    "latest": "20260916T145346Z",
+    "versions": {
+      "20260916T145346Z": {
+        "path": "artifacts/models/versions/level_02_daily_state_sales_artifact_20260916T145346Z.pkl",
+        "trained_at": "20260916T145346Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.07888758774002162,
+        "wrmsse_test": 0.6975979675672362,
+        "mae_test": 1156.7963169642858,
+        "rmse_test": 1485.8616147036487,
+        "smape_test": 0.08119448478497515,
+        "bias_test": -0.07268486146950634,
+        "rmsle_test": 0.10076946181156445,
+        "tracking_signal_test": 77.39529802279714,
+        "spec_test": 11740.547548757062,
+        "mase_test": 0.7472487355042169
+      }
+    }
+  },
+  "level_03_daily_cat_sales": {
+    "latest": "20260916T145346Z",
+    "versions": {
+      "20260916T145346Z": {
+        "path": "artifacts/models/versions/level_03_daily_cat_sales_artifact_20260916T145346Z.pkl",
+        "trained_at": "20260916T145346Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.047875794928299985,
+        "wrmsse_test": 0.4634749663630849,
+        "mae_test": 702.0438174293155,
+        "rmse_test": 1305.963967107175,
+        "smape_test": 0.04576710312778227,
+        "bias_test": -0.03945521161305555,
+        "rmsle_test": 0.061979847635676724,
+        "tracking_signal_test": 69.22574926348801,
+        "spec_test": 8964.512016919603,
+        "mase_test": 0.467472939435575
+      }
+    }
+  },
+  "level_03_weekly_cat_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_03_weekly_cat_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.0647084102428509,
+        "wrmsse_test": 0.39866013780585285,
+        "mae_test": 6642.124186197917,
+        "rmse_test": 11064.556603739826,
+        "smape_test": 0.05029823826755728,
+        "bias_test": -0.05611555073404889,
+        "rmsle_test": 0.06115120728656259,
+        "tracking_signal_test": 10.406477400408452,
+        "spec_test": 16106.333216221228,
+        "mase_test": 0.7101091677671828
+      }
+    }
+  },
+  "level_04_daily_dept_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_04_daily_dept_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.07800125060181096,
+        "wrmsse_test": 0.6613619826950646,
+        "mae_test": 490.1996553382095,
+        "rmse_test": 847.9712969449592,
+        "smape_test": 0.09789295389201087,
+        "bias_test": -0.059895752466077104,
+        "rmsle_test": 0.12617543515276594,
+        "tracking_signal_test": 150.50486232945804,
+        "spec_test": 6507.46598494872,
+        "mase_test": 0.721255335583573
+      }
+    }
+  },
+  "level_05_daily_state_cat_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_05_daily_state_cat_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.07347598672909975,
+        "wrmsse_test": 0.6318781160522665,
+        "mae_test": 359.1471242753286,
+        "rmse_test": 551.2544864671944,
+        "smape_test": 0.08103540394590786,
+        "bias_test": -0.022490754724081175,
+        "rmsle_test": 0.1016992210032357,
+        "tracking_signal_test": 77.13636036443738,
+        "spec_test": 2031.6574224599412,
+        "mase_test": 0.6689244753813384
+      }
+    }
+  },
+  "level_05_weekly_state_cat_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_05_weekly_state_cat_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "lightgbm",
+        "wape_test": 0.0827022088489978,
+        "wrmsse_test": 0.587211069370959,
+        "mae_test": 2829.711210574359,
+        "rmse_test": 4438.423924297474,
+        "smape_test": 0.0811175335904733,
+        "bias_test": -0.061934779769307294,
+        "rmsle_test": 0.0978260517377959,
+        "tracking_signal_test": 26.96000630123535,
+        "spec_test": 5507.465856238532,
+        "mase_test": 0.9868212984472413
+      }
+    }
+  },
+  "level_06_daily_store_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_06_daily_store_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.08054933810563042,
+        "wrmsse_test": 0.6631765132867932,
+        "mae_test": 354.3491960797991,
+        "rmse_test": 469.9914932581049,
+        "smape_test": 0.08177280011275574,
+        "bias_test": -0.053521787005642925,
+        "rmsle_test": 0.10090673311051422,
+        "tracking_signal_test": 186.04870895310913,
+        "spec_test": 2386.5368150771733,
+        "mase_test": 0.7102984575532209
+      }
+    }
+  },
+  "level_06_weekly_store_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_06_weekly_store_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.05699723374363921,
+        "wrmsse_test": 0.40187185155860206,
+        "mae_test": 1755.178515625,
+        "rmse_test": 2144.3785769996175,
+        "smape_test": 0.05986227040263146,
+        "bias_test": -0.05216955368479676,
+        "rmsle_test": 0.07166928311569895,
+        "tracking_signal_test": 36.61198992178725,
+        "spec_test": 2762.4678592938562,
+        "mase_test": 0.7670462952324664
+      }
+    }
+  },
+  "level_07_daily_state_dept_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_07_daily_state_dept_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.08923520028582833,
+        "wrmsse_test": 0.6921738416585502,
+        "mae_test": 186.9331755865188,
+        "rmse_test": 295.4543764013225,
+        "smape_test": 0.11669021467386609,
+        "bias_test": -0.06389261638214934,
+        "rmsle_test": 0.15182744330641446,
+        "tracking_signal_test": 421.0094033785703,
+        "spec_test": 2657.113089928169,
+        "mase_test": 0.7535339132219001
+      }
+    }
+  },
+  "level_07_weekly_state_dept_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_07_weekly_state_dept_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "lightgbm",
+        "wape_test": 0.07342613377975943,
+        "wrmsse_test": 0.5206701534790379,
+        "mae_test": 1076.7103362987093,
+        "rmse_test": 1686.978770166639,
+        "smape_test": 0.10534622391949024,
+        "bias_test": -0.0528823827670526,
+        "rmsle_test": 0.13832551266263116,
+        "tracking_signal_test": 60.497808120423315,
+        "spec_test": 2153.234574368931,
+        "mase_test": 0.8525108911036178
+      }
+    }
+  },
+  "level_08_daily_store_cat_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_08_daily_store_cat_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.0833489481464375,
+        "wrmsse_test": 0.6258862686981753,
+        "mae_test": 122.22170686267671,
+        "rmse_test": 197.23686624377478,
+        "smape_test": 0.09092932073061108,
+        "bias_test": -0.05484803978793637,
+        "rmsle_test": 0.11305154553790707,
+        "tracking_signal_test": 552.7646652591353,
+        "spec_test": 1412.076702758559,
+        "mase_test": 0.6659101872947092
+      }
+    }
+  },
+  "level_08_weekly_store_cat_sales": {
+    "latest": "20260916T175627Z",
+    "versions": {
+      "20260916T175627Z": {
+        "path": "artifacts/models/versions/level_08_weekly_store_cat_sales_artifact_20260916T175627Z.pkl",
+        "trained_at": "20260916T175627Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.07219919225170289,
+        "wrmsse_test": 0.4671746828228244,
+        "mae_test": 741.1030487060547,
+        "rmse_test": 1328.672480170165,
+        "smape_test": 0.06392768407600688,
+        "bias_test": -0.05032019019461748,
+        "rmsle_test": 0.08017433711127234,
+        "tracking_signal_test": 83.63560082920009,
+        "spec_test": 1400.0504648771785,
+        "mase_test": 0.7933790639545666
+      }
+    }
+  },
+  "level_09_daily_store_dept_sales": {
+    "latest": "20260916T184915Z",
+    "versions": {
+      "20260916T184915Z": {
+        "path": "artifacts/models/versions/level_09_daily_store_dept_sales_artifact_20260916T184915Z.pkl",
+        "trained_at": "20260916T184915Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.1039521567588249,
+        "wrmsse_test": 0.7018524370472542,
+        "mae_test": 65.32883898871286,
+        "rmse_test": 109.10014565736657,
+        "smape_test": 0.1410049426021806,
+        "bias_test": -0.04923626090250763,
+        "rmsle_test": 0.1931389244947749,
+        "tracking_signal_test": 928.3412136682044,
+        "spec_test": 654.4532708091353,
+        "mase_test": 0.7590137510226245
+      }
+    }
+  },
+  "level_09_weekly_store_dept_sales": {
+    "latest": "20260916T184915Z",
+    "versions": {
+      "20260916T184915Z": {
+        "path": "artifacts/models/versions/level_09_weekly_store_dept_sales_artifact_20260916T184915Z.pkl",
+        "trained_at": "20260916T184915Z",
+        "winner_family": "xgboost",
+        "wape_test": 0.08576228942631267,
+        "wrmsse_test": 0.544174473453601,
+        "mae_test": 377.281788117545,
+        "rmse_test": 601.9020321503568,
+        "smape_test": 0.1256751431683873,
+        "bias_test": -0.05635503812854067,
+        "rmsle_test": 0.1726615002940843,
+        "tracking_signal_test": 183.99008213917992,
+        "spec_test": 726.9107543965883,
+        "mase_test": 0.8822051959390856
+      }
+    }
+  }
+}

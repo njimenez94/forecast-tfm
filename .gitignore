@@ -38,7 +38,7 @@ catboost_info/
 artifacts/*
 !artifacts/models/
 
-# Historial de versiones locales (export_artifact) y su índice: rolling, se regenera
-# reentrenando -- no versionar en git, igual que el resto de artifacts/.
-artifacts/models/versions/
-artifacts/models/registry.json
+# Historial de versiones (export_artifact) y su índice: se versionan igual que
+# artifacts/models/*.pkl (vía LFS, ver .gitattributes) para que un `git pull` en
+# otra máquina traiga también las métricas/versión de cada nivel, no solo el .pkl
+# plano -- si no, hay que correr scripts/backfill_registry.py a mano cada vez.
