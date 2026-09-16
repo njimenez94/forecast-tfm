@@ -61,6 +61,11 @@ def explain_prediction(test_df, X_test, df_pred, explainer, target_col, series_i
     row_idx = test_df.index[row_mask][0]
 
     row = X_test.loc[[row_idx]]
+    # mismo wrangling que refinement.run_shap: TreeExplainer.shap_values() fuerza
+    # X.to_numpy(dtype=float) y explota con columnas category de valores string.
+    cat_cols = [c for c in row.columns if isinstance(row[c].dtype, pd.CategoricalDtype)]
+    if cat_cols:
+        row = row.assign(**{c: row[c].cat.codes for c in cat_cols})
     row_shap_values = explainer.shap_values(row)
 
     info = df_pred.loc[row_idx, ["series_id", "date", target_col, "y_pred", "error"]]
