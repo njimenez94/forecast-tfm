@@ -1,6 +1,6 @@
 """Harness de reproducibilidad (Fase 5 del plan de testing): confirma que las 5
 familias de src/modeling/families.py son deterministas dado el mismo random_state
--- la garantía real detrás de `cfg.random_state` (scripts/train_dataset/config.py),
+-- la garantía real detrás de `cfg.random_state` (src/training/config.py),
 que hoy se confía mucho pero no se verifica en ningún test. Si alguien introduce
 aleatoriedad no seedeada (p.ej. un sample() sin random_state, o un default de
 librería que cambia entre versiones), este test debería detectarlo.

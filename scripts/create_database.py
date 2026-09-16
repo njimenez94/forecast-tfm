@@ -1,4 +1,3 @@
-"""Descomprime el zip y crea la base de datos."""
 import zipfile
 from loguru import logger
 import config
@@ -51,7 +50,7 @@ def load_files():
         tables = sorted(t for (t,) in con.execute("SHOW TABLES").fetchall())
         for table in tables:
             count = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            logger.info(f"  - {table}: {count:,} filas")
+            logger.info(f"  - {table}: {count:,} registros")
 
 def main():
     extract_files()

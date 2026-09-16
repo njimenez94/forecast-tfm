@@ -10,7 +10,7 @@ from loguru import logger
 
 import config
 from src.modeling import MODEL_FAMILIES, compute_permutation_importance
-from scripts.train_dataset.config import Config
+from src.training.config import Config
 
 
 def _update_registry(key: str, version: str, path: Path, artifact: dict) -> None:

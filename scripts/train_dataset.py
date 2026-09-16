@@ -55,8 +55,8 @@ from loguru import logger
 
 import config
 from src.logging_setup import configure_logging
-from scripts.train_dataset.config import CFG, PROFILE
-from scripts.train_dataset.pipeline import run_pipeline
+from src.training.config import CFG, PROFILE
+from src.training.pipeline import run_pipeline
 
 
 def main():

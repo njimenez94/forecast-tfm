@@ -1,22 +1,3 @@
-"""Construye datasets por nivel de agregación (L1 → L12): data/processed/.
-
-Cada nivel produce un parquet en data/processed/ con el esquema:
-    level_{id:02d}_{grain}_{name}.parquet
-
-con la columna "sales" (venta individual). Historia completa, sin recorte por
-ventana de entrenamiento (eso se explora en tuning) ni por Level.filters -- ese
-recorte (p.ej. dept_id=FOODS_3 en L10-12) se aplica recién en build_datasets.py,
-para que data/processed/ conserve siempre el universo completo del nivel. Los lags
-y rolling windows los genera mlforecast internamente durante el entrenamiento.
-
-Siguiente paso del pipeline: scripts/build_datasets.py añade features derivadas
-sobre este dataset y guarda el resultado en artifacts/datasets/.
-
-Uso:
-    python -m scripts.process_data                  # niveles activos (config.ACTIVE_LEVEL_IDS)
-    python -m scripts.process_data --levels 1,9,12  # solo esos niveles
-    python -m scripts.process_data --counts         # solo series/filas, sin materializar
-"""
 import argparse
 import gc
 
@@ -77,7 +58,7 @@ def parse_levels(arg: str | None):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Genera datasets por nivel de agregación M5.")
+    ap = argparse.ArgumentParser(description="Genera datasets por nivel de agregación.")
     ap.add_argument("--levels", help="IDs separados por coma, p.ej. 1,9,12. "
                     "Por defecto: config.ACTIVE_LEVEL_IDS.")
     ap.add_argument("--counts", action="store_true",

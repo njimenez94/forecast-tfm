@@ -1,5 +1,5 @@
 .PHONY: create-database process-data build-datasets train-dataset pipeline test-sets serve-api \
-	docker-build docker-api docker-stop docker-logs testing-api test test-all check-regression
+	docker-build docker-api docker-stop docker-logs testing-api test test-all check-regression smoke-check
 
 PY := uv run python
 DOCKER_IMAGE := forecast-tfm-api
@@ -36,6 +36,12 @@ build-datasets:
 
 train-dataset:
 	$(PY) -m scripts.train_dataset $(ARGS)
+
+# Corrida mínima de punta a punta (perfil fast, un nivel, sin exportar artifact)
+# para validar que el pipeline no se rompió -- no mide calidad de modelo, ver
+# scripts/smoke_check.py.
+smoke-check:
+	$(PY) -m scripts.smoke_check
 
 test-sets:
 	$(PY) -m scripts.build_test_sets

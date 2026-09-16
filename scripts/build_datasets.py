@@ -1,11 +1,3 @@
-"""Aplica src.features sobre cada dataset base (data/processed/) y guarda
-el resultado -- dataframe final, con lags/rolling/momentum ya materializados, listo
-para entrenar cualquier modelo sin pasar por mlforecast -- en artifacts/datasets/.
-
-Uso:
-    python -m scripts.build_datasets                  # niveles activos (config.ACTIVE_LEVEL_IDS)
-    python -m scripts.build_datasets --levels 1,9,12   # solo esos niveles
-"""
 import argparse
 import gc
 import warnings
@@ -24,12 +16,7 @@ from src.features.pipeline import build_dataset
 
 warnings.filterwarnings("ignore", message="invalid value encountered in divide")
 
-# Por encima de este nº de filas, procesar el nivel partición a partición (store_id
-# o, si solo hay un store, state_id) en vez de cargar el nivel entero: a partir de
-# item_state (~18M filas) el pico de RAM -- float64 intermedio antes del downcast +
-# la copia que hace mlforecast.preprocess -- satura la memoria disponible. Cada
-# partición procesada por separado pesa lo mismo que un nivel "item" (~6M filas),
-# que ya se sabe que corre sin problema.
+
 CHUNK_ROW_THRESHOLD = 10_000_000
 
 

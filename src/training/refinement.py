@@ -10,7 +10,7 @@ from src.data.temporal_split import rolling_cv_folds
 from src.evaluation import build_predictions_report, objective_metric
 from src.evaluation.scaled import clip_closed_stores
 from src.modeling import MODEL_FAMILIES, backward_feature_selection, compute_permutation_importance
-from scripts.train_dataset.config import Config
+from src.training.config import Config
 
 
 def tune_optuna_family(state: SimpleNamespace, cfg: Config, family_name: str,

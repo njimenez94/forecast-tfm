@@ -94,7 +94,7 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
             intento de eliminación.
         fit_predict_fn: callable `(feats, cat_feats) -> y_pred_valid` que entrena el
             modelo candidato (familia y sus hiperparámetros ya fijos -- ver
-            `src.modeling.families` y `scripts/train_dataset.py:select_features`)
+            `src.modeling.families` y `src/training/refinement.py::select_features`)
             sobre `X_train[feats]`/`y_train` y devuelve sus predicciones sobre
             `X_valid[feats]`. Reentrenado en cada intento de eliminación.
         objective: objective del modelo ("rmse" o "tweedie") usado para decidir

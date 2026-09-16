@@ -26,6 +26,8 @@ make test-sets                                 # 5. predicciones finales + métr
 
 `make pipeline` encadena 2-4 (`process-data build-datasets train-dataset`); `create-database` y `test-sets` corren aparte. Sin `ARGS`, cada script usa los defaults de `config/` (niveles activos `config.ACTIVE_LEVEL_IDS`). Para filtrar: `ARGS="--levels 1,9,12"` (sin espacios entre comas), `ARGS="--profile fast"` (ver [Perfiles de entrenamiento](#perfiles-de-entrenamiento)) — combinables, p.ej. `ARGS="--levels 1 --profile fast"`.
 
+Para verificar rápido que un cambio en `src/training/`, `src/modeling/` o `src/features/` no rompió nada, sin esperar una corrida real ni pisar los artifacts ya entrenados: `make smoke-check` (perfil `fast`, nivel 1, `save_artifact=False` — ver [scripts/smoke_check.py](scripts/smoke_check.py)).
+
 ## Cómo correrlo desde cero (para reproducirlo en otra PC)
 
 Requisitos: [uv](https://docs.astral.sh/uv/) instalado y una cuenta de Kaggle que haya aceptado las reglas de la competencia [m5-forecasting-accuracy](https://www.kaggle.com/competitions/m5-forecasting-accuracy).
@@ -56,7 +58,7 @@ Los artifacts livianos por nivel quedan en `artifacts/models/*.pkl` (sí están 
 
 ## Perfiles de entrenamiento
 
-`train-dataset` agrupa las fases on/off y el presupuesto de Optuna en cuatro perfiles (`config/training.py`), elegibles con `--profile` (default: la constante `PROFILE` en [scripts/train_dataset/config.py](scripts/train_dataset/config.py), hoy `"efficient"`). El bench de familias (`benchmarking.run_bench_ml`) nunca usa Optuna en ningún perfil — hiperparámetros default + early stopping, para dejarle el presupuesto de Optuna a la ronda final sobre la ganadora:
+`train-dataset` agrupa las fases on/off y el presupuesto de Optuna en cuatro perfiles (`config/training.py`), elegibles con `--profile` (default: la constante `PROFILE` en [src/training/config.py](src/training/config.py), hoy `"efficient"`). El bench de familias (`benchmarking.run_bench_ml`) nunca usa Optuna en ningún perfil — hiperparámetros default + early stopping, para dejarle el presupuesto de Optuna a la ronda final sobre la ganadora:
 
 | Perfil | Fases | Uso |
 |---|---|---|
@@ -65,7 +67,7 @@ Los artifacts livianos por nivel quedan en `artifacts/models/*.pkl` (sí están 
 | `efficient` | Mismo flujo completo que `optimized` (todas las fases), pero con presupuesto de Optuna y de CV recortado a propósito para correr los 12 niveles x 2 grains en una sola pasada. Números reales (no smoke-test) pero mejorables con más tiempo de ajuste. | Corrida completa acotada en tiempo — default actual. |
 | `optimized` | Pipeline completo: todas las fases, presupuesto de Optuna original. | Corrida de calidad para las métricas finales del TFM. |
 
-Para agregar un parámetro nuevo al esquema de `Config` (no para bajar la calidad de una corrida puntual, para eso está `--profile`) se edita `Config` directamente en `scripts/train_dataset/config.py`.
+Para agregar un parámetro nuevo al esquema de `Config` (no para bajar la calidad de una corrida puntual, para eso está `--profile`) se edita `Config` directamente en `src/training/config.py`.
 
 ## Pipeline (script → make → salida)
 
@@ -74,7 +76,7 @@ Para agregar un parámetro nuevo al esquema de `Config` (no para bajar la calida
 | 1 | [scripts/create_database.py](scripts/create_database.py) | `create-database` | Descarga `backup/m5-forecasting-accuracy.zip` desde Kaggle si no existe, lo descomprime en `data/raw/` y crea la base DuckDB. | `data/m5.db` |
 | 2 | [scripts/process_data.py](scripts/process_data.py) | `process-data` | Por nivel de agregación (L1→L12) y granularidad (daily/weekly), extrae ventas (`sales`, precio, calendario, eventos). `ARGS="--levels 1,9,12"` (default: `config.ACTIVE_LEVEL_IDS`), `ARGS="--counts"` (solo contar, sin materializar). | `data/processed/{daily,weekly}/level_*.parquet` |
 | 3 | [scripts/build_datasets.py](scripts/build_datasets.py) | `build-datasets` | Aplica `src.features.pipeline` (calendario, precio, eventos, encoding, intermitencia, lags/rolling/momentum) sobre cada parquet de `data/processed/`. `ARGS="--levels 1,9,12"` (default: `config.ACTIVE_LEVEL_IDS`). | `data/datasets/{daily,weekly}/dataset_level_*.parquet` |
-| 4 | [scripts/train_dataset/](scripts/train_dataset/) | `train-dataset` | Entrena LightGBM/XGBoost/CatBoost/HistGB/Ridge por nivel/grain sobre `sales` (comparación de baselines, selección de features, SHAP, tuning Optuna sobre la ganadora). `ARGS="--levels 1,9,12"` (default: `config.ACTIVE_LEVEL_IDS`), `ARGS="--profile fast\|moderate\|efficient\|optimized"` (default: ver [Perfiles de entrenamiento](#perfiles-de-entrenamiento)). Niveles 10-12 entrenan un modelo por combinación `split_by` (dept/store). Logs en `logs/train_dataset/`. | `artifacts/results/*_{model_comparison,series_metrics,feature_selection}.csv`, `artifacts/plots/*_shap_*.png`, `artifacts/optuna_study.db`, `artifacts/models/*_artifact.pkl` |
+| 4 | [scripts/train_dataset.py](scripts/train_dataset.py) (orquesta [src/training/](src/training/)) | `train-dataset` | Entrena LightGBM/XGBoost/CatBoost/HistGB/Ridge por nivel/grain sobre `sales` (comparación de baselines, selección de features, SHAP, tuning Optuna sobre la ganadora). `ARGS="--levels 1,9,12"` (default: `config.ACTIVE_LEVEL_IDS`), `ARGS="--profile fast\|moderate\|efficient\|optimized"` (default: ver [Perfiles de entrenamiento](#perfiles-de-entrenamiento)). Niveles 10-12 entrenan un modelo por combinación `split_by` (dept/store). Logs en `logs/train_dataset/`. | `artifacts/results/*_{model_comparison,series_metrics,feature_selection}.csv`, `artifacts/plots/*_shap_*.png`, `artifacts/optuna_study.db`, `artifacts/models/*_artifact.pkl` |
 | 5 | [scripts/build_test_sets.py](scripts/build_test_sets.py) | `test-sets` | Corre el modelo final de cada nivel sobre su test set y agrega las métricas de error. | `artifacts/test_sets/{level}.parquet`, `output/test_metrics.json` |
 
 Métricas: WAPE, Bias, WRMSSE (y por serie también MASE/SPEC) — ver [src/evaluation/](src/evaluation/).
@@ -151,7 +153,7 @@ data/       raw/ (CSV de M5), processed/ (por nivel, sin features), datasets/ (c
 config/     Parámetros del proyecto separados por responsabilidad (paths, features, levels, model, training)
 queries/    SQL para crear la base DuckDB y los datasets base
 api/        API de predicción sobre los artifacts entrenados (ver API de predicción más arriba)
-src/        Lógica reutilizable (datos, features, modelado, evaluación)
+src/        Lógica reutilizable (datos, features, modelado, entrenamiento, evaluación)
 scripts/    Puntos de entrada ejecutables (orquestan src/)
 notebooks/  Exploración (eda) y prototipado del modelo (model)
 artifacts/  results/, plots/, models/, test_sets/ y optuna_study.db — generados por train-dataset y test-sets

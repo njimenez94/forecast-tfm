@@ -192,7 +192,7 @@ def rolling_cv_folds(X_train: pd.DataFrame, y_train: pd.Series, X_valid: pd.Data
                      n_folds: int) -> list[tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]]:
     """Folds rolling-origin sobre train+valid (todo lo anterior a test), para elegir
     un n_estimators robusto antes de reentrenar el modelo final con todos los datos
-    (ver scripts/train_dataset.py fit_final_model).
+    (ver src/training/refinement.py::fit_final_model).
 
     El fold más reciente es exactamente (X_train, X_valid) ya armados por
     build_feature_matrices; los `n_folds - 1` anteriores retroceden desde valid_start

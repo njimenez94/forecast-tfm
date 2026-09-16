@@ -86,7 +86,7 @@ def _build_feature_row(features: dict, artifact: dict) -> pd.DataFrame:
         # category"). Un placeholder inventado tampoco sirve -- XGBoost valida cada
         # categoría declarada contra las vistas en training, la use o no la fila. Por
         # eso hace falta el dominio real (guardado en el artifact desde que existe
-        # categorical_categories, ver scripts/train_dataset/export.py::export_artifact);
+        # categorical_categories, ver src/training/export.py::export_artifact);
         # el valor de la fila sigue siendo NaN (missing) pase lo que pase.
         value = X[col].iloc[0]
         if col in trained_categories:

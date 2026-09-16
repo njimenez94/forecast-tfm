@@ -9,8 +9,8 @@ cada fase del refactor y comparar el log (split, WAPE/WRMSSE de bench y final).
 from dataclasses import asdict, replace
 
 import config
-from scripts.train_dataset.config import CFG
-from scripts.train_dataset.pipeline import run_pipeline
+from src.training.config import CFG
+from src.training.pipeline import run_pipeline
 from src.logging_setup import configure_logging
 
 

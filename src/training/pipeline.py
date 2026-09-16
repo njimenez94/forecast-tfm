@@ -8,12 +8,12 @@ from src.data.dataset import load_data, split_data
 from src.evaluation import evaluate_predictions, objective_metric
 from src.evaluation.scaled import clip_closed_stores
 from src.modeling import ALL_FAMILIES
-from scripts.train_dataset.config import Config
-from scripts.train_dataset.benchmarking import (
+from src.training.config import Config
+from src.training.benchmarking import (
     pick_winner, run_baseline_naive, run_baseline_stats, run_bench_ml, save_model_comparison,
 )
-from scripts.train_dataset.refinement import fit_final_model, run_shap, select_features, tune_optuna
-from scripts.train_dataset.export import export_artifact
+from src.training.refinement import fit_final_model, run_shap, select_features, tune_optuna
+from src.training.export import export_artifact
 
 
 def make_evaluator(state: SimpleNamespace, cfg: Config):

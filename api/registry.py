@@ -1,5 +1,5 @@
 """Resuelve y cachea en memoria los artifacts entrenados (ver
-scripts/train_dataset.py::export_artifact) para servirlos desde la API.
+src/training/export.py::export_artifact) para servirlos desde la API.
 
 Dos fuentes, en este orden de preferencia (por nivel+grain+target, no por nivel+target
 solo -- ver GRAIN más abajo):
@@ -68,7 +68,7 @@ def _registry_keys(level_id: int, target: str, grain: str | None = None) -> list
 
 def _registry_key(level_id: int, target: str, grain: str | None = None) -> str | None:
     """La clave del registry es `{level_str}_{target}`, con level_str =
-    `level_{level_id:02d}_{grain}_{name}` (ver scripts/train_dataset/export.py). Como
+    `level_{level_id:02d}_{grain}_{name}` (ver src/training/export.py). Como
     level_str no es derivable de level_id solo (incluye grain y name), se resuelve
     buscando la entrada cuya versión más reciente apunte a un path con el prefijo
     `level_{level_id:02d}_`, filtrando por `grain` si se especifica.

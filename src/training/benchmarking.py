@@ -11,7 +11,7 @@ from src.modeling import (
     drift, fit_ets, fit_prophet, fit_sarima, fit_tbats, fit_theta, historical_mean,
     moving_average, seasonal_naive,
 )
-from scripts.train_dataset.config import Config
+from src.training.config import Config
 
 
 def run_baseline_naive(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:

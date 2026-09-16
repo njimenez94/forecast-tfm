@@ -1,4 +1,5 @@
 import matplotlib
+import numpy as np
 matplotlib.use("Agg")  # ponytail: entrenamiento es headless y paralelo (Optuna); TkAgg crashea (SIGILL) si el GC destruye figuras desde un hilo no-main
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -45,7 +46,7 @@ def plot_forecast(df_pred, level_label, target_col, series_id, n=30, date=None):
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
     plt.xticks(rotation=45, ha="right")
-    ax.grid(axis="y", alpha=0.3)
+    ax.grid(alpha=0.3, linestyle="--")
     
     if target_col == ['bias', 'spec']:
         lim = max(abs(df_pred[target_col].min()), abs(df_pred[target_col].max()))
@@ -84,10 +85,15 @@ def explain_prediction(test_df, X_test, df_pred, explainer, target_col, series_i
     bias_val = -info["error"]  # pred - actual (positivo = sobreestima)
     bias_pct = (bias_val / sales_val * 100) if sales_val != 0 else float("nan")
 
+    # np.ravel(...)[0]: explainer.expected_value es un array de 1 elemento (TreeExplainer,
+    # salida única) -- float(array) ya no funciona en numpy >= 2.0 (antes daba warning,
+    # ahora TypeError: "only 0-dimensional arrays can be converted to Python scalars").
+    base_value = np.ravel(explainer.expected_value)[0]
+
     shap.plots.waterfall(
         shap.Explanation(
             values=row_shap_values[0],
-            base_values=explainer.expected_value,
+            base_values=base_value,
             data=row.iloc[0],
             feature_names=row.columns,
         ),
