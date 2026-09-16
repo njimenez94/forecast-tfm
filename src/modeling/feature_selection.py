@@ -138,6 +138,15 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
     selection_log = [{"n_features": len(current_features), "score": best_score, "wrmsse": best_wrmsse, "removed": None, "n_removed": 0, "accepted": True}]
     logger.info(f"Baseline ({len(current_features)} features): {objective}={best_score:.4f} | WRMSSE={best_wrmsse:.4f} (informativo)")
 
+    # Con tolerance>0 el criterio de aceptación "arrastra" (ver docstring del
+    # parámetro `tolerance`): cada paso se compara contra el último aceptado, no
+    # contra el mejor visto en todo el proceso, así que una racha de pasos
+    # aceptados-pero-levemente-peores puede terminar bien por debajo del mejor
+    # punto que ya se había encontrado. Por eso se trackea aparte el mejor
+    # resultado real visto (`best_ever_*`) y es lo que se devuelve al final, en
+    # vez de donde haya quedado `current_features` tras la última aceptación.
+    best_ever_features, best_ever_score, best_ever_wrmsse = current_features, best_score, best_wrmsse
+
     def try_remove(batch: list[str]) -> bool:
         """Intenta remover `batch` (una o varias features) de `current_features`.
         Actualiza current_features/best_score/best_wrmsse/improved (nonlocal) y
@@ -145,6 +154,7 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
         llamador decida si hace falta el fallback uno-a-uno (ver batching en
         el docstring)."""
         nonlocal current_features, best_score, best_wrmsse, improved
+        nonlocal best_ever_features, best_ever_score, best_ever_wrmsse
         candidate_features = [f for f in current_features if f not in batch]
         score_candidate, wrmsse_candidate = train_and_eval(candidate_features)
         accepted = score_candidate <= best_score * (1 + tolerance)
@@ -157,6 +167,8 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
             current_features = candidate_features
             best_score = score_candidate
             best_wrmsse = wrmsse_candidate
+            if score_candidate < best_ever_score:
+                best_ever_features, best_ever_score, best_ever_wrmsse = candidate_features, score_candidate, wrmsse_candidate
             improved = True
             label = f"{len(batch)} features {batch}" if len(batch) > 1 else f"'{batch[0]}'"
             logger.warning(f"ELIMINADA(S) {label} -> {len(current_features)} features | {objective}={score_candidate:.4f} | WRMSSE={wrmsse_candidate:.4f}")
@@ -186,5 +198,8 @@ def backward_feature_selection(X_train, y_train, X_valid, y_valid, train_df, val
                     try_remove([feat])
             i += len(batch)
 
-    logger.info(f"Seleccionadas {len(current_features)}/{len(features)} features | {objective} final: {best_score:.4f} | WRMSSE final: {best_wrmsse:.4f}")
-    return current_features, best_score, best_wrmsse, pd.DataFrame(selection_log)
+    if len(best_ever_features) != len(current_features):
+        logger.info(f"Selección derivó de {len(best_ever_features)} (mejor punto real) a {len(current_features)} features -- "
+                    f"se devuelve el mejor punto ({objective}={best_ever_score:.4f}) en vez de donde terminó ({objective}={best_score:.4f}).")
+    logger.info(f"Seleccionadas {len(best_ever_features)}/{len(features)} features | {objective} final: {best_ever_score:.4f} | WRMSSE final: {best_ever_wrmsse:.4f}")
+    return best_ever_features, best_ever_score, best_ever_wrmsse, pd.DataFrame(selection_log)
