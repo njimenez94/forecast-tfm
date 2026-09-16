@@ -5,7 +5,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.dates as mdates
 
-def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
+def plot_forecast(df_pred, level_label, target_col, series_id, n=30, date=None):
     """Serie real vs. predicha para `series_id`; si se pasa `date`, recorta +-n días
     alrededor y marca la fecha con una línea vertical."""
     df_plot = df_pred[df_pred["series_id"] == series_id].copy()
@@ -26,10 +26,17 @@ def plot_forecast(df_pred, target_col, series_id, n=30, date=None):
     if date:
         ax.axvline(date, color="red", linestyle="--", linewidth=1)
 
-    ax.set_title(series_id, loc="left")
+    ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+
+    ax.set_title(f"{level_label} | {series_id}", loc="left")
     ax.set_xlabel("")
     unique_dates = sorted(df_plot["date"].unique())
-    if len(unique_dates) <= 20:
+    is_daily = len(unique_dates) > 1 and pd.Series(unique_dates).diff().min() == pd.Timedelta(days=1)
+    if is_daily:
+        # granularidad diaria: un tick por día, nada de saltos raros del auto-locator
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%y"))
+    elif len(unique_dates) <= 20:
         # pocas fechas (p.ej. series semanales): un tick por punto real, nada inventado
         ax.set_xticks(unique_dates)
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%y"))
