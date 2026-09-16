@@ -30,9 +30,22 @@ def _artifacts_subdir(target: str) -> Path:
 
 
 def _registry_key(level_id: int, target: str) -> str | None:
-    """La clave del registry es `{level_str}_{target}`; level_str no es derivable de
-    level_id solo (incluye grain/nombre), así que se resuelve buscando la entrada
-    cuya versión más reciente apunte a un path con el prefijo `level_{level_id:02d}_`."""
+    """La clave del registry es `{level_str}_{target}`, con level_str =
+    `level_{level_id:02d}_{grain}_{name}` (ver scripts/train_dataset/export.py). Como
+    level_str no es derivable de level_id solo (incluye grain y name), se resuelve
+    buscando la entrada cuya versión más reciente apunte a un path con el prefijo
+    `level_{level_id:02d}_`.
+
+    LIMITACIÓN CONOCIDA: la API (api/main.py) no recibe `grain` como parámetro, solo
+    `level_id` + `target`. Si para un mismo level_id llegaran a existir artifacts
+    registrados en ambos grains (daily y weekly -- hoy config.Level.grains incluye
+    los dos para todos los niveles activos, ver config/levels.py), esta función
+    devuelve el primero que encuentra recorriendo el dict del registry (orden de
+    inserción en registry.json), no necesariamente el que el caller espera. Hoy no
+    pasa (cada level_id activo solo tiene un grain entrenado, ver
+    artifacts/models/registry.json), pero si se entrenan ambos grains de un mismo
+    nivel esto queda ambiguo -- habría que agregar `grain` explícito a
+    /levels y /predict antes de que ocurra."""
     prefix = f"level_{level_id:02d}_"
     for key in load_registry():
         if key.startswith(prefix) and key.endswith(f"_{target}"):

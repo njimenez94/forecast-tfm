@@ -79,6 +79,43 @@ Para agregar un parámetro nuevo al esquema de `Config` (no para bajar la calida
 
 Métricas: WAPE, Bias, WRMSSE (y por serie también MASE/SPEC) — ver [src/evaluation/](src/evaluation/).
 
+## API de predicción
+
+`api/` sirve los artifacts ya entrenados (`make train-dataset`) sobre HTTP. **No recalcula
+features**: recibe el vector ya procesado (mismas columnas que `artifact["features"]` para
+ese nivel/target) y solo corre `model.predict(...)` — ver [api/main.py](api/main.py) §docstring
+sobre por qué reconstruir features desde datos crudos queda fuera de alcance por ahora.
+
+```bash
+make serve-api                              # uvicorn --reload en :8000
+make docker-api                             # build + contenedor en :8000
+make testing-api ARGS="--level 9 --n 3"     # prueba end-to-end contra la API ya corriendo
+```
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /health` | Liveness check. |
+| `GET /levels?target=sales` | Lista los niveles con artifact disponible: `level_id`, `level`, `version`, `wape_test`, `wrmsse_test`. |
+| `POST /predict/{level_id}?target=sales` | Predicción puntual. Body: `{"features": {...}, "version": null}` (`version` opcional, default la última en `registry.json`). |
+
+**Glosario de "nivel" (fuente frecuente de confusión, son 4 cosas parecidas pero no intercambiables):**
+
+| Nombre | Ejemplo | Dónde vive | Incluye |
+|---|---|---|---|
+| `level_id` | `9` | `config.Level.id` ([config/levels.py](config/levels.py)); param de `/predict/{level_id}` | Solo el id (1-12) |
+| `Level.name` | `"store_dept"` | `config.Level.name` | Solo el nombre corto, sin id ni grain — no se expone en la API |
+| `level` (a.k.a. `level_str`) | `"level_09_daily_store_dept"` | `artifact["level"]`, campo `level` de `LevelInfo` en `/levels` | id + grain + name |
+| `level_label` | `"level_09_daily"` | `artifact["level_label"]` | id + grain, sin name — no se expone en la API |
+
+`grain` (`daily`/`weekly`) va empotrado en `level`/`level_label`, **no es un parámetro de la
+API**: `/predict/{level_id}` y `/levels` no dejan elegirlo. Hoy no es un problema porque cada
+`level_id` activo solo tiene un grain entrenado en `artifacts/models/registry.json`, pero
+`config.Level.grains` entrena daily+weekly para todos los niveles activos por defecto — si
+algún día conviven ambos grains para el mismo `level_id`+`target`, `api/registry.py::_registry_key`
+devuelve el primero que encuentra en el registry (orden de inserción, no una elección real) y
+`/predict` serviría el grain equivocado sin avisar. Ver el docstring de `_registry_key` en
+[api/registry.py](api/registry.py) antes de tocar esa función.
+
 ## Tests
 
 ```bash
@@ -111,6 +148,7 @@ backup/     Zip de Kaggle descargado por create-database (no versionado, ver Con
 data/       raw/ (CSV de M5), processed/ (por nivel, sin features), datasets/ (con features, listo para entrenar), m5.db — solo se versiona la estructura
 config/     Parámetros del proyecto separados por responsabilidad (paths, features, levels, model, training)
 queries/    SQL para crear la base DuckDB y los datasets base
+api/        API de predicción sobre los artifacts entrenados (ver API de predicción más arriba)
 src/        Lógica reutilizable (datos, features, modelado, evaluación)
 scripts/    Puntos de entrada ejecutables (orquestan src/)
 notebooks/  Exploración (eda) y prototipado del modelo (model)

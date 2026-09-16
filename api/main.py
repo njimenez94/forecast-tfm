@@ -8,11 +8,10 @@ lags/rolling/target-encoding, hoy solo se hace en backtest sobre el parquet hist
 
 Levantar con: make serve-api  (o `uv run uvicorn api.main:app --reload`)
 """
-import time
 from contextlib import asynccontextmanager
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from loguru import logger
 
 import config
@@ -28,17 +27,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Forecast TFM API", lifespan=lifespan)
-
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    t0 = time.perf_counter()
-    response = await call_next(request)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
-    logger.info("{} {} -> {} ({:.1f} ms)", request.method, request.url.path,
-                response.status_code, elapsed_ms)
-    return response
+app = FastAPI(title="Forecast API", lifespan=lifespan)
 
 
 @app.get("/health")

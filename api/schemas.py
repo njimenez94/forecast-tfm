@@ -18,8 +18,13 @@ class PredictResponse(BaseModel):
 
 
 class LevelInfo(BaseModel):
-    level_id: int
-    level: str
+    level_id: int  # config.Level.id (1-12, ver config/levels.py), lo que recibe /predict/{level_id}
+    level: str  # artifact["level"] = level_str completo: "level_{level_id:02d}_{grain}_{name}"
+    # (p.ej. "level_09_daily_store_dept"), no confundir con Level.name ("store_dept",
+    # sin id/grain) ni con artifact["level_label"] ("level_09_daily", sin name) --
+    # ninguno de los dos se expone acá. Ojo: `grain` no es un parámetro de la API;
+    # va empotrado en este string y en la práctica solo se ve un grain por
+    # level_id+target (ver api/registry.py::_registry_key).
     target: str
     version: str | None
     wape_test: float | None

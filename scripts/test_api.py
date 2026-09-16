@@ -1,9 +1,9 @@
 """Prueba end-to-end de la API contra una instancia ya corriendo (make serve-api o
 make docker-api). Arma un payload real a partir del X_test reconstruido de un
 artifact local (mismas filas que backtestea notebooks/03_predictions.ipynb), lo
-manda a POST /predict/{level} y compara la predicción devuelta contra
+manda a POST /predict/{level_id} y compara la predicción devuelta contra
 model.predict(...) directo sobre esa fila -- mismo chequeo que se hizo a mano para
-validar api/main.py.
+validar api/main.py. (--level acá es en realidad el `level_id` de esa ruta.)
 
     make testing-api ARGS="--level 9 --n 3"
     # o
