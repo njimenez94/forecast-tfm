@@ -2,33 +2,72 @@ PRAGMA memory_limit='2.5GB';
 PRAGMA threads=2;
 PRAGMA temp_directory='data/duckdb_tmp';
 
-DROP TABLE IF EXISTS calendar;
-DROP TABLE IF EXISTS sell_prices;
-DROP TABLE IF EXISTS sales_train_evaluation;
-DROP TABLE IF EXISTS sales_train_validation;
-DROP TABLE IF EXISTS sample_submission;
 DROP TABLE IF EXISTS dataset_raw;
+DROP TABLE IF EXISTS sales_train_evaluation;
+DROP TABLE IF EXISTS sell_prices;
+DROP TABLE IF EXISTS calendar;
 
 -- ######################################################################################################################## --
 
-CREATE TABLE calendar AS
+CREATE TEMP TABLE _sales_raw AS
+    SELECT * FROM read_csv_auto('data/raw/sales_train_evaluation.csv');
+
+CREATE TEMP TABLE _calendar_raw AS
     SELECT * FROM read_csv_auto('data/raw/calendar.csv');
 
-CREATE TABLE sell_prices AS
+CREATE TEMP TABLE _sell_prices_raw AS
     SELECT * FROM read_csv_auto('data/raw/sell_prices.csv');
 
-CREATE TABLE sales_train_evaluation AS
-    UNPIVOT (SELECT * FROM read_csv_auto('data/raw/sales_train_evaluation.csv'))
-    ON COLUMNS(* EXCLUDE (id, item_id, dept_id, cat_id, store_id, state_id))
-    INTO NAME d VALUE sales;
+-- ######################################################################################################################## --
 
-CREATE TABLE sales_train_validation AS
-    UNPIVOT (SELECT * FROM read_csv_auto('data/raw/sales_train_validation.csv'))
-    ON COLUMNS(* EXCLUDE (id, item_id, dept_id, cat_id, store_id, state_id))
-    INTO NAME d VALUE sales;
+CREATE TABLE calendar (
+    date VARCHAR,
+    wm_yr_wk INTEGER,
+    weekday VARCHAR,
+    wday INTEGER,
+    month INTEGER,
+    year INTEGER,
+    d VARCHAR PRIMARY KEY,
+    event_name_1 VARCHAR,
+    event_type_1 VARCHAR,
+    event_name_2 VARCHAR,
+    event_type_2 VARCHAR,
+    snap_CA INTEGER,
+    snap_TX INTEGER,
+    snap_WI INTEGER
+);
+INSERT INTO calendar SELECT * FROM _calendar_raw;
 
-CREATE TABLE sample_submission AS
-    SELECT * FROM read_csv_auto('data/raw/sample_submission.csv');
+CREATE TABLE sell_prices (
+    store_id VARCHAR,
+    item_id VARCHAR,
+    wm_yr_wk INTEGER,
+    sell_price DOUBLE,
+    PRIMARY KEY (store_id, item_id, wm_yr_wk)
+);
+INSERT INTO sell_prices SELECT * FROM _sell_prices_raw;
+
+CREATE TABLE sales_train_evaluation (
+    id VARCHAR,
+    item_id VARCHAR,
+    dept_id VARCHAR,
+    cat_id VARCHAR,
+    store_id VARCHAR,
+    state_id VARCHAR,
+    d VARCHAR REFERENCES calendar(d),
+    sales INTEGER
+);
+INSERT INTO sales_train_evaluation
+    SELECT id, item_id, dept_id, cat_id, store_id, state_id, d, sales
+    FROM (
+        UNPIVOT _sales_raw
+        ON COLUMNS(* EXCLUDE (id, item_id, dept_id, cat_id, store_id, state_id))
+        INTO NAME d VALUE sales
+    );
+
+DROP TABLE _sales_raw;
+DROP TABLE _calendar_raw;
+DROP TABLE _sell_prices_raw;
 
 -- ######################################################################################################################## --
 
