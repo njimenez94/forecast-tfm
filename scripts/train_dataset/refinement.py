@@ -129,6 +129,8 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
 
 
 def run_shap(state: SimpleNamespace, cfg: Config, evaluate_model) -> None:
+    import matplotlib
+    matplotlib.use("Agg")  # ponytail: solo guardamos PNGs, nunca mostramos ventana; evita crash de Tk en hilo no-main durante Optuna
     import matplotlib.pyplot as plt
     import shap
 

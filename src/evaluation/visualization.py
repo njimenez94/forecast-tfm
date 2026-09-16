@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use("Agg")  # ponytail: entrenamiento es headless y paralelo (Optuna); TkAgg crashea (SIGILL) si el GC destruye figuras desde un hilo no-main
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
