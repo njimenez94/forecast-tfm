@@ -193,49 +193,72 @@ def tune_optuna(state: SimpleNamespace, cfg: Config) -> dict:
     )
 
 
-def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_params: dict) -> None:
-    family = MODEL_FAMILIES[state.winner_family]
-
-    if best_params:
-        label = f"{state.winner_family} (final, Optuna)"
-    else:
-        # run_optuna=False: en vez de un dict de hiperparámetros hardcodeado (como
-        # antes), se reusan los hiperparámetros default del bench -- siempre están
-        # disponibles porque el bench corre siempre (ver Config.run_bench_ml).
-        best_params = state.bench_params[state.winner_family]
-        label = f"{state.winner_family} (final, bench default)"
-
-    # CV rolling-origin sobre train+valid para un n_estimators robusto (ver
-    # rolling_cv_folds): el eval_metric acá es genérico (rmse/tweedie, igual que
-    # tune_optuna), no state.wrmsse_metric -- ese está atado al valid_df original y
-    # da resultados incorrectos sobre los folds más viejos. El último fold coincide
-    # con el split actual (train=X_train, valid=X_valid); sus predicciones se
-    # reusan para loggear la métrica "valid" (WRMSSE real) con evaluate_model.
+def _cv_fit_and_score(state: SimpleNamespace, cfg: Config, family, params: dict) -> tuple:
+    """CV rolling-origin sobre train+valid para un n_estimators robusto (ver
+    rolling_cv_folds), con `params` fijos. Devuelve (cv_fitted del último fold,
+    n_estimators elegido, objective_score sobre X_valid) -- el último fold coincide
+    con el split actual (train=X_train, valid=X_valid), así que su predicción sobre
+    X_valid es comparable directamente contra cualquier otro candidato evaluado
+    sobre el mismo split (bench, bench+selected features, etc.)."""
     folds = rolling_cv_folds(state.X_train, state.y_train, state.X_valid, state.y_valid,
                               state.train["date"], state.valid_start, state.grain, cfg.cv_folds)
 
-    def with_final_n_estimators(params):
+    def with_final_n_estimators(p):
         if not family.n_estimators_param:
-            return params
-        return {**params, family.n_estimators_param: cfg.final_n_estimators}
+            return p
+        return {**p, family.n_estimators_param: cfg.final_n_estimators}
 
-    t0 = time.perf_counter()
     best_iters, cv_fitted = [], None
     for X_tr, y_tr, X_val, y_val in folds:
         cv_fitted = family.fit(
             X_tr, y_tr, X_val, y_val, state.categorical_features, state.numerical_features,
-            with_final_n_estimators(best_params), early_stopping_rounds=50, random_state=cfg.random_state,
+            with_final_n_estimators(params), early_stopping_rounds=50, random_state=cfg.random_state,
         )
         best_iters.append(cv_fitted.best_iteration)
     valid_iters = [bi for bi in best_iters if bi is not None]
     n_estimators = round(np.mean(valid_iters)) if valid_iters else cfg.final_n_estimators
-    logger.info("CV ({} folds) best_iteration: {} -> n_estimators final = {}",
-                cfg.cv_folds, best_iters, n_estimators)
+    logger.info("CV ({} folds) best_iteration: {} -> n_estimators = {}", cfg.cv_folds, best_iters, n_estimators)
+
+    y_pred = clip_closed_stores(state.valid, cv_fitted.predict(state.X_valid))
+    score = objective_metric(state.y_valid, y_pred, cfg.objective, cfg.tweedie_variance_power)
+    return cv_fitted, n_estimators, score
+
+
+def fit_final_model(state: SimpleNamespace, cfg: Config, evaluate_model, best_params: dict) -> None:
+    family = MODEL_FAMILIES[state.winner_family]
+    t0 = time.perf_counter()
+
+    # Candidato "default": siempre se corre, con los mismos hiperparámetros del
+    # bench que ya ganó la comparación de familias -- sirve de piso de comparación
+    # para el candidato Optuna. Sin este piso, un budget de Optuna corto (perfiles
+    # "efficient"/"fast", pocos trials/timeout chico) puede devolver hiperparámetros
+    # peores que el default y el pipeline los promovía igual a producción sin
+    # comparar contra nada (bug real: visto en niveles finos/ruidosos como
+    # store×dept, donde el WAPE final terminaba muy por encima del mejor candidato
+    # ya evaluado en el bench).
+    default_params = state.bench_params[state.winner_family]
+    default_label = f"{state.winner_family} (final, bench default)"
+    cv_fitted, n_estimators, score = _cv_fit_and_score(state, cfg, family, default_params)
+    label, chosen_params = default_label, default_params
+
+    if best_params:
+        tuned_label = f"{state.winner_family} (final, Optuna)"
+        cv_fitted_tuned, n_estimators_tuned, score_tuned = _cv_fit_and_score(state, cfg, family, best_params)
+        if score_tuned < score:
+            cv_fitted, n_estimators, score = cv_fitted_tuned, n_estimators_tuned, score_tuned
+            label, chosen_params = tuned_label, best_params
+        else:
+            logger.warning(
+                "Optuna no mejoró el default del bench en validación ({}={:.4f} tuned vs {:.4f} default) -- "
+                "se descarta el tuning, el modelo final usa hiperparámetros default.",
+                cfg.objective, score_tuned, score,
+            )
+
     evaluate_model(label, cv_fitted.predict(state.X_valid),
                     fit_time=time.perf_counter() - t0, category="ML", stage="final")
 
-    model_params = best_params if not family.n_estimators_param else {
-        **best_params, family.n_estimators_param: n_estimators,
+    model_params = chosen_params if not family.n_estimators_param else {
+        **chosen_params, family.n_estimators_param: n_estimators,
     }
     X_trainval = pd.concat([state.X_train, state.X_valid])
     y_trainval = pd.concat([state.y_train, state.y_valid])

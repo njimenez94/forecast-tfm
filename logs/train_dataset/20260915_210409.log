@@ -1,0 +1,60 @@
+2026-09-15 21:04:09.692 | INFO     | __main__:main:85 - Perfil de entrenamiento: efficient
+2026-09-15 21:04:13.311 | INFO     | src.data.dataset:load_data:58 - level_09_daily_store_dept | target=sales | 135,870 filas | 191 features (9 categóricas)
+2026-09-15 21:04:13.635 | INFO     | src.data.temporal_split:log_summary:41 - Train : 2011-01-29 to 2015-04-26 (1,549 days, 108,430 rows)
+2026-09-15 21:04:13.636 | INFO     | src.data.temporal_split:log_summary:42 - Valid : 2015-04-27 to 2016-04-24 (364 days, 25,480 rows)
+2026-09-15 21:04:13.637 | INFO     | src.data.temporal_split:log_summary:43 - Test  : 2016-04-25 to 2016-05-22 (28 days, 1,960 rows)
+2026-09-15 21:04:14.529 | INFO     | src.data.dataset:split_data:119 - Features: 191 (9 categóricas)
+2026-09-15 21:04:15.109 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (1d) [Naive] | WAPE: 26.44% | WRMSSE: 1.5142  | fit: 0.19s
+2026-09-15 21:04:15.657 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (7d) [Naive] | WAPE: 19.03% | WRMSSE: 1.0971  | fit: 0.17s
+2026-09-15 21:04:16.215 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (28d) [Naive] | WAPE: 19.70% | WRMSSE: 1.1511  | fit: 0.17s
+2026-09-15 21:04:16.736 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Seasonal naive (364d) [Naive] | WAPE: 19.25% | WRMSSE: 1.1647  | fit: 0.16s
+2026-09-15 21:04:17.167 | INFO     | src.evaluation.reports:evaluate_predictions:58 -             Drift [Naive] | WAPE: 28.80% | WRMSSE: 1.6565  | fit: 0.06s
+2026-09-15 21:04:17.525 | INFO     | src.evaluation.reports:evaluate_predictions:58 -   Historical mean [Naive] | WAPE: 24.43% | WRMSSE: 1.5380  | fit: 0.01s
+2026-09-15 21:04:17.906 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (7d) [Naive] | WAPE: 21.18% | WRMSSE: 1.2579  | fit: 0.02s
+2026-09-15 21:04:18.307 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (14d) [Naive] | WAPE: 20.58% | WRMSSE: 1.2318  | fit: 0.02s
+2026-09-15 21:04:18.712 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (21d) [Naive] | WAPE: 20.20% | WRMSSE: 1.1997  | fit: 0.02s
+2026-09-15 21:04:19.109 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (28d) [Naive] | WAPE: 20.19% | WRMSSE: 1.1967  | fit: 0.02s
+2026-09-15 21:04:19.483 | INFO     | src.evaluation.reports:evaluate_predictions:58 - Moving average (35d) [Naive] | WAPE: 20.26% | WRMSSE: 1.2083  | fit: 0.02s
+2026-09-15 21:04:19.483 | INFO     | scripts.train_dataset.pipeline:run_pipeline:51 - Fase naive: 5.0s
+2026-09-15 21:04:39.786 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      SARIMA [Statistical] | WAPE: 23.39% | WRMSSE: 1.2939  | fit: 19.49s
+2026-09-15 21:04:44.594 | INFO     | src.evaluation.reports:evaluate_predictions:58 - ETS (Holt-Winters) [Statistical] | WAPE: 17.77% | WRMSSE: 1.0110  | fit: 4.43s
+2026-09-15 21:04:48.553 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       Theta [Statistical] | WAPE: 17.49% | WRMSSE: 0.9991  | fit: 0.73s
+2026-09-15 21:05:14.861 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       TBATS [Statistical] | WAPE: 23.76% | WRMSSE: 1.3179  | fit: 25.89s
+2026-09-15 21:05:26.779 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     Prophet [Statistical] | WAPE: 18.68% | WRMSSE: 1.0385  | fit: 9.05s
+2026-09-15 21:05:26.782 | INFO     | scripts.train_dataset.pipeline:run_pipeline:56 - Fase estadísticos clásicos: 62.0s
+2026-09-15 21:05:26.784 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 1/5 -- lightgbm
+2026-09-15 21:05:53.387 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     lightgbm (bench) [ML] | WAPE: 37.47% | WRMSSE: 1.8801  | fit: 25.75s
+2026-09-15 21:05:53.415 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 2/5 -- xgboost
+2026-09-15 21:06:13.152 | INFO     | src.evaluation.reports:evaluate_predictions:58 -      xgboost (bench) [ML] | WAPE: 27.31% | WRMSSE: 1.4777  | fit: 16.81s
+2026-09-15 21:06:13.153 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 3/5 -- catboost
+2026-09-15 21:06:38.670 | INFO     | src.evaluation.reports:evaluate_predictions:58 -     catboost (bench) [ML] | WAPE: 37.19% | WRMSSE: 2.1361  | fit: 22.34s
+2026-09-15 21:06:38.673 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 4/5 -- histgb
+2026-09-15 21:07:25.052 | INFO     | src.evaluation.reports:evaluate_predictions:58 -       histgb (bench) [ML] | WAPE: 46.17% | WRMSSE: 2.3379  | fit: 41.89s
+2026-09-15 21:07:25.056 | INFO     | scripts.train_dataset.benchmarking:run_bench_ml:67 - Bench ML: familia 5/5 -- ridge
+2026-09-15 21:07:29.637 | INFO     | src.evaluation.reports:evaluate_predictions:58 -        ridge (bench) [ML] | WAPE: 48.07% | WRMSSE: 2.5123  | fit: 4.05s
+2026-09-15 21:07:29.641 | SUCCESS  | scripts.train_dataset.benchmarking:pick_winner:94 - Modelo ganador (bench, 4 familias tree-based comparadas): xgboost | regression_l2=281.9148
+2026-09-15 21:07:29.641 | INFO     | scripts.train_dataset.pipeline:run_pipeline:62 - Fase bench ML (5 familias, sin Optuna): 114.7s
+2026-09-15 21:07:29.669 | INFO     | scripts.train_dataset.refinement:select_features:88 - Top 10 gain importance (xgboost):
+rolling_mean_lag1_window_size7    1.110240e+08
+te_weekend_mean                   1.662858e+07
+lag1                              1.141363e+07
+lag28                             7.899413e+06
+lag7                              3.086371e+06
+lag91                             2.261277e+06
+lag6                              1.919874e+06
+lag35                             1.766930e+06
+lag21                             1.103338e+06
+snap                              5.678903e+05
+dtype: float64
+2026-09-15 21:08:00.571 | INFO     | scripts.train_dataset.refinement:select_features:95 - Top 10 permutation importance (xgboost):
+te_weekend_mean                   148.901788
+dept_id                            82.869879
+te_snap_mean                       34.872198
+lag21                              22.464587
+lag364                             20.401123
+lag56                              18.706763
+lag28                              13.404938
+store_id                           10.258337
+rolling_mean_lag1_window_size7      7.923804
+dayofweek                           7.457648
+dtype: float64

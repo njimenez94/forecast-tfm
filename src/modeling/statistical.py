@@ -8,18 +8,38 @@ from joblib import Parallel, delayed
 from loguru import logger
 
 
+def _sane_forecast(fc, y_train, max_ratio=50.0) -> bool:
+    """Un ARIMA/ETS/TBATS/... puede converger sin lanzar ninguna excepción y aun
+    así devolver un forecast numéricamente absurdo (típico de SARIMA con
+    diferenciación estacional larga -- `season_length=52` en grain weekly -- sobre
+    series con pocos ciclos estacionales: el polinomio estacional queda cerca de
+    raíz unitaria y extrapola una explosión). Sin este chequeo esas series no caen
+    al fallback (solo lo hacían las que tiraban excepción) y su forecast delirante
+    domina el WAPE/RMSE agregado del modelo entero -- visto en SARIMA weekly de
+    varios niveles, con RMSE de hasta 1e13 sobre una escala real de a lo sumo
+    miles. `max_ratio` deja margen amplio para tendencias de crecimiento legítimas
+    mientras corta explosiones de varios órdenes de magnitud."""
+    if not np.all(np.isfinite(fc)):
+        return False
+    scale = max(np.abs(y_train).max(), 1.0)
+    return bool(np.all(np.abs(fc) <= max_ratio * scale))
+
+
 def _fit_predict_one(gid, sub, train_sub, target_col, fit_predict):
     """Ajusta una única serie; usado por `_forecast_by_series` tanto en el
     camino secuencial como en cada worker de `joblib` cuando `n_jobs != 1`."""
     h = len(sub)
     if train_sub is None or train_sub.empty:
         return sub.index, np.zeros(h), False
+    y_train = train_sub[target_col].to_numpy(dtype=float)
     try:
         fc = np.asarray(fit_predict(train_sub, sub["date"].to_numpy()), dtype=float)
         if fc.size != h:
             raise ValueError(f"esperaba {h} valores, se obtuvieron {fc.size}")
+        if not _sane_forecast(fc, y_train):
+            raise ValueError(f"forecast fuera de rango razonable (max|fc|={np.max(np.abs(fc)):.3g})")
     except Exception:
-        fc = np.full(h, float(train_sub[target_col].to_numpy(dtype=float)[-1]))
+        fc = np.full(h, float(y_train[-1]))
         return sub.index, fc, True
     return sub.index, fc, False
 
