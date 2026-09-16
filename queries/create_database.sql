@@ -4,6 +4,8 @@ PRAGMA temp_directory='data/duckdb_tmp';
 
 DROP TABLE IF EXISTS dataset_raw;
 DROP TABLE IF EXISTS sales_train_evaluation;
+DROP TABLE IF EXISTS sales_train_validation;
+DROP TABLE IF EXISTS sample_submission;
 DROP TABLE IF EXISTS sell_prices;
 DROP TABLE IF EXISTS calendar;
 
