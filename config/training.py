@@ -73,6 +73,12 @@ MODERATE = TrainingProfile(
 # sola pasada sin que cada combinación tome lo mismo que "optimized". Los números
 # resultantes son reales (no un smoke-test) pero mejorables con más tiempo de ajuste
 # -- dejar esa salvedad explícita en el informe.
+# optuna_timeout_s subido de 120s a 900s (2026-09-15): con 120s Optuna apenas
+# alcanzaba a converger en niveles grandes (store×dept) y el resultado tuneado
+# terminaba peor que el default del bench -- ver guardrail en
+# refinement.fit_final_model, que ya no promueve el tuneado si no mejora al
+# default, pero con 120s casi nunca llegaba a mejorarlo. 900s le da margen real
+# para tunear sin disparar el tiempo total de la corrida completa.
 EFFICIENT = TrainingProfile(
     name="efficient",
     run_baseline_stats=True,
@@ -81,7 +87,7 @@ EFFICIENT = TrainingProfile(
     run_optuna=True,
     bench_n_estimators=800,
     optuna_n_trials=100,
-    optuna_timeout_s=120,
+    optuna_timeout_s=900,
     optuna_n_estimators=800,
     cv_folds=1,
     final_n_estimators=1_500,
