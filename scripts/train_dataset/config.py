@@ -43,16 +43,20 @@ class Config:
     # con tolerance>0 el ORDEN de las pruebas importa mucho más: batch vs.
     # uno-a-uno pueden terminar seleccionando conjuntos de features bien
     # distintos (probado: 6 vs. 21 features en un caso sintético).
-    # Subido de 0.0 a 0.005 (2026-09-16): con 0.0, cualquier ruido numérico entre
-    # reentrenamientos rechaza el bloque de 8 y cae al fallback uno-a-uno (ver
-    # "Batching" abajo) -- en la práctica casi ningún bloque prosperaba, así que el
-    # batching no aportaba nada y "selección de features" terminaba siendo ~85%
-    # del tiempo total del pipeline (ver logs/train_dataset/20260915_223756.log).
-    # 0.005 (0.5% relativo) alcanza para que un bloque de features genuinamente
-    # poco importantes pase de una, sin abrir la puerta a degradar la métrica de
-    # forma notoria -- deliberadamente menos fino que 0.0, es lo que se pidió
-    # (podar lo obvio rápido, no exhaustivo).
-    backward_tolerance: float = 0.005
+    # Subido de 0.0 a 0.005 y luego a 0.02 (2026-09-16): con 0.0, cualquier ruido
+    # numérico entre reentrenamientos rechaza el bloque de 8 y cae al fallback
+    # uno-a-uno (ver "Batching" abajo) -- en la práctica casi ningún bloque
+    # prosperaba, así que el batching no aportaba nada y "selección de features"
+    # terminaba siendo ~85% del tiempo total del pipeline (ver
+    # logs/train_dataset/20260915_223756.log). 0.005 mejoró poco: un bloque
+    # rechazado paga el intento del bloque + cada feature individual (el mismo
+    # costo que sin batching, más uno de yapa), así que si la mayoría de los
+    # bloques se siguen rechazando, batching no ahorra nada. 0.02 (2% relativo)
+    # hace que los bloques de features poco importantes pasen la mayoría de las
+    # veces, así se paga 1 reentrenamiento por bloque en vez de N -- más agresivo
+    # podando, pero es justo lo que se pidió (descartar lo obvio rápido, no
+    # selección fina).
+    backward_tolerance: float = 0.02
     # Cuántas features candidatas se prueba remover juntas en cada reentrenamiento
     # de backward_feature_selection (ver docstring ahí, sección "Batching"). 1 =
     # una por una (algoritmo original, más lento con muchas features); >1 = por

@@ -96,9 +96,14 @@ def select_features(state: SimpleNamespace, cfg: Config) -> None:
 
     def fit_predict_fn(feats, cat_feats):
         num_feats = [f for f in state.numerical_features if f in feats]
+        # early_stopping_rounds bajado de 30 a 15 (2026-09-16): cada intento de
+        # backward_feature_selection reentrena desde cero, y este valor solo decide
+        # cuándo cortar cada intento individual -- no afecta qué features termina
+        # eligiendo, solo el punto de corte del boosting. Con decenas de reintentos
+        # por nivel, este es el costo dominante de la fase.
         fitted_candidate = family.fit(
             state.X_train[feats], state.y_train, state.X_valid[feats], state.y_valid,
-            cat_feats, num_feats, params, early_stopping_rounds=30, random_state=cfg.random_state,
+            cat_feats, num_feats, params, early_stopping_rounds=15, random_state=cfg.random_state,
         )
         return fitted_candidate.predict(state.X_valid[feats])
 
