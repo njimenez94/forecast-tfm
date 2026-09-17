@@ -1,4 +1,6 @@
 """Schemas Pydantic de la API de predicción."""
+import datetime
+
 from pydantic import BaseModel
 
 
@@ -16,6 +18,29 @@ class PredictResponse(BaseModel):
     # no necesariamente el que se pidió: si `grain` no viene en la request y solo hay
     # un grain entrenado para ese level_id+target, se resuelve solo; si hay dos, la
     # request es rechazada (400) y hay que pedir uno explícito, ver api/registry.py.
+    target: str
+    version: str
+    prediction: float
+
+
+class ForecastRequest(BaseModel):
+    # A diferencia de PredictRequest (vector de features ya calculado), esto es
+    # lo que un cliente real tendría a mano: qué serie y qué día, más -- opcional
+    # -- valores conocidos/planeados para ese día que la API no puede inventar
+    # (precio, evento, snap; ver api/feature_builder.py::OVERRIDABLE_FIELDS). El
+    # resto (~190 columnas de lags/rolling/encoding/calendario) se calcula solo a
+    # partir de la historia real de esa serie en data/processed/.
+    series_id: str
+    date: datetime.date
+    version: str | None = None
+    overrides: dict[str, float | int | str | None] | None = None
+
+
+class ForecastResponse(BaseModel):
+    level_id: int
+    series_id: str
+    date: datetime.date
+    grain: str
     target: str
     version: str
     prediction: float

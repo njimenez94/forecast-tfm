@@ -497,6 +497,7 @@ name = "forecast-tfm"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "duckdb", marker = "sys_platform == 'linux'" },
     { name = "fastapi", marker = "sys_platform == 'linux'" },
     { name = "humanize", marker = "sys_platform == 'linux'" },
     { name = "joblib", marker = "sys_platform == 'linux'" },
@@ -505,6 +506,7 @@ dependencies = [
     { name = "mlforecast", marker = "sys_platform == 'linux'" },
     { name = "numpy", marker = "sys_platform == 'linux'" },
     { name = "pandas", marker = "sys_platform == 'linux'" },
+    { name = "polars", extra = ["pyarrow", "rtcompat"], marker = "sys_platform == 'linux'" },
     { name = "pyarrow", marker = "sys_platform == 'linux'" },
     { name = "scikit-learn", marker = "sys_platform == 'linux'" },
     { name = "shap", marker = "sys_platform == 'linux'" },
@@ -521,7 +523,6 @@ dev = [
 modeling = [
     { name = "catboost", marker = "sys_platform == 'linux'" },
     { name = "dataframe-image", marker = "sys_platform == 'linux'" },
-    { name = "duckdb", marker = "sys_platform == 'linux'" },
     { name = "ipykernel", marker = "sys_platform == 'linux'" },
     { name = "ipython", marker = "sys_platform == 'linux'" },
     { name = "ipywidgets", marker = "sys_platform == 'linux'" },
@@ -531,7 +532,6 @@ modeling = [
     { name = "nbformat", marker = "sys_platform == 'linux'" },
     { name = "optuna-integration", marker = "sys_platform == 'linux'" },
     { name = "plotly", marker = "sys_platform == 'linux'" },
-    { name = "polars", extra = ["pyarrow", "rtcompat"], marker = "sys_platform == 'linux'" },
     { name = "prophet", marker = "sys_platform == 'linux'" },
     { name = "scikit-learn", marker = "sys_platform == 'linux'" },
     { name = "seaborn", marker = "sys_platform == 'linux'" },
@@ -542,6 +542,7 @@ modeling = [
 
 [package.metadata]
 requires-dist = [
+    { name = "duckdb", specifier = ">=1.5.3" },
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "humanize", specifier = ">=4.16.0" },
     { name = "joblib", specifier = ">=1.5.2" },
@@ -550,6 +551,7 @@ requires-dist = [
     { name = "mlforecast", specifier = ">=1.0.2" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "pandas", specifier = ">=3.0.3" },
+    { name = "polars", extras = ["pyarrow", "rtcompat"], specifier = ">=1.41.2" },
     { name = "pyarrow", specifier = ">=24.0.0" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "shap", specifier = ">=0.52.0" },
@@ -566,7 +568,6 @@ dev = [
 modeling = [
     { name = "catboost", specifier = ">=1.2.10" },
     { name = "dataframe-image", specifier = ">=0.2.7" },
-    { name = "duckdb", specifier = ">=1.5.3" },
     { name = "ipykernel", specifier = "==6.30.1" },
     { name = "ipython", specifier = ">=9.14.1" },
     { name = "ipywidgets", specifier = ">=8.1.8" },
@@ -576,7 +577,6 @@ modeling = [
     { name = "nbformat", specifier = ">=5.10.4" },
     { name = "optuna-integration", specifier = ">=4.9.0" },
     { name = "plotly", specifier = ">=6.8.0" },
-    { name = "polars", extras = ["pyarrow", "rtcompat"], specifier = ">=1.41.2" },
     { name = "prophet", specifier = ">=1.4.0" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "seaborn", specifier = ">=0.13.2" },

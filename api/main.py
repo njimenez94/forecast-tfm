@@ -21,8 +21,9 @@ from fastapi import FastAPI, HTTPException
 from loguru import logger
 
 import config
+from api.feature_builder import build_target_row
 from api.registry import GRAINS, artifact_grain, get_model, load_registry, resolve_version
-from api.schemas import LevelInfo, PredictRequest, PredictResponse
+from api.schemas import ForecastRequest, ForecastResponse, LevelInfo, PredictRequest, PredictResponse
 from src.logging_setup import configure_logging
 
 
@@ -121,3 +122,46 @@ def predict(level_id: int, body: PredictRequest, target: str = "sales", grain: s
     resolved_grain = artifact_grain(artifact)
     version = resolve_version(level_id, target, body.version, resolved_grain)
     return PredictResponse(level_id=level_id, grain=resolved_grain, target=target, version=version, prediction=prediction)
+
+
+@app.post("/predict/{level_id}/forecast", response_model=ForecastResponse)
+def forecast(level_id: int, body: ForecastRequest, target: str = "sales", grain: str | None = None) -> ForecastResponse:
+    """A diferencia de /predict/{level_id} (recibe un vector de features ya
+    calculado), esto recibe lo que un cliente real tiene a mano: `series_id` +
+    `date` a predecir, más overrides opcionales de exógenas del propio día
+    (precio/evento/snap, ver api/feature_builder.py). Reconstruye las ~190
+    columnas de features corriendo el mismo pipeline de training
+    (build_dataset) sobre la historia real de esa serie en data/processed/, en
+    vez de servir una fila ya calculada de artifacts/datasets/."""
+    try:
+        artifact = get_model(level_id, target, body.version, grain)
+    except (FileNotFoundError, KeyError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    resolved_grain = artifact_grain(artifact)
+    level = config.LEVELS_BY_ID[level_id]
+    try:
+        row = build_target_row(level, resolved_grain, body.series_id, body.date, body.overrides)
+    except (FileNotFoundError, KeyError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Mismo patrón que notebooks/05_api_negocio.ipynb::predict() -- ahí lo hace el
+    # cliente sobre una fila ya calculada de test; acá sobre la fila recién
+    # reconstruida por build_target_row(), pero la conversión a tipos "de wire"
+    # (None/str/float) para pasar por _build_feature_row es la misma.
+    features = {
+        col: (None if pd.isna(row[col].iloc[0]) else
+              str(row[col].iloc[0]) if col in artifact["categorical_features"] else float(row[col].iloc[0]))
+        for col in artifact["features"]
+    }
+    X = _build_feature_row(features, artifact)
+    prediction = float(artifact["model"].predict(X)[0])
+    version = resolve_version(level_id, target, body.version, resolved_grain)
+    return ForecastResponse(
+        level_id=level_id, series_id=body.series_id, date=body.date,
+        grain=resolved_grain, target=target, version=version, prediction=prediction,
+    )

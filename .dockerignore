@@ -2,6 +2,7 @@
 .git
 .claude
 data
+!data/processed
 notebooks
 docs
 report
