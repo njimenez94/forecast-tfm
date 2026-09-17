@@ -13,13 +13,24 @@ wheels/
 data/*
 !data/raw/
 !data/processed/
+!data/datasets/
 data/raw/*
 data/processed/*
+!data/processed/daily/
+!data/processed/weekly/
+data/processed/daily/*
+data/processed/weekly/*
+data/datasets/*
+!data/datasets/daily/
+!data/datasets/weekly/
+data/datasets/daily/*
+data/datasets/weekly/*
 !data/**/.gitkeep
 
 # Dataset crudo de Kaggle descargado por scripts/create_database.py: no redistribuir
 # (reglas de la competencia, ver docs/guia_tfm.md).
-backup/
+backup/*
+!backup/.gitkeep
 
 fil-result/
 /fil-result
@@ -37,6 +48,13 @@ catboost_info/
 # ver scripts/train_datasets.py:reconstruct_test_data()).
 artifacts/*
 !artifacts/models/
+!artifacts/plots/
+!artifacts/results/
+!artifacts/test_sets/
+artifacts/plots/*
+artifacts/results/*
+artifacts/test_sets/*
+!artifacts/**/.gitkeep
 
 # Historial de versiones (export_artifact) y su índice: se versionan igual que
 # artifacts/models/*.pkl (vía LFS, ver .gitattributes) para que un `git pull` en
