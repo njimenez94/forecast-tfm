@@ -1,20 +1,22 @@
-import sys
-
-import matplotlib
 import numpy as np
-if "ipykernel" not in sys.modules:
-    # ponytail: entrenamiento es headless y paralelo (Optuna); TkAgg crashea (SIGILL) si el GC
-    # destruye figuras desde un hilo no-main. En notebook (ipykernel) dejamos el backend que
-    # ponga `%matplotlib inline`, si no plt.show() no muestra nada.
-    matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-import matplotlib.dates as mdates
+
 
 def plot_forecast(df_pred, level_label, target_col, series_id, n=30, date=None):
     """Serie real vs. predicha para `series_id`; si se pasa `date`, recorta +-n días
     alrededor y marca la fecha con una línea vertical."""
+    import sys
+
+    import matplotlib
+    if "ipykernel" not in sys.modules:
+        # ponytail: entrenamiento es headless y paralelo (Optuna); TkAgg crashea (SIGILL) si el GC
+        # destruye figuras desde un hilo no-main. En notebook (ipykernel) dejamos el backend que
+        # ponga `%matplotlib inline`, si no plt.show() no muestra nada.
+        matplotlib.use("Agg")
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     df_plot = df_pred[df_pred["series_id"] == series_id].copy()
     if date:
         date = pd.Timestamp(date)
@@ -69,6 +71,7 @@ def plot_forecast(df_pred, level_label, target_col, series_id, n=30, date=None):
 def explain_prediction(test_df, X_test, df_pred, explainer, target_col, series_id, date, max_display=10):
     """Waterfall de SHAP para la fila (series_id, date), con el detalle real/pred/bias
     en el título. Requiere un `explainer` de shap ya construido sobre el modelo."""
+    import matplotlib.pyplot as plt
     import shap
 
     row_mask = (test_df["series_id"] == series_id) & (test_df["date"] == date)

@@ -12,7 +12,20 @@ requires-python = ">=3.13,<3.14"
 # respaldados por pyarrow, joblib.load() los necesita para reconstruirlos aunque
 # api/ no los use -- a diferencia de statsforecast/prophet/catboost, pyarrow
 # instala de un wheel binario (no compila nada), así que no reintroduce el
-# problema de necesitar g++ en la imagen.
+# problema de necesitar g++ en la imagen. shap también: export_artifact() guarda
+# un shap.TreeExplainer ya armado en el pickle (ver src/training/export.py), y
+# joblib.load() necesita poder importar la clase para deserializarlo aunque
+# api/ nunca llame a shap -- si no está instalado, /predict rompe con
+# ModuleNotFoundError al cargar cualquier artifact reentrenado. scikit-learn
+# también: el wrapper de modelo (src/modeling/families.py) subclasea
+# BaseEstimator/RegressorMixin, joblib.load() necesita la clase para
+# deserializar el estimador ganador sea cual sea la familia. xgboost también:
+# el estimador ganador guardado en el pickle es directamente el objeto nativo
+# de la familia que ganó ese nivel -- hoy (ver artifacts/models/registry.json)
+# eso es siempre histgb (sklearn), lightgbm o xgboost, nunca catboost/prophet/
+# statsforecast, así que alcanza con estas tres. Si algún día una de esas
+# familias más pesadas gana un nivel, /predict de ese nivel va a romper igual
+# hasta agregarla acá.
 dependencies = [
     "fastapi>=0.141.1",
     "humanize>=4.16.0",
@@ -23,7 +36,10 @@ dependencies = [
     "numpy>=2.4.6",
     "pandas>=3.0.3",
     "pyarrow>=24.0.0",
+    "scikit-learn>=1.8.0",
+    "shap>=0.52.0",
     "uvicorn[standard]>=0.52.1",
+    "xgboost>=3.4.1",
 ]
 
 [dependency-groups]
@@ -52,7 +68,6 @@ modeling = [
     "prophet>=1.4.0",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
-    "shap>=0.52.0",
     "statsforecast>=2.0.3",
     "statsmodels>=0.14.6",
     "xgboost>=3.4.1",
