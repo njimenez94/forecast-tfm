@@ -1,46 +1,71 @@
 # forecast-tfm
 
-Forecasting de demanda sobre el dataset **M5** (LightGBM vía mlforecast, validación temporal). La metodología, los resultados y las decisiones de diseño están en el informe del TFM y en el video explicativo — este README es la guía práctica para correr el proyecto.
-
 ## Requisitos
 
 - [uv](https://docs.astral.sh/uv/) (Python 3.13, ver `.python-version`)
-- Cuenta de Kaggle que haya aceptado las reglas de [m5-forecasting-accuracy](https://www.kaggle.com/competitions/m5-forecasting-accuracy) — solo para el paso 1
+- Opcional: Cuenta de [Kaggle](https://www.kaggle.com/) (solo para descargar los datos, ya que sus condiciones de uso no permiten publicarlos).
 
 ```bash
-git clone <repo> && cd forecast-tfm
+git clone git@github.com:njimenez94/forecast-tfm.git && cd forecast-tfm
 uv sync
 ```
 
 ## 1. Conseguir los datos
 
-El pipeline necesita 3 CSV de la competencia: `calendar.csv`, `sell_prices.csv` y `sales_train_evaluation.csv`.
-
 **Opción A — con API de Kaggle**
 
 ```bash
-export KAGGLE_API_TOKEN=tu_token   # generado en https://www.kaggle.com/settings/api
-make create-database
+export KAGGLE_API_TOKEN=token
 ```
-(alternativa a la variable de entorno: `uv run kaggle auth login`, autentica por navegador).
 
-`create-database` descarga el zip a `backup/m5-forecasting-accuracy.zip`, lo descomprime en `data/raw/` y arma la base DuckDB en `data/m5.db`.
+Posteriormente al ejecutar código, se usará la key.
 
 **Opción B — manual, sin API key**
 
-1. Entrá logueado a la [página de datos de la competencia](https://www.kaggle.com/competitions/m5-forecasting-accuracy/data) (hay que haber aceptado las reglas) y descargá el zip con "Download All".
-2. Dejalo sin descomprimir en `backup/m5-forecasting-accuracy.zip` (creá la carpeta) y corré `make create-database` — lo encuentra y salta la descarga.
-   - O descomprimilo vos mismo y copiá los 3 CSV directo en `data/raw/`; `make create-database` solo descarga/descomprime si no los encuentra, así que si ya están ahí pasa directo a crear la base.
+1. Entrar a [la página de datos de Kaggle](https://www.kaggle.com/competitions/m5-forecasting-accuracy/data) descargar el zip.
+2. Dejarlo sin descomprimir en `backup/m5-forecasting-accuracy.zip`
 
 ## 2. Correr el pipeline
 
-| Paso | Comando | Entrada → salida |
-|---|---|---|
-| 1 | `make create-database` | zip de Kaggle → `data/m5.db` |
-| 2 | `make process-data` | `data/m5.db` → `data/processed/{daily,weekly}/level_*.parquet` |
-| 3 | `make build-datasets` | + features derivadas → `data/datasets/{daily,weekly}/dataset_level_*.parquet` |
-| 4 | `make train-dataset` | entrena y evalúa → `artifacts/{results,plots,models}/` |
-| 5 | `make test-sets` | modelo final vs. test → `artifacts/test_sets/`, `output/test_metrics.json` |
+**1) Crear base de datos**
+
+```bash
+make create-database
+```
+
+Crea `data/m5.db` a partir del zip de Kaggle.
+
+**2) Procesar datos**
+
+```bash
+make process-data
+```
+
+Genera `data/processed/{daily,weekly}/level_*.parquet`.
+
+**3) Construir datasets**
+
+```bash
+make build-datasets
+```
+
+Arma `data/datasets/{daily,weekly}/dataset_level_*.parquet` con features derivadas.
+
+**4) Entrenar modelo**
+
+```bash
+make train-dataset
+```
+
+Entrena y evalúa, guarda en `artifacts/{results,plots,models}/`.
+
+**5) Evaluar en test**
+
+```bash
+make test-sets
+```
+
+Evalúa el modelo final vs. test, guarda en `artifacts/test_sets/` y `output/test_metrics.json`.
 
 `make pipeline` encadena 2-4. Todo usa los defaults de `config/` (niveles activos en `config.ACTIVE_LEVEL_IDS`); para acotar: `ARGS="--levels 1,9,12"`, `ARGS="--profile fast"` (ver perfiles abajo), combinables: `ARGS="--levels 1 --profile fast"`.
 
@@ -63,7 +88,17 @@ Por defecto `train-dataset` entrena los 12 niveles x 2 grains con `efficient`, y
 
 Corridas largas conviene dejarlas en `tmux`/`nohup`: el progreso queda en `logs/train_dataset/` igual si se corta la terminal.
 
-## 3. Servir el modelo (API)
+## 3. Config por defecto
+
+El pipeline ya viene configurado con lo que uso para el TFM (`config/`); por defecto corre así, sin tocar nada:
+
+- **Niveles activos** (`config.levels.ACTIVE_LEVEL_IDS`): los 12 niveles M5, en daily y weekly. Los niveles item-level (10-12) vienen acotados a `dept_id=FOODS_3` (y `state_id=CA`/`store_id=CA_3` en 11/12) porque sin filtro son inviables de materializar.
+- **Perfil de entrenamiento** (`config.training`): `efficient` — todas las fases (baselines, feature selection, SHAP, Optuna) con presupuesto recortado para poder correr los 12 niveles x 2 grains en una sola pasada.
+- **Modelo** (`config.model`): LightGBM, objective `regression_l2` (o `tweedie` en niveles 11-12 por la cantidad de ceros).
+
+Para cambiar esto sin editar `config/`, usar `ARGS` al correr los comandos de la sección anterior, por ejemplo `ARGS="--levels 1,9,12 --profile fast"`. Para un cambio permanente, editar el archivo correspondiente en `config/`.
+
+## 4. Servir el modelo (API)
 
 `api/` sirve los artifacts ya entrenados por HTTP — no recalcula features, recibe el vector ya procesado y corre `model.predict()`.
 
@@ -92,19 +127,15 @@ make check-regression ARGS="--level 1"   # falla si wape/wrmsse empeoró >5% vs.
 ## Estructura
 
 ```
-backup/     zip de Kaggle (no versionado, ver paso 1)
-data/       raw/ (CSV de M5), processed/ (por nivel), datasets/ (con features), m5.db -- solo se versiona la estructura de carpetas
+backup/     zip de Kaggle
+data/       raw/ (CSV de M5), processed/ (por nivel), datasets/ (con features)
 config/     parámetros del proyecto (paths, features, levels, model, training)
 queries/    SQL para crear la base DuckDB
 api/        API de predicción sobre los artifacts entrenados
 src/        lógica reutilizable (datos, features, modelado, entrenamiento, evaluación)
 scripts/    puntos de entrada ejecutables (orquestan src/)
 notebooks/  exploración y prototipado
-report/     notebook de resultados finales para el informe
-docs/       informe del TFM y notas de metodología
+docs/       archivos varios .md mayormente
 artifacts/  results/, plots/, models/, test_sets/ -- generados por train-dataset y test-sets
-output/     test_metrics.json
 logs/       un .log por corrida, por script
 ```
-
-**Sobre `artifacts/`:** `artifacts/models/*.pkl` sí está versionado (vía Git LFS) porque es liviano — modelo + features + métricas, sin datos — y así el repo se puede usar sin reentrenar desde cero. El resto de `artifacts/` (results, plots, optuna_study.db, test_sets) no se versiona porque se reproduce corriendo el pipeline. `make clean` borra `data/processed`, `data/datasets` y todo `artifacts/`.
